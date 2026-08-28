@@ -1,0 +1,805 @@
+openapi: 3.0.3
+info:
+  title: Thermo Intelligence REST API
+  description: Authoritative REST API for Industrial Fire & Persistent Thermal Source Detection Platform (SIH 2026 PS 26162 - NTRO)
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local Development Server
+  - url: https://api.thermoscan.ai/api/v1
+    description: Production Server
+
+paths:
+  /health:
+    get:
+      summary: System Health & Ingestion Status
+      description: Returns backend, PostGIS, Redis, and satellite telemetry freshness status.
+      responses:
+        '200':
+          description: System operational status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /events:
+    get:
+      summary: List Thermal Events
+      description: Retrieve paginated and filtered list of clustered thermal events across India.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 25
+            maximum: 100
+        - name: classification
+          in: query
+          schema:
+            type: string
+            enum: [IND_FIRE, IND_FLARE, IND_ROUTINE, AGRI_BURN, WILDFIRE, OTHER_UNCERTAIN]
+        - name: anomaly_tier
+          in: query
+          schema:
+            type: string
+            enum: [NORMAL, ELEVATED, ABNORMAL, CRITICAL]
+        - name: persistence_tier
+          in: query
+          schema:
+            type: string
+            enum: [TRANSIENT, INTERMITTENT, PERSISTENT]
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: min_frp
+          in: query
+          schema:
+            type: number
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: -latest_detected_utc
+      responses:
+        '200':
+          description: List of thermal events with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+
+  /events/{event_id}:
+    get:
+      summary: Get Single Thermal Event Investigation Payload
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Complete event telemetry, classification, baseline, and geographic context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /events/{event_id}/observations:
+    get:
+      summary: Get Raw Sensor Hits for Event
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Array of underlying FIRMS observations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObservationListResponse'
+
+  /events/{event_id}/history:
+    get:
+      summary: Get Multi-Pass Earlier vs Now History
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Historical satellite passes and telemetry growth deltas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventHistoryResponse'
+
+  /gis/events:
+    get:
+      summary: Viewport-Culled Thermal Events (GeoJSON)
+      description: Returns GeoJSON FeatureCollection of thermal events inside the bounding box.
+      parameters:
+        - name: bbox
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "68.0,20.0,75.0,25.0"
+        - name: zoom
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 8
+        - name: time_window
+          in: query
+          schema:
+            type: string
+            default: "24h"
+            enum: ["6h", "24h", "7d", "30d", "all"]
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoJSONFeatureCollection'
+
+  /gis/facilities:
+    get:
+      summary: Viewport-Culled Industrial Facilities (GeoJSON)
+      parameters:
+        - name: bbox
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: sector
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of facilities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoJSONFeatureCollection'
+
+  /facilities:
+    get:
+      summary: Search and List Industrial Facilities
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: sector_category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated facility list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilityListResponse'
+
+  /facilities/{facility_code}:
+    get:
+      summary: Get Facility Details and Historical Baseline
+      parameters:
+        - name: facility_code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Facility record and baseline metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilityDetailResponse'
+
+  /news:
+    get:
+      summary: List Thermo News Bulletins
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: severity
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tactical news bulletin list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsListResponse'
+
+  /notifications:
+    get:
+      summary: List User Notifications
+      responses:
+        '200':
+          description: Notification alerts list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+
+  /notifications/{id}/read:
+    patch:
+      summary: Mark Notification as Read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Updated notification state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      is_read:
+                        type: boolean
+                        example: true
+
+  /search:
+    get:
+      summary: Global Universal Omnibox Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Type-aware structured search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+
+  /chat/query:
+    post:
+      summary: Grounded Conversational AI Query (RAG)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                session_id:
+                  type: string
+                  example: "sess_98a72b01"
+                query:
+                  type: string
+                  example: "Show me abnormal flares in Gujarat over past 24h"
+      responses:
+        '200':
+          description: Synthesized response strictly grounded in PostGIS records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+
+  /reports/generate:
+    post:
+      summary: Generate Tactical Intelligence PDF Dossier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - event_id
+                - title
+                - included_sections
+              properties:
+                event_id:
+                  type: string
+                  example: "EVT-IN-GUJ-202608-0042"
+                title:
+                  type: string
+                  example: "Tactical Incident Assessment: Jamnagar Refinery Fire Surge"
+                included_sections:
+                  type: array
+                  items:
+                    type: string
+                    enum: [EXECUTIVE_SUMMARY, TELEMETRY_BREAKDOWN, HISTORICAL_BASELINE, GEOGRAPHIC_CONTEXT, TIMELINE_DELTA, SATELLITE_EVIDENCE]
+      responses:
+        '201':
+          description: Report generation initiated/completed with download URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportGenerateResponse'
+
+  /admin/ingest/trigger:
+    post:
+      summary: Trigger Satellite Ingestion (Admin)
+      security:
+        - AdminKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sensor:
+                  type: string
+                  default: "VIIRS_NOAA20"
+                hours_back:
+                  type: integer
+                  default: 6
+                is_demo:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Ingestion job result summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      records_received:
+                        type: integer
+                      records_inserted:
+                        type: integer
+                      records_duplicated:
+                        type: integer
+                      status:
+                        type: string
+
+components:
+  securitySchemes:
+    AdminKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Admin-Key
+
+  responses:
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: "EVENT_NOT_FOUND"
+            message:
+              type: string
+              example: "Thermal event with identifier EVT-IN-GUJ-9999 was not found."
+            details:
+              type: object
+            timestamp:
+              type: string
+              format: date-time
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "HEALTHY"
+        database:
+          type: string
+          example: "CONNECTED_POSTGIS_16"
+        redis:
+          type: string
+          example: "CONNECTED_REDIS_7"
+        ml_model_version:
+          type: string
+          example: "thermo_xgb_v1.0.0"
+        latest_ingestion_utc:
+          type: string
+          format: date-time
+        active_events_count:
+          type: integer
+        critical_anomalies_count:
+          type: integer
+
+    EventListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventSummary'
+        pagination:
+          $ref: '#/components/schemas/PaginationMetadata'
+
+    EventSummary:
+      type: object
+      properties:
+        event_id:
+          type: string
+          example: "EVT-IN-GUJ-202608-0042"
+        latitude:
+          type: number
+          example: 22.47120
+        longitude:
+          type: number
+          example: 70.06310
+        bounding_area_ha:
+          type: number
+          example: 14.2
+        first_detected_utc:
+          type: string
+          format: date-time
+        latest_detected_utc:
+          type: string
+          format: date-time
+        duration_hours:
+          type: number
+          example: 4.05
+        observation_count:
+          type: integer
+          example: 8
+        peak_frp_mw:
+          type: number
+          example: 450.0
+        mean_frp_mw:
+          type: number
+          example: 182.4
+        max_brightness_k:
+          type: number
+          example: 482.5
+        classification:
+          type: string
+          example: "IND_FIRE"
+        classification_confidence:
+          type: number
+          example: 0.942
+        persistence_tier:
+          type: string
+          example: "PERSISTENT"
+        anomaly_tier:
+          type: string
+          example: "CRITICAL"
+        anomaly_z_score:
+          type: number
+          example: 5.82
+        lifecycle_status:
+          type: string
+          example: "ACTIVE"
+        associated_facility:
+          type: object
+          properties:
+            facility_code:
+              type: string
+            name:
+              type: string
+            sector_category:
+              type: string
+
+    EventDetailResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            event_id:
+              type: string
+            centroid:
+              type: object
+            boundary_geojson:
+              type: object
+            bounding_area_ha:
+              type: number
+            telemetry:
+              type: object
+            classification:
+              type: object
+            baseline_anomaly:
+              type: object
+            geographic_context:
+              type: object
+            lifecycle_status:
+              type: string
+
+    ObservationListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              observation_id:
+                type: string
+                format: uuid
+              latitude:
+                type: number
+              longitude:
+                type: number
+              brightness_temp_k:
+                type: number
+              frp_mw:
+                type: number
+              observation_timestamp_utc:
+                type: string
+                format: date-time
+              satellite_sensor:
+                type: string
+              confidence_level:
+                type: string
+              day_night:
+                type: string
+
+    EventHistoryResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            event_id:
+              type: string
+            passes:
+              type: array
+              items:
+                type: object
+            deltas:
+              type: object
+
+    GeoJSONFeatureCollection:
+      type: object
+      required:
+        - type
+        - features
+      properties:
+        type:
+          type: string
+          example: "FeatureCollection"
+        features:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "Feature"
+              id:
+                type: string
+              geometry:
+                type: object
+              properties:
+                type: object
+
+    FacilityListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacilityDetail'
+
+    FacilityDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FacilityDetail'
+
+    FacilityDetail:
+      type: object
+      properties:
+        facility_code:
+          type: string
+          example: "FAC-REF-JAMNAGAR"
+        name:
+          type: string
+          example: "Reliance Jamnagar Refinery Complex"
+        sector_category:
+          type: string
+          example: "REFINERY"
+        operator_name:
+          type: string
+        state:
+          type: string
+        district:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        baseline_frp_mean:
+          type: number
+        baseline_frp_std:
+          type: number
+        historical_event_count:
+          type: integer
+
+    NewsListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              news_id:
+                type: string
+                format: uuid
+              event_id:
+                type: string
+              headline:
+                type: string
+              summary:
+                type: string
+              severity_tag:
+                type: string
+              published_at:
+                type: string
+                format: date-time
+
+    NotificationListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              event_id:
+                type: string
+              title:
+                type: string
+              message:
+                type: string
+              severity:
+                type: string
+              is_read:
+                type: boolean
+              created_at:
+                type: string
+                format: date-time
+
+    SearchResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            query:
+              type: string
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [FACILITY, EVENT, REGION]
+                  title:
+                    type: string
+                  subtitle:
+                    type: string
+                  target_id:
+                    type: string
+                  coordinates:
+                    type: array
+                    items:
+                      type: number
+
+    ChatResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            session_id:
+              type: string
+            answer_markdown:
+              type: string
+            grounded_events:
+              type: array
+              items:
+                type: object
+            matched_record_count:
+              type: integer
+            provenance:
+              type: string
+
+    ReportGenerateResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            report_id:
+              type: string
+            event_id:
+              type: string
+            title:
+              type: string
+            download_url:
+              type: string
+            sha256_checksum:
+              type: string
+            generated_at:
+              type: string
+              format: date-time
+            status:
+              type: string
+
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_records:
+          type: integer
+          example: 142
+        total_pages:
+          type: integer
+          example: 6
+        has_next:
+          type: boolean
+          example: true
+        has_prev:
+          type: boolean
+          example: false
