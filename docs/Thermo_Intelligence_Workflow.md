@@ -304,32 +304,30 @@ flowchart TD
 
 When a user selects an event marker or news card:
 
-```
-[ User Selects Event `EVT-IN-GUJ-0042` ]
-                   ↓
-[ Open Right-Side Investigation Drawer & Lock GIS Focus ]
-                   ↓
-+----------------------------------------------------------------------------------------------------+
-|  TAB 1: CURRENT STATE                                                                              |
-|  • Classification: Industrial Accidental Fire (94.2% Confidence)                                   |
-|  • Peak FRP: 450 MW | Max Temp: 482 K | Active Hits: 8 | Area: 14.2 Ha                             |
-|  • Top AI Feature Drivers: 1. In-Facility (100%), 2. FRP Surge (+5.8σ), 3. Night Persistence       |
-+----------------------------------------------------------------------------------------------------+
-|  TAB 2: HISTORICAL BASELINE                                                                        |
-|  • Facility: Reliance Jamnagar Refinery Complex                                                    |
-|  • Baseline Curve: Observed (450 MW) vs Historical Mean (42 MW ± 12 MW)                            |
-|  • 30-Day Activity Calendar: Continuous Flaring (28/30 Days)                                       |
-+----------------------------------------------------------------------------------------------------+
-|  TAB 3: GEOGRAPHIC CONTEXT                                                                         |
-|  • Surrounding LULC: 84% Industrial, 12% Urban, 4% Barren                                          |
-|  • Proximity Buffers: Nearest Residential: 1.8 km | Critical Fuel Tanks: 320 m                     |
-+----------------------------------------------------------------------------------------------------+
-|  TAB 4: "EARLIER VS. NOW" TIMELINE                                                                 |
-|  • Temporal Scrubber: Pass 1 (T-18h) → Pass 2 (T-12h) → Pass 3 (T-6h) → Pass 4 (Current)           |
-|  • Multi-Pass Delta: Area expanded from 1.2 Ha to 14.2 Ha (+1080%)                                 |
-|  • Satellite Evidence: True-Color RGB vs SWIR False-Color comparison tile                         |
-+----------------------------------------------------------------------------------------------------+
-```
+**[ User Selects Event `EVT-IN-GUJ-0042` ]**
+↓
+**[ Open Right-Side Investigation Drawer & Lock GIS Focus ]**
+↓
+
+> **TAB 1: CURRENT STATE**
+> • Classification: Industrial Accidental Fire (94.2% Confidence)
+> • Peak FRP: 450 MW | Max Temp: 482 K | Active Hits: 8 | Area: 14.2 Ha
+> • Top AI Feature Drivers: 1. In-Facility (100%), 2. FRP Surge (+5.8σ), 3. Night Persistence
+
+> **TAB 2: HISTORICAL BASELINE**
+> • Facility: Reliance Jamnagar Refinery Complex
+> • Baseline Curve: Observed (450 MW) vs Historical Mean (42 MW ± 12 MW)
+> • 30-Day Activity Calendar: Continuous Flaring (28/30 Days)
+
+> **TAB 3: GEOGRAPHIC CONTEXT**
+> • Surrounding LULC: 84% Industrial, 12% Urban, 4% Barren
+> • Proximity Buffers: Nearest Residential: 1.8 km | Critical Fuel Tanks: 320 m
+
+> **TAB 4: "EARLIER VS. NOW" TIMELINE**
+> • Temporal Scrubber: Pass 1 (T-18h) → Pass 2 (T-12h) → Pass 3 (T-6h) → Pass 4 (Current)
+> • Multi-Pass Delta: Area expanded from 1.2 Ha to 14.2 Ha (+1080%)
+> • Satellite Evidence: True-Color RGB vs SWIR False-Color comparison tile
+
 
 ---
 
@@ -392,27 +390,25 @@ sequenceDiagram
 
 ## 18. Tactical Report Generation Workflow
 
-```
-[ User Clicks "Generate Intelligence Dossier" on Event EVT-IN-GUJ-0042 ]
-                                   ↓
-[ Modal Opens: Select Dossier Sections ]
-  [x] Executive Incident Summary
-  [x] Radiometric & Telemetry Breakdown
-  [x] Historical Baseline & Anomaly Delta Charts
-  [x] Surrounding Land-Use & Vulnerability Buffers
-  [x] Multi-Pass "Earlier vs. Now" Timeline
-  [x] Satellite Visual Evidence (SWIR Tile)
-                                   ↓
-[ Click "Compile Official Report (PDF)" ]
-                                   ↓
-[ Backend Aggregates Structured Telemetry & Renders Jinja2 HTML Template ]
-                                   ↓
-[ Headless Chromium / WeasyPrint Compiles Pixel-Perfect A4 PDF ]
-                                   ↓
-[ PDF Artifact Stored in MinIO/S3 → Signed Download URL Returned ]
-                                   ↓
-[ Browser Triggers Instant PDF Download & Displays Print Preview ]
-```
+**[ User Clicks "Generate Intelligence Dossier" on Event `EVT-IN-GUJ-0042` ]**
+↓
+**[ Modal Opens: Select Dossier Sections ]**
+- `[x]` Executive Incident Summary
+- `[x]` Radiometric & Telemetry Breakdown
+- `[x]` Historical Baseline & Anomaly Delta Charts
+- `[x]` Surrounding Land-Use & Vulnerability Buffers
+- `[x]` Multi-Pass "Earlier vs. Now" Timeline
+- `[x]` Satellite Visual Evidence (SWIR Tile)
+↓
+**[ Click "Compile Official Report (PDF)" ]**
+↓
+**[ Backend Aggregates Structured Telemetry & Renders Jinja2 HTML Template ]**
+↓
+**[ Headless Chromium / WeasyPrint Compiles Pixel-Perfect A4 PDF ]**
+↓
+**[ PDF Artifact Stored in MinIO/S3 → Signed Download URL Returned ]**
+↓
+**[ Browser Triggers Instant PDF Download & Displays Print Preview ]**
 
 ---
 
