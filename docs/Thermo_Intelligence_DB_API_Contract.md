@@ -56,47 +56,38 @@ This document constitutes the **immutable development contract** across all syst
 
 ## 3. Controlled Vocabularies & Canonical Enums
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                      CANONICAL SYSTEM ENUMERATIONS                                 |
-+----------------------+--------------------------+--------------------------------------------------+
-| Enum Name            | Canonical Values         | Exact Meaning & Criteria                         |
-+----------------------+--------------------------+--------------------------------------------------+
-| **Classification**   | `IND_FIRE`               | Industrial Accidental Fire / Explosion           |
-|                      | `IND_FLARE`              | Industrial Persistent Flare / Gas Venting        |
-|                      | `IND_ROUTINE`            | Routine High-Temp Industrial Plant (Steel/Cement)|
-|                      | `AGRI_BURN`              | Agricultural Stubble / Crop Residue Burning      |
-|                      | `WILDFIRE`               | Wildfire / Forest & Vegetation Blaze             |
-|                      | `OTHER_UNCERTAIN`        | Ambiguous / Cloud Edge / Unverified              |
-+----------------------+--------------------------+--------------------------------------------------+
-| **Anomaly Tier**     | `NORMAL`                 | `Z < 1.5` (Routine operational flaring)          |
-|                      | `ELEVATED`               | `1.5 <= Z < 2.5` (Process venting / surge)      |
-|                      | `ABNORMAL`               | `2.5 <= Z < 4.0` (Significant flare deviation)  |
-|                      | `CRITICAL`               | `Z >= 4.0` or Footprint Expansion `>300\%`      |
-+----------------------+--------------------------+--------------------------------------------------+
-| **Persistence Tier** | `TRANSIENT`              | Active `< 24h`, 0 prior hits past 90 days |
-|                      | `INTERMITTENT`           | Recurring `3–14 days/year` (Batch kilns)  |
-|                      | `PERSISTENT`             | `>15 active days/month` over `>6m` |
-+----------------------+--------------------------+--------------------------------------------------+
-| **Lifecycle Status** | `ACTIVE`                 | Hotspots detected within trailing 12 hours       |
-|                      | `COOLING`                | No detections in 12h–36h; residual heat decay    |
-|                      | `RESOLVED`               | No detections `>36h`; thermal signature 0 |
-+----------------------+--------------------------+--------------------------------------------------+
-| **News Severity**    | `CRITICAL`               | Requires immediate disaster/defense response     |
-|                      | `ALERT`                  | High-priority abnormal industrial flaring        |
-|                      | `NOTICE`                 | General notification / Seasonal stubble update   |
-|                      | `PERSISTENCE_UPDATE`     | Milestone persistence confirmation               |
-+----------------------+--------------------------+--------------------------------------------------+
-| **Facility Sector**  | `REFINERY`               | Petroleum & Crude Oil Refining Complex           |
-|                      | `PETROCHEMICAL`          | Downstream Chemicals, Polymers, Aromatics        |
-|                      | `POWER_THERMAL`          | Coal / Gas Fired Thermal Power Stations          |
-|                      | `STEEL_SMELTER`          | Blast Furnaces, Electric Arc Furnaces            |
-|                      | `MINING_COAL`            | Open-Cast & Underground Coal Mines               |
-|                      | `LNG_TERMINAL`           | Regasification & Liquefied Gas Storage           |
-|                      | `CEMENT_KILN`            | Clinker Production & Rotary Kilns                |
-|                      | `OTHER_INDUSTRIAL`       | Fertilizer, Heavy Engineering, Slag Dumps        |
-+----------------------+--------------------------+--------------------------------------------------+
-```
+### CANONICAL SYSTEM ENUMERATIONS
+
+| Enum Name | Canonical Values | Exact Meaning & Criteria |
+|:---|:---|:---|
+| **Classification** | `IND_FIRE` | Industrial Accidental Fire / Explosion |
+| | `IND_FLARE` | Industrial Persistent Flare / Gas Venting |
+| | `IND_ROUTINE` | Routine High-Temp Industrial Plant (Steel/Cement)|
+| | `AGRI_BURN` | Agricultural Stubble / Crop Residue Burning |
+| | `WILDFIRE` | Wildfire / Forest & Vegetation Blaze |
+| | `OTHER_UNCERTAIN` | Ambiguous / Cloud Edge / Unverified |
+| **Anomaly Tier** | `NORMAL` | `Z < 1.5` (Routine operational flaring) |
+| | `ELEVATED` | `1.5 <= Z < 2.5` (Process venting / surge) |
+| | `ABNORMAL` | `2.5 <= Z < 4.0` (Significant flare deviation) |
+| | `CRITICAL` | `Z >= 4.0` or Footprint Expansion `>300\%` |
+| **Persistence Tier** | `TRANSIENT` | Active `< 24h`, 0 prior hits past 90 days |
+| | `INTERMITTENT` | Recurring `3–14 days/year` (Batch kilns) |
+| | `PERSISTENT` | `>15 active days/month` over `>6m` |
+| **Lifecycle Status** | `ACTIVE` | Hotspots detected within trailing 12 hours |
+| | `COOLING` | No detections in 12h–36h; residual heat decay |
+| | `RESOLVED` | No detections `>36h`; thermal signature 0 |
+| **News Severity** | `CRITICAL` | Requires immediate disaster/defense response |
+| | `ALERT` | High-priority abnormal industrial flaring |
+| | `NOTICE` | General notification / Seasonal stubble update |
+| | `PERSISTENCE_UPDATE`| Milestone persistence confirmation |
+| **Facility Sector** | `REFINERY` | Petroleum & Crude Oil Refining Complex |
+| | `PETROCHEMICAL` | Downstream Chemicals, Polymers, Aromatics |
+| | `POWER_THERMAL` | Coal / Gas Fired Thermal Power Stations |
+| | `STEEL_SMELTER` | Blast Furnaces, Electric Arc Furnaces |
+| | `MINING_COAL` | Open-Cast & Underground Coal Mines |
+| | `LNG_TERMINAL` | Regasification & Liquefied Gas Storage |
+| | `CEMENT_KILN` | Clinker Production & Rotary Kilns |
+| | `OTHER_INDUSTRIAL`| Fertilizer, Heavy Engineering, Slag Dumps |
 
 ---
 

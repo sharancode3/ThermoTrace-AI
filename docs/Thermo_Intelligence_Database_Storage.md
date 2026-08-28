@@ -500,66 +500,42 @@ thermo-intelligence-assets/
 
 ## 9. Redis In-Memory Caching & Key Naming Conventions
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           REDIS CACHE KEY ARCHITECTURE                                         |
-+--------------------------------------+---------------+---------------------+-----------------------------------+
-| Key Pattern                          | Data Type     | Default TTL         | Purpose                           |
-+--------------------------------------+---------------+---------------------+-----------------------------------+
-| `cache:gis:bbox:{hash}`              | String (JSON) | 60 Seconds          | Viewport GeoJSON event clusters   |
-+--------------------------------------+---------------+---------------------+-----------------------------------+
-| `cache:event:{event_id}:telemetry`   | String (JSON) | 5 Minutes           | Investigation drawer telemetry    |
-+--------------------------------------+---------------+---------------------+-----------------------------------+
-| `cache:facility:{code}:baseline`     | Hash          | 1 Hour              | Running mean and std FRP values   |
-+--------------------------------------+---------------+---------------------+-----------------------------------+
-| `lock:clustering:execution`          | String (Lock) | 30 Seconds          | Distributed lock for ST-DBSCAN    |
-+--------------------------------------+---------------+---------------------+-----------------------------------+
-| `stream:news:realtime`               | Redis Pub/Sub | Real-time Stream    | SSE broadcast channel to frontend |
-+--------------------------------------+---------------+---------------------+-----------------------------------+
-```
+### REDIS CACHE KEY ARCHITECTURE
+
+| Key Pattern | Data Type | Default TTL | Purpose |
+|:---|:---|:---|:---|
+| `cache:gis:bbox:{hash}` | String (JSON) | 60 Seconds | Viewport GeoJSON event clusters |
+| `cache:event:{event_id}:telemetry` | String (JSON) | 5 Minutes | Investigation drawer telemetry |
+| `cache:facility:{code}:baseline` | Hash | 1 Hour | Running mean and std FRP values |
+| `lock:clustering:execution` | String (Lock) | 30 Seconds | Distributed lock for ST-DBSCAN |
+| `stream:news:realtime` | Redis Pub/Sub | Real-time Stream | SSE broadcast channel to frontend |
 
 ---
 
 ## 10. Data Retention, Archival & Purging Policies
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                      DATA RETENTION TIMELINE                                       |
-+--------------------------+-----------------------+-------------------------------------------------+
-| Data Entity / Table      | Retention Duration    | Enforcement Mechanism                           |
-+--------------------------+-----------------------+-------------------------------------------------+
-| `thermal_observations`   | **Permanent**         | Compressed historical partitions; read-only.    |
-| `thermal_events`         | **Indefinite**        | Active -> Cooling -> Resolved lifecycle.|
-| `news_items`             | **180 Days**          | Celery cron drops items older than 6 months.    |
-| `ingestion_jobs` (Logs)  | **90 Days**           | Rolling purge of successful job logs.           |
-| `reports` (PDF Files)    | **1 Year**            | Object lifecycle rule deletes raw PDF after 1y. |
-| Redis Query Caches       | **60s to 3600s**      | Automatic Redis key TTL expiration.             |
-+--------------------------+-----------------------+-------------------------------------------------+
-```
+### DATA RETENTION TIMELINE
+
+| Data Entity / Table | Retention Duration | Enforcement Mechanism |
+|:---|:---|:---|
+| `thermal_observations` | **Permanent** | Compressed historical partitions; read-only. |
+| `thermal_events` | **Indefinite** | Active -> Cooling -> Resolved lifecycle.|
+| `news_items` | **180 Days** | Celery cron drops items older than 6 months. |
+| `ingestion_jobs` (Logs) | **90 Days** | Rolling purge of successful job logs. |
+| `reports` (PDF Files) | **1 Year** | Object lifecycle rule deletes raw PDF after 1y. |
+| Redis Query Caches | **60s to 3600s** | Automatic Redis key TTL expiration. |
 
 ---
 
 ## 11. Scalability Tiers: SIH Prototype to Enterprise Production
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    SCALABILITY PROGRESSION MATRIX                                  |
-+----------------------+-----------------------------+-----------------------------------------------+
-| Tier Level           | Scale Target                | Architecture Configuration                    |
-+----------------------+-----------------------------+-----------------------------------------------+
-| **Level 1: Prototype**| India Active Feeds          | Single Dockerized PostgreSQL 16 + PostGIS 3.4 |
-| (Current SIH Scope)  | (~50,000 observations/mo)   | Local volume storage (`/app/storage/`)        |
-|                      |                             | Single Redis instance; 4GB RAM footprint.     |
-+----------------------+-----------------------------+-----------------------------------------------+
-| **Level 2: National**| Full India 5-Year History   | PostgreSQL with monthly time partitions       |
-| (Production NTRO)    | (~20,000,000 observations)  | Managed MinIO / AWS S3 Object Store           |
-|                      |                             | Read-Replicas for MapLibre vector tile queries|
-+----------------------+-----------------------------+-----------------------------------------------+
-| **Level 3: Global**  | Worldwide Satellite Feeds   | Distributed Citus / PostGIS Sharded Clusters  |
-| (Global C4I Scale)   | (~500,000,000 observations) | CDN-cached Mapbox Vector Tiles (MVT)          |
-|                      |                             | Cold data tiering to S3 Glacier Deep Archive  |
-+----------------------+-----------------------------+-----------------------------------------------+
-```
+### SCALABILITY PROGRESSION MATRIX
+
+| Tier Level | Scale Target | Architecture Configuration |
+|:---|:---|:---|
+| **Level 1: Prototype** (Current SIH Scope) | India Active Feeds (~50,000 observations/mo) | Single Dockerized PostgreSQL 16 + PostGIS 3.4<br>Local volume storage (`/app/storage/`)<br>Single Redis instance; 4GB RAM footprint. |
+| **Level 2: National** (Production NTRO) | Full India 5-Year History (~20,000,000 observations) | PostgreSQL with monthly time partitions<br>Managed MinIO / AWS S3 Object Store<br>Read-Replicas for MapLibre vector tile queries|
+| **Level 3: Global** (Global C4I Scale) | Worldwide Satellite Feeds (~500,000,000 observations) | Distributed Citus / PostGIS Sharded Clusters<br>CDN-cached Mapbox Vector Tiles (MVT)<br>Cold data tiering to S3 Glacier Deep Archive |
 
 ---
 
