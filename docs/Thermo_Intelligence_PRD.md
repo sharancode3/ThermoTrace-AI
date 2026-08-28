@@ -29,16 +29,18 @@ As a result:
 ### 2.2 The Solution
 **Thermo Intelligence** transforms raw, uncontextualized NASA FIRMS radiometric points into actionable **Thermal Event Intelligence** through spatio-temporal clustering, geographic fusion (OpenStreetMap industrial boundaries and LULC land-cover data), machine learning classification, and facility-specific baseline anomaly tracking.
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    CORE INTELLIGENCE PIPELINE                                      |
-|                                                                                                    |
-|  [NASA FIRMS Stream]                                                                               |
-|  [OSM Industrial GIS] ---> [Event Clustering] ---> [Contextual ML] ---> [Facility Baselines] --->  |
-|  [LULC Land Cover]        (ST-DBSCAN Engine)       (Multi-Class)         (Normal vs Abnormal)      |
-|                                                                                                    |
-|  ---> [GIS Command Center] + [Thermo News] + [Notifications] + [Domain RAG Chat] + [Tactical Dossier]
-+----------------------------------------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    FIRMS[NASA FIRMS Stream] --> Clust
+    OSM[OSM Industrial GIS] --> Clust
+    LULC[LULC Land Cover] --> Clust
+    Clust[Event Clustering ST-DBSCAN Engine] --> ML[Contextual ML Multi-Class]
+    ML --> Base[Facility Baselines Normal vs Abnormal]
+    Base --> GC[GIS Command Center]
+    Base --> TN[Thermo News]
+    Base --> Notif[Notifications]
+    Base --> RAG[Domain RAG Chat]
+    Base --> Rep[Tactical Dossier]
 ```
 
 ---
@@ -278,10 +280,15 @@ The system queries the multi-year thermal historical repository for each spatial
 
 ### 12.2 Facility-Specific Baseline & Anomaly Engine
 For every registered industrial asset, the system maintains a running baseline distribution:
-$$\mu_{FRP} = \text{Historical Mean FRP}, \quad \sigma_{FRP} = \text{Historical Standard Deviation}$$
+```text
+mean_FRP = Historical Mean FRP
+std_FRP = Historical Standard Deviation
+```
 
 When a new event occurs inside the facility boundary:
-$$Z\text{-Score} = \frac{FRP_{observed} - \mu_{FRP}}{\sigma_{FRP}}$$
+```text
+Z-Score = (FRP_observed - mean_FRP) / std_FRP
+```
 
 ```
 +----------------------------------------------------------------------------------------------------+

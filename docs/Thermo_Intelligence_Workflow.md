@@ -19,28 +19,16 @@ This Workflow Document defines **how information and users move through the Ther
 - User-driven exploration, visual investigation, natural language querying, and tactical reporting.
 - Edge cases, concurrent updates, and graceful degradation workflows under failure conditions.
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    MASTER OPERATIONAL LIFECYCLE                                    |
-|                                                                                                    |
-|  [ Observe ]       NASA FIRMS Telemetry Ingestion (VIIRS / MODIS)                                  |
-|      ↓                                                                                             |
-|  [ Process ]       Deduplication, Spatial Indexing & ST-DBSCAN Event Clustering                    |
-|      ↓                                                                                             |
-|  [ Contextualize ] Spatial Intersect with OSM Industrial Boundaries & LULC Rasters                 |
-|      ↓                                                                                             |
-|  [ Classify ]      XGBoost Multi-Class Machine Learning Inference                                  |
-|      ↓                                                                                             |
-|  [ Analyse ]       Facility Historical Baseline & Z-Score Anomaly Evaluation                       |
-|      ↓                                                                                             |
-|  [ Surface ]       Thermo News Feed Dispatch & Anti-Fatigue Notification Trigger                   |
-|      ↓                                                                                             |
-|  [ Investigate ]   MapLibre GIS Command Center & "Earlier vs. Now" Timeline Analysis               |
-|      ↓                                                                                             |
-|  [ Explain ]       Grounded RAG Conversational AI Assistant                                        |
-|      ↓                                                                                             |
-|  [ Report ]        Tactical Multi-Section PDF Intelligence Dossier Export                          |
-+----------------------------------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    Obs[Observe: NASA FIRMS Telemetry Ingestion] --> Proc[Process: Deduplication, Spatial Indexing & ST-DBSCAN]
+    Proc --> Ctx[Contextualize: Spatial Intersect with OSM & LULC]
+    Ctx --> Class[Classify: XGBoost Multi-Class ML Inference]
+    Class --> Analy[Analyse: Facility Historical Baseline & Z-Score]
+    Analy --> Surf[Surface: Thermo News Feed & Notifications]
+    Surf --> Inv[Investigate: MapLibre GIS Command Center]
+    Inv --> Exp[Explain: Grounded RAG Conversational AI Assistant]
+    Exp --> Rep[Report: Tactical Multi-Section PDF Dossier Export]
 ```
 
 ---

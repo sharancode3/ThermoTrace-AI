@@ -115,8 +115,8 @@ If requested, feature contributions are extracted using Tree SHAP directly on th
 * **Baseline**: Aggregates all historical FRP for a *known facility* to establish what is "normal" for that facility (Mean and StdDev).
 
 ## 37. Anomaly Engine & 38. Classification vs Anomaly
-* **Calculation**: $Z = \frac{FRP_{current} - \mu_{baseline}}{\sigma_{baseline}}$
-* **Tiers**: `NORMAL` ($Z<1.5$), `ELEVATED`, `ABNORMAL`, `CRITICAL` ($Z \ge 4.0$).
+* **Calculation**: `Z = (FRP_current - mean_baseline) / std_baseline`
+* **Tiers**: `NORMAL` (`Z < 1.5`), `ELEVATED`, `ABNORMAL`, `CRITICAL` (`Z >= 4.0`).
 * **Distinction**: A `PERSISTENT` `IND_FLARE` is completely `NORMAL` if its current FRP matches its baseline.
 
 ## 39. Event Intelligence Object & 77. Event State Consolidation

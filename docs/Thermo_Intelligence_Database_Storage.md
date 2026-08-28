@@ -403,7 +403,9 @@ CREATE INDEX idx_ingestion_exec ON ingestion_jobs(executed_at DESC);
 
 ### 6.1 Deterministic SHA-256 Deduplication Hash
 To prevent duplicate records from overlapping satellite passes or retried API requests, every incoming observation is stamped with an immutable hash:
-$$\text{dedup\_key} = \text{SHA256}(\text{Round}(\text{lat}, 4) \parallel \text{Round}(\text{lon}, 4) \parallel \text{acq\_date} \parallel \text{acq\_time\_utc} \parallel \text{satellite\_sensor})$$
+```text
+dedup_key = SHA256(Round(lat, 4) || Round(lon, 4) || acq_date || acq_time_utc || satellite_sensor)
+```
 
 ```python
 # Backend Python Implementation
@@ -434,8 +436,10 @@ INSERT INTO thermal_observations (
 ### 7.1 Coordinate Reference System (CRS) Standards
 - **Storage & Ingestion CRS:** Standard **WGS 84 (`EPSG:4326`)** representing planar latitude/longitude coordinates.
 - **Accurate Metric Distance Calculations:** Handled dynamically via PostGIS geography casts:
-  $$\text{ST\_DWithin}(\text{geom\_a}::\text{geography}, \text{geom\_b}::\text{geography}, \text{distance\_meters})$$
-  $$\text{ST\_Area}(\text{geom}::\text{geography}) / 10000.0 \implies \text{Hectares}$$
+```text
+ST_DWithin(geom_a::geography, geom_b::geography, distance_meters)
+ST_Area(geom::geography) / 10000.0 => Hectares
+```
 
 ### 7.2 High-Frequency Spatial Query Patterns
 

@@ -140,7 +140,9 @@ The ingestion service interacts with the NASA FIRMS REST API (`https://firms.mod
 - **Polling Interval:** Configurable cron worker executing every **15 minutes** (aligning with satellite downlink cycles).
 - **Bounding Box for India Subcontinent:** `[6.5° N, 68.0° E]` to `[37.5° N, 97.5° E]`.
 - **Deduplication Hash:** Unique SHA-256 hash generated per detection:
-  $$\text{dedup\_key} = \text{SHA256}(\text{lat}_{4\text{dec}} \parallel \text{lon}_{4\text{dec}} \parallel \text{acq\_date} \parallel \text{acq\_time} \parallel \text{satellite} \parallel \text{sensor})$$
+```text
+dedup_key = SHA256(lat_4dec || lon_4dec || acq_date || acq_time || satellite || sensor)
+```
 - **Upsert Logic:** `INSERT INTO thermal_observations ... ON CONFLICT (dedup_key) DO NOTHING;`
 
 ### 4.3 Validation & Hygiene Rules
@@ -331,13 +333,13 @@ CREATE INDEX idx_events_anomaly ON thermal_events(anomaly_tier);
 Raw observations arriving within temporal window $\Delta T$ are clustered into unified events using a hybrid Spatio-Temporal DBSCAN algorithm.
 
 **Mathematical Distance Metric:**
-$$D((p_1, t_1), (p_2, t_2)) = \begin{cases} 
-\text{HaversineDistance}(p_1, p_2) & \text{if } |t_1 - t_2| \le \epsilon_{temporal} \\
-\infty & \text{otherwise}
-\end{cases}$$
+```text
+D((p1, t1), (p2, t2)) =
+  HaversineDistance(p1, p2), if |t1 - t2| <= epsilon_temporal
+  Infinity, otherwise
+```
 
 **Configured Parameters:**
-- $\epsilon_{spatial} = 750\text{ meters}$ (for coordinates overlapping industrial polygons; $1500\text{m}$ for rural/forest zones).
 - $\epsilon_{temporal} = 12\text{ hours}$ (maximum elapsed time between consecutive satellite passes before splitting into a distinct event).
 - $MinPts = 1$ (single high-FRP detections initiate a tracking event).
 
@@ -346,7 +348,9 @@ For a clustered set of points $\{p_1, p_2, \dots, p_k\}$:
 1. If $k = 1$: `boundary_geom` is generated via `ST_Buffer(p_1::geography, 187.5)::geometry` (representing the 375m VIIRS pixel envelope).
 2. If $k \ge 2$: `boundary_geom` is computed via `ST_ConvexHull(ST_Collect(geom))` with an outer buffer of $100\text{m}$.
 3. Bounding area in hectares is computed via:
-   $$\text{Area}_{\text{Ha}} = \frac{\text{ST\_Area}(\text{boundary\_geom}::\text{geography})}{10,000}$$
+```text
+Area_Ha = ST_Area(boundary_geom::geography) / 10000.0
+```
 
 ---
 
@@ -407,11 +411,16 @@ The classifier targets 6 mutually exclusive classes:
 ### 8.1 Facility Baseline Computation
 For each industrial facility $F$, the historical baseline profile is recalculated on an automated weekly cycle using a rolling 12-month window:
 
-$$\mu_{\text{FRP}} = \frac{1}{N} \sum_{i=1}^{N} \text{FRP}_i, \quad \sigma_{\text{FRP}} = \sqrt{\frac{1}{N-1} \sum_{i=1}^{N} (\text{FRP}_i - \mu_{\text{FRP}})^2}$$
+```text
+mean_FRP = sum(FRP) / N
+std_FRP = sqrt(sum((FRP - mean_FRP)^2) / (N-1))
+```
 
 ### 8.2 Anomaly Z-Score & Severity Matrix
 When active event $E$ occurs within the spatial perimeter of facility $F$:
-$$Z = \frac{\text{Peak\_FRP}_E - \mu_{\text{FRP}, F}}{\max(\sigma_{\text{FRP}, F}, 2.0)}$$
+```text
+Z_score = (Peak_FRP_event - mean_FRP_facility) / max(std_FRP_facility, 2.0)
+```
 
 ```
 +----------------------------------------------------------------------------------------------------+
