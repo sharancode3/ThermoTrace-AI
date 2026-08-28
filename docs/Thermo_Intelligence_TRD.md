@@ -356,33 +356,25 @@ Area_Ha = ST_Area(boundary_geom::geography) / 10000.0
 
 ## 7. Machine Learning Pipeline & Classification System
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    ML FEATURE VECTOR COMPOSITION                                   |
-+----------------------+--------------------+--------------------------------------------------------+
-| Feature Group        | Dimension / Type   | Description & Extraction Source                        |
-+----------------------+--------------------+--------------------------------------------------------+
+### ML FEATURE VECTOR COMPOSITION
+
+| Feature Group | Dimension / Type | Description & Extraction Source |
+|:---|:---|:---|
 | **Spatial Distance** | `dist_ind_m` (F32) | Distance in meters to nearest OSM Industrial Boundary. |
-|                      | `in_facility` (0/1)| 1 if centroid is strictly inside an industrial polygon.|
-|                      | `facility_type_enc`| One-hot encoded category (Refinery, Steel, Power, etc.)|
-+----------------------+--------------------+--------------------------------------------------------+
-| **Radiometric**      | `peak_frp_mw` (F32)| Maximum single-observation Fire Radiative Power (MW).  |
-|                      | `frp_density` (F32)| Total FRP divided by cluster bounding area (MW/Ha).    |
-|                      | `max_tb_k` (F32)   | Maximum channel 21/I-4 Brightness Temperature (K).     |
-|                      | `delta_tb_k` (F32) | Max Brightness Temp minus Background Temp (K).         |
-+----------------------+--------------------+--------------------------------------------------------+
-| **Temporal & Cycle** | `duration_h` (F32) | Total elapsed hours between first and last detection.  |
-|                      | `night_ratio` (F32)| Fraction of detections captured during night passes.   |
-|                      | `obs_count` (I32)  | Total number of satellite sensor hits in cluster.      |
-+----------------------+--------------------+--------------------------------------------------------+
-| **Historical Pers.** | `hist_30d_hits`    | Number of historical detections within 500m past 30d.  |
-|                      | `hist_365d_freq`   | Number of active thermal days at site past 365 days.   |
-+----------------------+--------------------+--------------------------------------------------------+
-| **Land-Cover Mask**  | `lc_crop_pct`      | Percentage of cluster area intersecting Cropland mask. |
-|                      | `lc_forest_pct`    | Percentage of cluster area intersecting Forest mask.   |
-|                      | `lc_urban_pct`     | Percentage of cluster area intersecting Urban mask.    |
-+----------------------+--------------------+--------------------------------------------------------+
-```
+| | `in_facility` (0/1)| 1 if centroid is strictly inside an industrial polygon.|
+| | `facility_type_enc`| One-hot encoded category (Refinery, Steel, Power, etc.)|
+| **Radiometric** | `peak_frp_mw` (F32)| Maximum single-observation Fire Radiative Power (MW). |
+| | `frp_density` (F32)| Total FRP divided by cluster bounding area (MW/Ha). |
+| | `max_tb_k` (F32) | Maximum channel 21/I-4 Brightness Temperature (K). |
+| | `delta_tb_k` (F32) | Max Brightness Temp minus Background Temp (K). |
+| **Temporal & Cycle** | `duration_h` (F32) | Total elapsed hours between first and last detection. |
+| | `night_ratio` (F32)| Fraction of detections captured during night passes. |
+| | `obs_count` (I32) | Total number of satellite sensor hits in cluster. |
+| **Historical Pers.** | `hist_30d_hits` | Number of historical detections within 500m past 30d. |
+| | `hist_365d_freq` | Number of active thermal days at site past 365 days. |
+| **Land-Cover Mask** | `lc_crop_pct` | Percentage of cluster area intersecting Cropland mask. |
+| | `lc_forest_pct` | Percentage of cluster area intersecting Forest mask. |
+| | `lc_urban_pct` | Percentage of cluster area intersecting Urban mask. |
 
 ### 7.1 Multi-Class Classification Schema
 The classifier targets 6 mutually exclusive classes:
@@ -422,18 +414,14 @@ When active event `E` occurs within the spatial perimeter of facility `F`:
 Z_score = (Peak_FRP_event - mean_FRP_facility) / max(std_FRP_facility, 2.0)
 ```
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                      ANOMALY SEVERITY TIERS                                        |
-+---------------------+-------------------------------+----------------------------------------------+
-| Anomaly Tier        | Z-Score Range                 | System Reaction & Notification Trigger       |
-+---------------------+-------------------------------+----------------------------------------------+
-| **NORMAL**          | `Z < 1.5`                     | Logged as routine operational flaring.       |
-| **ELEVATED**        | `1.5 <= Z < 2.5`             | Highlighted in GIS; added to weekly report.  |
-| **ABNORMAL**        | `2.5 <= Z < 4.0`             | High-priority badge; Thermo News generated.  |
-| **CRITICAL**        | `Z >= 4.0` or `Δ A>300\%`| Emergency toast + Web Push + Audio alert.     |
-+---------------------+-------------------------------+----------------------------------------------+
-```
+### ANOMALY SEVERITY TIERS
+
+| Anomaly Tier | Z-Score Range | System Reaction & Notification Trigger |
+|:---|:---|:---|
+| **NORMAL** | `Z < 1.5` | Logged as routine operational flaring. |
+| **ELEVATED** | `1.5 <= Z < 2.5` | Highlighted in GIS; added to weekly report. |
+| **ABNORMAL** | `2.5 <= Z < 4.0` | High-priority badge; Thermo News generated. |
+| **CRITICAL** | `Z >= 4.0` or `Δ A>300\%`| Emergency toast + Web Push + Audio alert. |
 
 ---
 
@@ -533,39 +521,19 @@ STRICT OPERATIONAL DIRECTIVES:
 
 ## 13. RESTful API Specifications
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           REST API ENDPOINT CONTRACTS                                          |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| Category            | Method & Path                           | Request Body / Params & Response Summary       |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **GIS Layer**       | `GET /api/v1/gis/events`                | Params: `bbox, zoom, time_range, severity`     |
-|                     |                                         | Response: GeoJSON FeatureCollection of events. |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Event Details**   | `GET /api/v1/events/{event_id}`         | Response: Full telemetry, classification,      |
-|                     |                                         | baseline delta, associated facility & timeline.|
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Earlier vs Now**  | `GET /api/v1/events/{event_id}/history` | Response: Chronological multi-pass FRP deltas  |
-|                     |                                         | and sensor footprints.                         |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Facilities**      | `GET /api/v1/facilities`                | Params: `sector, state, bbox`                  |
-|                     |                                         | Response: Facility polygons & baseline FRPs.   |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Thermo News**     | `GET /api/v1/news`                      | Params: `limit, page, priority`                |
-|                     |                                         | Response: List of tactical news bulletins.     |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Realtime Stream** | `GET /api/v1/stream/news`               | Protocol: Server-Sent Events (SSE) stream.     |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Conversational**  | `POST /api/v1/chat/query`               | Body: `{ "query": "..." }`                     |
-|                     |                                         | Response: `{ "answer": "...", "events": [] }`  |
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Report Export**   | `POST /api/v1/reports/generate`         | Body: `{ "event_id": "...", "sections": [] }`  |
-|                     |                                         | Response: `{ "report_url": "...", "id": "..."}`|
-+---------------------+-----------------------------------------+------------------------------------------------+
-| **Ingestion Trigger**| `POST /api/v1/admin/ingest/trigger`    | Headers: `X-Admin-Key`                         |
-|                     |                                         | Response: `{ "ingested_count": 142 }`          |
-+---------------------+-----------------------------------------+------------------------------------------------+
-```
+### REST API ENDPOINT CONTRACTS
+
+| Category | Method & Path | Request Body / Params & Response Summary |
+|:---|:---|:---|
+| **GIS Layer** | `GET /api/v1/gis/events` | Params: `bbox, zoom, time_range, severity`<br>Response: GeoJSON FeatureCollection of events. |
+| **Event Details** | `GET /api/v1/events/{event_id}` | Response: Full telemetry, classification, baseline delta, associated facility & timeline.|
+| **Earlier vs Now** | `GET /api/v1/events/{event_id}/history` | Response: Chronological multi-pass FRP deltas and sensor footprints. |
+| **Facilities** | `GET /api/v1/facilities` | Params: `sector, state, bbox`<br>Response: Facility polygons & baseline FRPs. |
+| **Thermo News** | `GET /api/v1/news` | Params: `limit, page, priority`<br>Response: List of tactical news bulletins. |
+| **Realtime Stream** | `GET /api/v1/stream/news` | Protocol: Server-Sent Events (SSE) stream. |
+| **Conversational** | `POST /api/v1/chat/query` | Body: `{ "query": "..." }`<br>Response: `{ "answer": "...", "events": [] }` |
+| **Report Export** | `POST /api/v1/reports/generate` | Body: `{ "event_id": "...", "sections": [] }`<br>Response: `{ "report_url": "...", "id": "..."}`|
+| **Ingestion Trigger**| `POST /api/v1/admin/ingest/trigger` | Headers: `X-Admin-Key`<br>Response: `{ "ingested_count": 142 }` |
 
 ---
 
@@ -600,26 +568,14 @@ STRICT OPERATIONAL DIRECTIVES:
 
 ## 15. Testing & Quality Assurance Framework
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                      TESTING PYRAMID HIERARCHY                                     |
-+---------------------+-------------------------+----------------------------------------------------+
-| Test Layer          | Framework & Tools       | Target Scope & Coverage Requirements               |
-+---------------------+-------------------------+----------------------------------------------------+
-| **Unit Tests**      | `pytest`, `pytest-cov`  | ST-DBSCAN clustering logic, Haversine calculators, |
-|                     |                         | Z-score formulas, FIRMS deduplication hash (`>90\%`).|
-+---------------------+-------------------------+----------------------------------------------------+
-| **Integration Tests**| `pytest-asyncio`, `httpx`| PostGIS spatial queries, FastAPI REST endpoints,   |
-|                     | `testcontainers-postgres`| Redis task queuing, Celery worker task execution.  |
-+---------------------+-------------------------+----------------------------------------------------+
-| **ML Model Tests**  | `pytest`, `scikit-learn`| Feature vector consistency, zero-NaN verification,  |
-|                     |                         | inference latency benchmark (`<25ms`).       |
-+---------------------+-------------------------+----------------------------------------------------+
-| **E2E Browser Tests**| `Playwright`            | End-to-end user flows: Page load -> GIS |
-|                     |                         | zoom -> event selection ->   |
-|                     |                         | earlier vs now slider -> PDF export.    |
-+---------------------+-------------------------+----------------------------------------------------+
-```
+### TESTING PYRAMID HIERARCHY
+
+| Test Layer | Framework & Tools | Target Scope & Coverage Requirements |
+|:---|:---|:---|
+| **Unit Tests** | `pytest`, `pytest-cov` | ST-DBSCAN clustering logic, Haversine calculators, Z-score formulas, FIRMS deduplication hash (`>90\%`).|
+| **Integration Tests**| `pytest-asyncio`, `httpx`<br>`testcontainers-postgres`| PostGIS spatial queries, FastAPI REST endpoints, Redis task queuing, Celery worker task execution. |
+| **ML Model Tests** | `pytest`, `scikit-learn`| Feature vector consistency, zero-NaN verification, inference latency benchmark (`<25ms`). |
+| **E2E Browser Tests**| `Playwright` | End-to-end user flows: Page load -> GIS zoom -> event selection -> earlier vs now slider -> PDF export. |
 
 ---
 

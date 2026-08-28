@@ -130,18 +130,15 @@ The system explicitly separates two foundational analytical questions:
 
 ## 7. Product Scope & Functional Breakdown
 
-```
-+-------------------------------------------------------------------------------------------------------------+
-|                                        THERMO INTELLIGENCE CAPABILITIES                                     |
-+------------------------------------+-----------------------------------+------------------------------------+
+### THERMO INTELLIGENCE CAPABILITIES
+
 | 1. CORE GIS COMMAND CENTER         | 2. ANALYTICS & PERSISTENCE        | 3. COMMUNICATIONS & REPORTING      |
+|:---|:---|:---|
 | - Dark Multi-Basemap GIS           | - Spatio-Temporal Clustering      | - Live Thermo News Bulletin Feed   |
 | - Layer Controller (5 layers)      | - Contextual ML Classifier (6 cl) | - Multi-Tier Notification Drawer   |
 | - Dynamic Level-of-Detail (LOD)    | - Facility Baseline Engine        | - Grounded Conversational RAG Chat |
 | - Bounding Box & Polygon Selection | - FRP Z-Score Surge Detector      | - Tactical PDF Dossier Generator   |
 | - Time Scrubbing (6h/24h/7d/30d)   | - Earlier vs Now Visual Slider    | - CSV/GeoJSON Intelligence Export  |
-+------------------------------------+-----------------------------------+------------------------------------+
-```
 
 ---
 
@@ -290,16 +287,13 @@ When a new event occurs inside the facility boundary:
 Z-Score = (FRP_observed - mean_FRP) / std_FRP
 ```
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    ANOMALY SEVERITY TIERS                                          |
-|                                                                                                    |
+### ANOMALY SEVERITY TIERS
+
 |  [ Z < 1.5 ]       --->  NORMAL      (Routine operational flaring / permitted thermal activity)    |
+|:---|
 |  [ 1.5 <= Z < 2.5] --->  ELEVATED    (Increased flaring / process venting; flagged for monitoring) |
 |  [ 2.5 <= Z < 4.0] --->  ABNORMAL    (Significant thermal deviation / potential minor incident)    |
 |  [ Z >= 4.0 ]      --->  CRITICAL    (Severe emergency / explosion / uncontrolled structural fire) |
-+----------------------------------------------------------------------------------------------------+
-```
 
 ---
 
@@ -470,24 +464,18 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 
 ### 20.2 Responsive Device Adaptations
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    RESPONSIVE LAYOUT MATRIX                                        |
-+---------------------+-----------------------------------+------------------------------------------+
+### RESPONSIVE LAYOUT MATRIX
+
 | Device Type         | Screen Width                      | Layout Configuration                     |
-+---------------------+-----------------------------------+------------------------------------------+
+|:---|:---|:---|
 | **Desktop / Widescreen** | `>= 1200px`          | Fullscreen GIS with persistent Top Bar,  |
 |                     |                                   | collapsible Left Filter/News Sidebar,    |
 |                     |                                   | and slide-in Right Investigation Drawer. |
-+---------------------+-----------------------------------+------------------------------------------+
 | **Tablet / Laptop** | `768px - 1199px`    | Fullscreen GIS with overlay toggle       |
 |                     |                                   | drawers and bottom quick-stats bar.      |
-+---------------------+-----------------------------------+------------------------------------------+
 | **Mobile**          | `< 768px`                  | Bottom Navigation Bar (Map, News, Chat,  |
 |                     |                                   | Alerts), Swipeable Bottom Sheet Drawer   |
 |                     |                                   | for Event Investigation & Filters.       |
-+---------------------+-----------------------------------+------------------------------------------+
-```
 
 ### 20.3 First-Open Onboarding Experience
 - Fast, non-intrusive 30-second interactive intro modal for first-time visitors:

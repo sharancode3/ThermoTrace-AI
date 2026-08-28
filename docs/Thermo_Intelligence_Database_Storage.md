@@ -27,34 +27,24 @@ This Database & Storage Requirements Document defines **what data the system sto
 
 ## 2. Storage Domains & Data Categorization
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           STORAGE DOMAIN TAXONOMY                                              |
-+----------------------+--------------------------+------------------------------+-------------------------------+
+### STORAGE DOMAIN TAXONOMY
+
 | Storage Domain       | Description              | Primary Target Storage       | Retention / Lifecycle Policy  |
-+----------------------+--------------------------+------------------------------+-------------------------------+
+|:---|:---|:---|:---|
 | **Domain A: Telemetry**| Raw & Normalized FIRMS   | PostgreSQL (`thermal_obs`)   | Permanent / Read-Only Archive |
 |                      | VIIRS / MODIS records    | PostGIS Point geometries     | (Immutable Ground Truth)      |
-+----------------------+--------------------------+------------------------------+-------------------------------+
 | **Domain B: Events** | Grouped thermal clusters | PostgreSQL (`thermal_events`)| Indefinite (Active, Cooling,  |
 |                      | & Spatio-temporal hulls  | PostGIS Polygons / Centroids | Resolved Lifecycles)          |
-+----------------------+--------------------------+------------------------------+-------------------------------+
 | **Domain C: Spatial**| Industrial boundaries,   | PostgreSQL (PostGIS vectors) | Static / Monthly OSM Sync     |
 |                      | LULC masks, admin zones  | MVT Vector Tile Cache        | Versioned Spatial Registry    |
-+----------------------+--------------------------+------------------------------+-------------------------------+
 | **Domain D: ML / AI**| Feature vectors, model   | PostgreSQL (`event_class`,   | Historical Record per Model   |
 |                      | probabilities, baselines | `event_anomalies`, pgvector) | Version (Auditable)           |
-+----------------------+--------------------------+------------------------------+-------------------------------+
 | **Domain E: Reports**| Tactical PDF dossiers &  | Object Storage (MinIO / S3)  | 1-Year Retention; Stored with |
 |                      | Satellite imagery crops  | DB Metadata (`reports`)      | SHA-256 Checksum              |
-+----------------------+--------------------------+------------------------------+-------------------------------+
 | **Domain F: Comms**  | Thermo News bulletins &  | PostgreSQL (`news_items`,    | 90-Day Active History;        |
 |                      | In-app notification logs | `notifications`)             | Auto-Archive Expired Items    |
-+----------------------+--------------------------+------------------------------+-------------------------------+
 | **Domain G: State**  | Viewport bbox caches,    | Redis 7 In-Memory            | Ephemeral (TTL: 60s – 24h)    |
 |                      | Task queues, locks       | Celery Broker                | Non-Persistent                |
-+----------------------+--------------------------+------------------------------+-------------------------------+
-```
 
 ---
 
@@ -376,26 +366,19 @@ CREATE INDEX idx_ingestion_exec ON ingestion_jobs(executed_at DESC);
 
 ## 5. Raw vs. Derived vs. User Data Boundaries
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           DATA BOUNDARY MATRIX                                                 |
-+---------------------+-------------------------------+---------------------------------+------------------------+
+### DATA BOUNDARY MATRIX
+
 | Classification      | Data Entities                 | Authoritative Source            | Mutability Rule        |
-+---------------------+-------------------------------+---------------------------------+------------------------+
+|:---|:---|:---|:---|
 | **Raw Telemetry**   | `thermal_observations`        | NASA FIRMS Satellites           | **100% Immutable**     |
 |                     | (Coordinates, FRP, Tb, Time)  | (NOAA-20, S-NPP, MODIS)         | Append-Only.           |
-+---------------------+-------------------------------+---------------------------------+------------------------+
 | **External GIS**    | `industrial_facilities`,      | OpenStreetMap, Global Energy    | Versioned Periodic     |
 |                     | `land_cover_zones`            | Monitor, ESA WorldCover         | Ingestion Updates.     |
-+---------------------+-------------------------------+---------------------------------+------------------------+
 | **Derived Analytics**| `thermal_events`,             | Spatio-Temporal Clusterer,      | Re-computed upon new   |
 |                     | `event_classifications`,      | XGBoost Model (`v1.0.0`),       | satellite pass or      |
 |                     | `event_anomalies`             | Facility Baseline Engine        | baseline recalibration.|
-+---------------------+-------------------------------+---------------------------------+------------------------+
 | **User Generated**  | `users`, `user_watchlists`,   | Tactical Analysts, Emergency    | Read/Write by User;    |
 |                     | `reports`, `notifications`    | Coordinators                    | Cascade on User Delete.|
-+---------------------+-------------------------------+---------------------------------+------------------------+
-```
 
 ---
 

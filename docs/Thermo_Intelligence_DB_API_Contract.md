@@ -35,12 +35,10 @@ This document constitutes the **immutable development contract** across all syst
 
 ## 2. Authoritative Data Ownership Matrix
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           DATA OWNERSHIP & MUTABILITY MATRIX                                   |
-+----------------------+--------------------------+-----------------------+--------------------------------------+
+### DATA OWNERSHIP & MUTABILITY MATRIX
+
 | Data Domain          | Authoritative Owner      | Primary Ingestion     | Mutability & Lifecycle Rules         |
-+----------------------+--------------------------+-----------------------+--------------------------------------+
+|:---|:---|:---|:---|
 | **Raw Telemetry**    | Ingestion Engine         | NASA FIRMS API        | **100% Immutable** (Append-Only)     |
 | **Facility Registry**| Spatial Data Pipeline    | OSM / GEM / Govt GIS  | Periodic Upsert / Versioned Master   |
 | **Thermal Events**   | ST-DBSCAN Clusterer      | Derived Spatial Logic | Mutable (Active → Cooling → Resolved)|
@@ -49,8 +47,6 @@ This document constitutes the **immutable development contract** across all syst
 | **Thermo News Feed** | News Dispatcher Service  | Triggered on Anomaly  | Mutable Headline & Metrics           |
 | **Notifications**    | Alert Dispatcher Service | Escalation Engine     | Mutable Delivery / Read State        |
 | **Tactical Reports** | Report Generator         | Event Snapshot + LLM  | **100% Immutable** PDF Snapshot      |
-+----------------------+--------------------------+-----------------------+--------------------------------------+
-```
 
 ---
 
@@ -442,12 +438,10 @@ CREATE INDEX idx_ingestion_executed ON ingestion_jobs(executed_at DESC);
 
 ### 5.2 Canonical Error Codes & HTTP Status Codes
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                      CANONICAL ERROR CODE TAXONOMY                                 |
-+---------------------+-------------------+----------------------------------------------------------+
+### CANONICAL ERROR CODE TAXONOMY
+
 | HTTP Status Code    | Error Code        | Condition & Trigger Scenario                             |
-+---------------------+-------------------+----------------------------------------------------------+
+|:---|:---|:---|
 | `400 Bad Request`   | `INVALID_PARAM`   | Malformed bounding box string or invalid coordinate value|
 | `401 Unauthorized`  | `AUTH_REQUIRED`   | Missing or expired Bearer JWT access token               |
 | `403 Forbidden`     | `ROLE_FORBIDDEN`  | Analyst attempting administrative trigger actions        |
@@ -457,8 +451,6 @@ CREATE INDEX idx_ingestion_executed ON ingestion_jobs(executed_at DESC);
 | `429 Too Many Req`  | `RATE_LIMITED`    | Ingestion trigger or query rate limit exceeded           |
 | `500 Server Error`  | `INTERNAL_ERROR`  | Uncaught backend exception or PostGIS connection failure |
 | `503 Unavailable`   | `FIRMS_UNAVAILABLE`| Upstream NASA FIRMS API unreachable; using cached feed   |
-+---------------------+-------------------+----------------------------------------------------------+
-```
 
 ---
 
@@ -947,12 +939,10 @@ Protected administrative trigger to force an incremental NASA FIRMS satellite in
 
 ## 7. Machine Learning & Backend Feature Interface Contract
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    14-DIMENSIONAL ML FEATURE VECTOR                                |
-+---------------------+---------------+--------------------------------------------------------------+
+### 14-DIMENSIONAL ML FEATURE VECTOR
+
 | Feature Key         | Type          | Definition & Engineering Source                              |
-+---------------------+---------------+--------------------------------------------------------------+
+|:---|:---|:---|
 | `dist_ind_m`        | `float32`     | Distance to nearest OSM industrial boundary in meters        |
 | `in_facility`       | `int32 (0/1)` | 1 if centroid is strictly inside an industrial polygon       |
 | `facility_type_enc` | `int32 (0..7)`| One-hot integer encoding of sector category                  |
@@ -967,8 +957,6 @@ Protected administrative trigger to force an incremental NASA FIRMS satellite in
 | `hist_365d_freq`    | `int32`       | Number of active thermal days at site past 365 days          |
 | `lc_crop_pct`       | `float32`     | Percentage of cluster area intersecting Cropland mask (`0..1`)|
 | `lc_forest_pct`     | `float32`     | Percentage of cluster area intersecting Forest mask (`0..1`) |
-+---------------------+---------------+--------------------------------------------------------------+
-```
 
 ### 7.1 XGBoost Prediction Object Output Contract
 ```python
@@ -997,12 +985,10 @@ Protected administrative trigger to force an incremental NASA FIRMS satellite in
 
 ## 8. Complete System Integration & Acceptance Matrix
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                      FULL-STACK COMPONENT INTEGRATION MATRIX                                   |
-+---------------------+-----------------------------+---------------------------+--------------------------------+
+### FULL-STACK COMPONENT INTEGRATION MATRIX
+
 | Product Feature     | PostGIS Entity Sources      | REST API Endpoint         | Primary Frontend Consumer UI   |
-+---------------------+-----------------------------+---------------------------+--------------------------------+
+|:---|:---|:---|:---|
 | **GIS Map Canvas**  | `thermal_events`            | `GET /api/v1/gis/events`  | MapLibre GL JS WebGL Layer     |
 | **Facility Overlay**| `industrial_facilities`     | `GET /api/v1/gis/facils`  | MapLibre Polygon Layer         |
 | **Investigation**   | `events` + `class` + `anom` | `GET /api/v1/events/{id}` | 4-Tab Slide-Out Drawer         |
@@ -1012,8 +998,6 @@ Protected administrative trigger to force an incremental NASA FIRMS satellite in
 | **Universal Search**| `facilities`, `events`      | `GET /api/v1/search`      | Top Omnibox Autocomplete       |
 | **AI RAG Assistant**| `events` + `pgvector`       | `POST /api/v1/chat/query` | Analytical Terminal Drawer     |
 | **Tactical Report** | `reports` + `events` (S3)   | `POST /api/v1/reports/...`| Print Preview & PDF Modal      |
-+---------------------+-----------------------------+---------------------------+--------------------------------+
-```
 
 ---
 

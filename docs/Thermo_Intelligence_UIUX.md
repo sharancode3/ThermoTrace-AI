@@ -29,28 +29,20 @@ The design philosophy follows six non-negotiable operational principles:
 
 ## 2. Absolute Visual Restrictions (Anti-Patterns Prohibited)
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    PROHIBITED DESIGN PATTERNS                                      |
-+------------------------------------+---------------------------------------------------------------+
+### PROHIBITED DESIGN PATTERNS
+
 | Prohibited Pattern                 | Design Rationale & Required Alternative                       |
-+------------------------------------+---------------------------------------------------------------+
+|:---|:---|
 | **Neon / Hyper-Glow Colors**       | Causes visual fatigue and looks like gaming software.         |
 | (e.g., `#00FFCC`, `#FF00FF`)       | Use calibrated, matte semantic tones (e.g., Crimson `#DC2626`).|
-+------------------------------------+---------------------------------------------------------------+
 | **Generic AI & Sparkle Tropes**    | Erodes user trust and credibility with defense evaluators.   |
 | (Robots, wands, brain SVGs)        | Use minimal, technical Lucide iconography (Terminal, Search). |
-+------------------------------------+---------------------------------------------------------------+
 | **Excessive Glassmorphism**        | Blurs text contrast over satellite imagery.                  |
 | (High blur, frosted cards)         | Use solid, high-contrast surfaces (`#111827`, `#1F2937`).    |
-+------------------------------------+---------------------------------------------------------------+
 | **Hyper-Rounded Cards (>16px)**    | Consumes valuable screen space on GIS viewports.             |
 |                                    | Enforce subtle, crisp radii (4px – 8px max).                  |
-+------------------------------------+---------------------------------------------------------------+
 | **Constant Floating Animations**   | Distracts analysts from identifying real-world thermal spikes.|
 | (Pulsing blobs, particle meshes)   | Restrain animation to subtle micro-state transitions (<150ms).|
-+------------------------------------+---------------------------------------------------------------+
-```
 
 ---
 
@@ -58,12 +50,10 @@ The design philosophy follows six non-negotiable operational principles:
 
 ### 3.1 Color System (Dual Theme: Dark Aerospace & Clean Light)
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           DESIGN COLOR TOKEN MATRIX                                            |
-+----------------------+--------------------------+---------------------------+----------------------------------+
+### DESIGN COLOR TOKEN MATRIX
+
 | Token Name           | Dark Mode (Default)      | Light Mode (Operations)   | Semantic Role / Usage            |
-+----------------------+--------------------------+---------------------------+----------------------------------+
+|:---|:---|:---|:---|
 | `bg-app`             | `#0B0F17` (Deep Obsidian)| `#F8FAFC` (Slate Cool)    | Root application background      |
 | `bg-surface`         | `#111827` (Carbon Gray)  | `#FFFFFF` (Pure White)    | Navigation sidebar, card panels  |
 | `bg-surface-elevated`| `#1F2937` (Graphite)     | `#F1F5F9` (Subtle Gray)   | Dropdowns, modals, hover states  |
@@ -72,27 +62,22 @@ The design philosophy follows six non-negotiable operational principles:
 | `text-primary`       | `#F8FAFC` (Crisp Slate)  | `#0F172A` (Ink Dark)      | Headings, primary metrics        |
 | `text-secondary`     | `#94A3B8` (Medium Slate) | `#475569` (Charcoal)      | Labels, subheadings, metadata    |
 | `text-muted`         | `#64748B` (Muted Slate)  | `#94A3B8` (Cool Muted)    | Timestamps, disabled captions    |
-+----------------------+--------------------------+---------------------------+----------------------------------+
 | `status-critical`    | `#DC2626` (Matte Crimson)| `#B91C1C` (Deep Crimson)  | Accidental Industrial Fire, Z>4σ |
 | `status-warning`     | `#D97706` (Amber Orange) | `#B45309` (Deep Amber)    | Elevated Anomaly, Unclassified   |
 | `status-persistent`  | `#0284C7` (Sky Steel)    | `#0369A1` (Ocean Steel)   | Routine Industrial Flare / Kiln  |
 | `status-vegetation`  | `#16A34A` (Forest Green) | `#15803D` (Deep Green)    | Wildfire / Forest Fire           |
 | `status-agri`        | `#CA8A04` (Harvest Gold) | `#A16207` (Ochre Gold)    | Agricultural Stubble Burning     |
 | `status-normal`      | `#059669` (Emerald)      | `#047857` (Deep Emerald)  | Compliant Baseline, Resolved     |
-+----------------------+--------------------------+---------------------------+----------------------------------+
-```
 
 ### 3.2 Typography Hierarchy
 - **Font Families:**
   - **Primary UI & Headings:** `Inter`, `-apple-system`, `BlinkMacSystemFont`, `sans-serif` (Optimal readability at small sizes).
   - **Telemetry & Numerics:** `JetBrains Mono`, `ui-monospace`, `monospace` (Tabular numbers for coordinates, timestamps, and FRP).
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           TYPOGRAPHIC SPECIFICATIONS                                           |
-+----------------------+-------------------+---------------+---------------+-------------------------------------+
+### TYPOGRAPHIC SPECIFICATIONS
+
 | Style Level          | Font Size / Line  | Weight        | Tracking      | Typical Application                 |
-+----------------------+-------------------+---------------+---------------+-------------------------------------+
+|:---|:---|:---|:---|:---|
 | **Display Title**    | `24px` / `32px`   | Bold (700)    | `-0.02em`     | Landing Title, PDF Header           |
 | **Page Heading**     | `18px` / `24px`   | SemiBold (600)| `-0.01em`     | Top Bar Title, Section Names        |
 | **Section Heading**  | `14px` / `20px`   | SemiBold (600)| `0.0em`       | Drawer Tabs, Card Headers           |
@@ -101,8 +86,6 @@ The design philosophy follows six non-negotiable operational principles:
 | **Badge / Caption**  | `11px` / `14px`   | Medium (500)  | `+0.02em`     | Status badges, coordinate tags      |
 | **Data Metric Large**| `20px` / `26px`   | Bold (700)    | Monospace     | Peak FRP (`450 MW`), Max Temp (`482K`)|
 | **Data Metric Small**| `12px` / `16px`   | Medium (500)  | Monospace     | Lat/Lon (`22.4712°N, 70.0631°E`)    |
-+----------------------+-------------------+---------------+---------------+-------------------------------------+
-```
 
 ### 3.3 Spacing, Radii, Borders & Shadows
 - **Base Grid:** Strict 4px modular grid (`4px`, `8px`, `12px`, `16px`, `20px`, `24px`, `32px`).
@@ -178,20 +161,16 @@ graph TD
 ### 5.1 Map Event Visualization Language
 Markers avoid generic circular pins. They use a precise geometric symbology:
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    EVENT CARTOGRAPHY SYMBOLOGY                                     |
-+---------------------+-------------------+-----------------+----------------------------------------+
+### EVENT CARTOGRAPHY SYMBOLOGY
+
 | Classification      | Geometric Marker  | Fill Color      | Border / Stroke                        |
-+---------------------+-------------------+-----------------+----------------------------------------+
+|:---|:---|:---|:---|
 | **Industrial Fire** | Hexagon with core | `#DC2626` (Red) | 2px solid `#FFFFFF`, subtle ping ring  |
 | **Industrial Flare**| Solid Circle (8px)| `#0284C7` (Sky) | 1.5px solid `#0B0F17`                  |
 | **Routine High-Temp**| Diamond (10px)   | `#475569` (Dark)| 1.5px solid `#94A3B8`                  |
 | **Wildfire**        | Triangle (9px)    | `#16A34A` (Grn) | 1.5px solid `#0B0F17`                  |
 | **Agricultural**    | Square (7px)      | `#CA8A04` (Gold)| 1px solid `#0B0F17`                    |
 | **Uncertain**       | Circle (Dotted)   | `#D97706` (Amb) | 1.5px dashed `#F8FAFC`                 |
-+---------------------+-------------------+-----------------+----------------------------------------+
-```
 
 ### 5.2 Dynamic Clustering Display
 - **Zoom 1–6 (Macro National Clusters):** Solid circular badge with dark background, crisp border, and white tabular count: `14 (2 Critical)`.
@@ -310,25 +289,18 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 
 ## 7. Responsive Design & Touch Ergonomics
 
-```
-+----------------------------------------------------------------------------------------------------------------+
-|                                           RESPONSIVE ADAPTATION MATRIX                                         |
-+---------------------+-------------------+---------------------+------------------------------------------------+
+### RESPONSIVE ADAPTATION MATRIX
+
 | Screen Breakpoint   | Viewport Width    | Navigation Layout   | Map & Panel Behavior                           |
-+---------------------+-------------------+---------------------+------------------------------------------------+
+|:---|:---|:---|:---|
 | **Desktop Wide**    | `>= 1440px`| Persistent Sidebar  | Map takes 70% width; Investigation drawer      |
 |                     |                   | (200px Expanded)    | open persistently on right (380px).            |
-+---------------------+-------------------+---------------------+------------------------------------------------+
 | **Standard Laptop** | `1024px - 1439px`| Icon Sidebar  | Map takes full width; Investigation drawer     |
 |                     |                   | (64px Collapsed)    | slides over map with backdrop dimming.         |
-+---------------------+-------------------+---------------------+------------------------------------------------+
 | **Tablet**          | `768px - 1023px` | Icon Sidebar  | Map takes full width; Investigation drawer     |
 |                     |                   | (64px)              | opens as 450px side sheet from right.          |
-+---------------------+-------------------+---------------------+------------------------------------------------+
 | **Mobile**          | `< 768px`  | Bottom Navigation   | Map takes 100% viewport; Investigation drawer  |
 |                     |                   | Bar (60px Fixed)    | operates as a swipeable bottom sheet drawer.   |
-+---------------------+-------------------+---------------------+------------------------------------------------+
-```
 
 ### 7.1 Mobile Touch Targets & Usability Constraints
 - **Minimum Touch Target:** `44px × 44px` for all clickable buttons, map controls, and filter chips.
@@ -348,25 +320,18 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 
 ## 9. Loading, Empty & Error UI States
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                      STATE TREATMENT STANDARDS                                     |
-+----------------------+-----------------------------------------------------------------------------+
+### STATE TREATMENT STANDARDS
+
 | State Type           | Visual Specification & User Feedback                                        |
-+----------------------+-----------------------------------------------------------------------------+
+|:---|:---|
 | **Map Loading**      | Subtle skeleton shimmer on sidebar; minimal top-line progress bar on map.  |
 |                      | No blocking full-screen spinners.                                           |
-+----------------------+-----------------------------------------------------------------------------+
 | **Empty Search**     | Clean slate panel: "No thermal events match the selected filters."          |
 |                      | Action: `[ Reset Filters ]` button with suggested broader search chips.     |
-+----------------------+-----------------------------------------------------------------------------+
 | **Satellite Cloud**  | Explicit amber badge: "Optical pass cloud-obscured; thermal radiometry active"|
 | **Obscuration**      | Vector bounding polygon renders cleanly over high-contrast dark basemap.   |
-+----------------------+-----------------------------------------------------------------------------+
 | **FIRMS Ingestion**  | Amber banner in top bar: "Operating on cached satellite telemetry (2h ago)"|
 | **Delayed**          | Background polling continues automatically without disrupting the session.  |
-+----------------------+-----------------------------------------------------------------------------+
-```
 
 ---
 

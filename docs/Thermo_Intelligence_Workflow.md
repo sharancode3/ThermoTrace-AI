@@ -418,28 +418,15 @@ sequenceDiagram
 
 ## 19. Failure & Graceful Degradation Workflows
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    DEGRADED MODE BEHAVIOR MATRIX                                   |
-+--------------------------+----------------------------------+--------------------------------------+
-| Subsystem Failure        | Fallback Behavior                | User-Facing UI Status Indicator      |
-+--------------------------+----------------------------------+--------------------------------------+
-| **NASA FIRMS Offline**   | Serve cached NRT & historical    | Amber Top Banner: "Operating on      |
-|                          | database records seamlessly.     | Cached Satellite Feed (Updated 2h ago)|
-+--------------------------+----------------------------------+--------------------------------------+
-| **ML Inference Service** | Fall back to heuristic rule      | Badge: "Heuristic Classification —   |
-|                          | engine based on OSM proximity.   | Model Re-evaluating"                 |
-+--------------------------+----------------------------------+--------------------------------------+
-| **LLM Provider API Down**| Fall back to template-based SQL  | Structured tabular responses served  |
-|                          | data summaries for chat/reports. | with no disruption to core data.     |
-+--------------------------+----------------------------------+--------------------------------------+
-| **Satellite Imagery**    | Render synthetic thermal vector  | "Optical imagery cloud-obscured;     |
-| **Cloud Obscuration**    | footprint over dark basemap.     | thermal radiometry fully active"     |
-+--------------------------+----------------------------------+--------------------------------------+
-| **Network Loss (Client)**| MapLibre serves cached vector    | Offline banner; auto-reconnects      |
-|                          | tiles via Service Worker cache.  | when connectivity is restored.       |
-+--------------------------+----------------------------------+--------------------------------------+
-```
+### DEGRADED MODE BEHAVIOR MATRIX
+
+| Subsystem Failure | Fallback Behavior | User-Facing UI Status Indicator |
+|:---|:---|:---|
+| **NASA FIRMS Offline** | Serve cached NRT & historical database records seamlessly. | Amber Top Banner: "Operating on Cached Satellite Feed (Updated 2h ago)"|
+| **ML Inference Service** | Fall back to heuristic rule engine based on OSM proximity. | Badge: "Heuristic Classification — Model Re-evaluating" |
+| **LLM Provider API Down**| Fall back to template-based SQL data summaries for chat/reports. | Structured tabular responses served with no disruption to core data. |
+| **Satellite Imagery Cloud Obscuration**| Render synthetic thermal vector footprint over dark basemap. | "Optical imagery cloud-obscured; thermal radiometry fully active" |
+| **Network Loss (Client)**| MapLibre serves cached vector tiles via Service Worker cache. | Offline banner; auto-reconnects when connectivity is restored. |
 
 ---
 
