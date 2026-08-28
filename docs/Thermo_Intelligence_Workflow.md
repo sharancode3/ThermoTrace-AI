@@ -122,7 +122,7 @@ flowchart TD
 
 ---
 
-## 6. Observation $\rightarrow$ Event Formation Workflow (ST-DBSCAN)
+## 6. Observation -> Event Formation Workflow (ST-DBSCAN)
 
 ```
 [ New Normalized Observations Ingested ]
@@ -204,13 +204,13 @@ flowchart LR
 
 1. **Spatial Buffer Query:** System queries `thermal_observations` within a 500m radius of the event centroid across the trailing 12 months.
 2. **Metrics Computation:**
-   - Total Historical Detections ($N_{\text{hits}}$).
-   - Unique Active Days ($D_{\text{active}}$).
-   - Recurrence Frequency ($F_{\text{rec}} = D_{\text{active}} / 365$).
+   - Total Historical Detections (`N_hits`).
+   - Unique Active Days (`D_active`).
+   - Recurrence Frequency (`F_rec = D_active / 365`).
 3. **Persistence State Classification:**
-   - **Transient:** $D_{\text{active}} \le 2$ days and duration $< 24\text{ hours}$ (e.g., farm fires).
-   - **Intermittent:** $3 \le D_{\text{active}} \le 14$ days per year (e.g., seasonal brick kilns, periodic maintenance flaring).
-   - **Persistent:** $D_{\text{active}} > 15$ days per month over $>6\text{ months}$ (e.g., continuous refinery flaring stacks).
+   - **Transient:** `D_active <= 2` days and duration `< 24 hours` (e.g., farm fires).
+   - **Intermittent:** `3 <= D_active <= 14` days per year (e.g., seasonal brick kilns, periodic maintenance flaring).
+   - **Persistent:** `D_active > 15` days per month over `>6 months` (e.g., continuous refinery flaring stacks).
 
 ---
 
@@ -244,11 +244,11 @@ flowchart TD
    - It is newly classified as `IND_FIRE` or `WILDFIRE`.
    - Its anomaly tier reaches `ABNORMAL` or `CRITICAL`.
    - Its persistence status is officially confirmed (`>30 days`).
-2. **Deduplication Check:** Check if a news item already exists for `event_id`. If exists $\rightarrow$ Update headline/metrics rather than creating duplicate entries.
+2. **Deduplication Check:** Check if a news item already exists for `event_id`. If exists -> Update headline/metrics rather than creating duplicate entries.
 3. **Headline & Summary Generation:**
    - Template: `"{SEVERITY}: {EVENT_TYPE} Detected at {FACILITY_NAME / LOCATION}, {STATE}"`
    - Example: *"CRITICAL: Major Thermal Surge (+5.2σ) Detected at Jamnagar Petrochemical Complex, Gujarat"*.
-4. **Broadcast & UI Ingestion:** Insert into `news_items` table $\rightarrow$ Publish payload via Server-Sent Events (SSE) $\rightarrow$ Animate new card at top of frontend news stream.
+4. **Broadcast & UI Ingestion:** Insert into `news_items` table -> Publish payload via Server-Sent Events (SSE) -> Animate new card at top of frontend news stream.
 
 ---
 
@@ -448,15 +448,15 @@ sequenceDiagram
 ### Scenario 1: Accidental Refinery Fire Escalation
 - **T+00m:** VIIRS NOAA-20 night pass detects a 420 MW thermal hotspot at Jamnagar Refinery.
 - **T+02m:** Ingestion worker deduplicates and clusters 6 points into `EVT-IN-GUJ-202608-0042`.
-- **T+03m:** ML Classifier computes $Z = +5.8\sigma$ and assigns `IND_FIRE` (94% confidence).
+- **T+03m:** ML Classifier computes `Z = +5.8σ` and assigns `IND_FIRE` (94% confidence).
 - **T+04m:** Thermo News generates bulletin; in-app audio-visual toast triggers on analyst screen.
-- **T+05m:** Analyst clicks notification $\rightarrow$ Map flies to Jamnagar $\rightarrow$ Timeline shows 700% area surge $\rightarrow$ Analyst exports Tactical PDF report for emergency dispatch.
+- **T+05m:** Analyst clicks notification -> Map flies to Jamnagar -> Timeline shows 700% area surge -> Analyst exports Tactical PDF report for emergency dispatch.
 
 ### Scenario 2: Agricultural Stubble Fire near Captive Power Plant
 - **T+00m:** Afternoon MODIS pass detects dense thermal points in Sangrur, Punjab, 400m from a thermal plant.
 - **T+02m:** Classifier evaluates features: high cropland overlap (92%), transient duration (3h), low FRP (14 MW).
 - **T+03m:** System classifies cluster as `AGRI_BURN` (91% confidence) and labels the captive plant as `IND_ROUTINE`.
-- **T+04m:** Analyst toggles `Industrial Only` filter $\rightarrow$ Agricultural points fade out, preventing false alarms.
+- **T+04m:** Analyst toggles `Industrial Only` filter -> Agricultural points fade out, preventing false alarms.
 
 ---
 
@@ -492,11 +492,11 @@ stateDiagram-v2
 ## 22. Time & Data Freshness Taxonomy
 
 To eliminate temporal confusion, the system strictly separates and exposes 5 distinct timestamps:
-1. **Observation Time ($T_{\text{obs}}$):** Exact UTC instant the satellite sensor scanned the ground pixel.
-2. **Ingestion Time ($T_{\text{ingest}}$):** Time the FIRMS CSV was downloaded and parsed into PostGIS.
-3. **Processing Time ($T_{\text{process}}$):** Time ML classification and anomaly scoring completed.
-4. **Publication Time ($T_{\text{pub}}$):** Time the event was broadcasted to Thermo News and GIS layers.
-5. **Viewing Time ($T_{\text{view}}$):** Current local time of the user's browser session.
+1. **Observation Time (`T_obs`):** Exact UTC instant the satellite sensor scanned the ground pixel.
+2. **Ingestion Time (`T_ingest`):** Time the FIRMS CSV was downloaded and parsed into PostGIS.
+3. **Processing Time (`T_process`):** Time ML classification and anomaly scoring completed.
+4. **Publication Time (`T_pub`):** Time the event was broadcasted to Thermo News and GIS layers.
+5. **Viewing Time (`T_view`):** Current local time of the user's browser session.
 
 ---
 
@@ -506,10 +506,10 @@ To eliminate temporal confusion, the system strictly separates and exposes 5 dis
 | :--- | :--- | :--- |
 | **WAC-1: First-Time User** | Open app with cleared browser cache. | Onboarding modal appears; dismissing it opens the India GIS overview cleanly. |
 | **WAC-2: Ingestion & Cluster** | Push 10 raw FIRMS points within 500m. | Exactly 1 cohesive `thermal_event` entity created with calculated convex hull geometry. |
-| **WAC-3: Baseline Escalation** | Ingest event with FRP $= 5.0\times$ facility mean. | System transitions status to `CRITICAL`, creates news bulletin, and fires alert toast. |
+| **WAC-3: Baseline Escalation** | Ingest event with FRP `= 5.0x` facility mean. | System transitions status to `CRITICAL`, creates news bulletin, and fires alert toast. |
 | **WAC-4: GIS Viewport Zoom** | Zoom from Level 4 to Level 12 over Gujarat. | Dynamically transitions from macro count badges to precise satellite footprint polygons. |
-| **WAC-5: RAG Chat Assistant** | Ask: *"Show active industrial flares in Gujarat"*. | Returns factual, database-grounded response with clickable event map chips in $<1.5\text{s}$. |
-| **WAC-6: Report Compilation** | Click *"Generate Report"* on active event. | Compiles and downloads publication-grade PDF dossier with valid charts in $<2.5\text{s}$. |
+| **WAC-5: RAG Chat Assistant** | Ask: *"Show active industrial flares in Gujarat"*. | Returns factual, database-grounded response with clickable event map chips in `<1.5s`. |
+| **WAC-6: Report Compilation** | Click *"Generate Report"* on active event. | Compiles and downloads publication-grade PDF dossier with valid charts in `<2.5s`. |
 
 ---
 

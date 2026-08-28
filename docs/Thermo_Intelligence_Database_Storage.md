@@ -529,7 +529,7 @@ thermo-intelligence-assets/
 | Data Entity / Table      | Retention Duration    | Enforcement Mechanism                           |
 +--------------------------+-----------------------+-------------------------------------------------+
 | `thermal_observations`   | **Permanent**         | Compressed historical partitions; read-only.    |
-| `thermal_events`         | **Indefinite**        | Active $\rightarrow$ Cooling $\rightarrow$ Resolved lifecycle.|
+| `thermal_events`         | **Indefinite**        | Active -> Cooling -> Resolved lifecycle.|
 | `news_items`             | **180 Days**          | Celery cron drops items older than 6 months.    |
 | `ingestion_jobs` (Logs)  | **90 Days**           | Rolling purge of successful job logs.           |
 | `reports` (PDF Files)    | **1 Year**            | Object lifecycle rule deletes raw PDF after 1y. |
@@ -577,21 +577,21 @@ docker exec -t thermo_postgis pg_dump -U thermo_admin -d thermo_intelligence \
   --format=custom --blobs --verbose \
   --file=/var/lib/postgresql/data/thermo_backup_${TIMESTAMP}.dump
 
-echo "Backup completed: ${BACKUP_DIR}/thermo_backup_${TIMESTAMP}.dump"
+echo "Backup completed: `BACKUP_DIR/thermo_backup_`{TIMESTAMP}.dump"
 ```
 
 ### 12.2 Production Disaster Recovery (RTO & RPO)
-- **Recovery Point Objective (RPO):** $< 15\text{ minutes}$ (continuous Write-Ahead Logging / WAL-G archiving to S3).
-- **Recovery Time Objective (RTO):** $< 30\text{ minutes}$ (automated container re-provisioning via Terraform / Docker Compose).
+- **Recovery Point Objective (RPO):** `< 15 minutes` (continuous Write-Ahead Logging / WAL-G archiving to S3).
+- **Recovery Time Objective (RTO):** `< 30 minutes` (automated container re-provisioning via Terraform / Docker Compose).
 
 ---
 
 ## 13. Data Quality, Constraints & Hygiene Engine
 
 The database enforces strict validation checks at the schema level:
-1. **Coordinate Bounding Check:** All points must satisfy $-90.0 \le \text{lat} \le 90.0$ and $-180.0 \le \text{lon} \le 180.0$.
-2. **Radiometry Range Check:** $200.0\text{ K} \le T_b \le 600.0\text{ K}$ and $FRP \ge 0.0\text{ MW}$.
-3. **Temporal Sanity Check:** $T_{\text{obs}} \le \text{NOW}() + 2\text{ hours}$ (rejecting corrupted future satellite metadata).
+1. **Coordinate Bounding Check:** All points must satisfy `-90.0 <= lat <= 90.0` and `-180.0 <= lon <= 180.0`.
+2. **Radiometry Range Check:** `200.0 K <= T_b <= 600.0 K` and `FRP >= 0.0 MW`.
+3. **Temporal Sanity Check:** `T_obs <= NOW() + 2 hours` (rejecting corrupted future satellite metadata).
 4. **Foreign Key Integrity:** Deleting an industrial facility sets `thermal_events.associated_facility_id = NULL`, ensuring historical events are never deleted.
 
 ---
@@ -601,10 +601,10 @@ The database enforces strict validation checks at the schema level:
 | Acceptance Code | Verification Criteria | Expected Result |
 | :--- | :--- | :--- |
 | **DB-AC-1: Dedup** | Insert 1,000 FIRMS records with 200 exact duplicates. | Exactly 800 distinct rows saved; 200 duplicates skipped via `ON CONFLICT DO NOTHING`. |
-| **DB-AC-2: Spatial** | Execute `ST_DWithin` query across 50,000 points. | Spatial query returns in $<25\text{ms}$ utilizing GiST spatial index. |
+| **DB-AC-2: Spatial** | Execute `ST_DWithin` query across 50,000 points. | Spatial query returns in `<25ms` utilizing GiST spatial index. |
 | **DB-AC-3: Event Link** | Query all underlying FIRMS points for a clustered event. | Returns exact list of observation IDs from `event_observations` with zero orphaned rows. |
-| **DB-AC-4: Baseline** | Update facility with 50 historical events. | Baseline $\mu_{\text{FRP}}$ and $\sigma_{\text{FRP}}$ compute accurately without precision loss. |
-| **DB-AC-5: pgvector** | Query semantic embedding vector for a natural language prompt. | HNSW index returns top-5 closest events in $<15\text{ms}$. |
+| **DB-AC-4: Baseline** | Update facility with 50 historical events. | Baseline `μ_FRP` and `σ_FRP` compute accurately without precision loss. |
+| **DB-AC-5: pgvector** | Query semantic embedding vector for a natural language prompt. | HNSW index returns top-5 closest events in `<15ms`. |
 | **DB-AC-6: Report Ref**| Store a 1.2MB PDF report in object storage. | File hash and valid download URL persist in `reports` table; binary is not stored in DB. |
 
 ---

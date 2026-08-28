@@ -118,7 +118,7 @@ The design philosophy follows six non-negotiable operational principles:
 
 ## 4. Master Layout Architecture
 
-### 4.1 Desktop Viewport Layout ($\ge 1200\text{px}$)
+### 4.1 Desktop Viewport Layout (`>= 1200px`)
 
 ```
 +------------------------------------------------------------------------------------------------------------------+
@@ -140,7 +140,7 @@ The design philosophy follows six non-negotiable operational principles:
 +------------------------------------------------------------------------------------------------------------------+
 ```
 
-### 4.2 Mobile Viewport Layout ($< 768\text{px}$)
+### 4.2 Mobile Viewport Layout (`< 768px`)
 
 ```
 +----------------------------------------------------------------------------------+
@@ -195,7 +195,7 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 
 ### 5.2 Dynamic Clustering Display
 - **Zoom 1–6 (Macro National Clusters):** Solid circular badge with dark background, crisp border, and white tabular count: `14 (2 Critical)`.
-- **Zoom 7–10 (Regional Groups):** Individual geometric markers scaled proportionally to $\log_{10}(\text{Peak\_FRP})$.
+- **Zoom 7–10 (Regional Groups):** Individual geometric markers scaled proportionally to `\log_10(Peak_FRP)`.
 - **Zoom 11–18 (Deep Inspection):** Exact satellite pixel footprint polygon (`boundary_geom`) rendered with 20% opacity fill and 1.5px high-contrast stroke + 1km/5km safety buffer rings.
 
 ---
@@ -203,13 +203,13 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 ## 6. Page-by-Page UX Specifications
 
 ### 6.1 Screen 1: Introduction & First-Open Experience
-- **User Goal:** Understand the mission value of Thermo Intelligence in $<15\text{ seconds}$ and immediately access the live GIS.
+- **User Goal:** Understand the mission value of Thermo Intelligence in `<15 seconds` and immediately access the live GIS.
 - **Layout:** High-contrast modal overlay over the dimmed live GIS map.
 - **Visual Content:**
   - Header: *"Thermo Intelligence: Industrial Thermal Monitoring Platform (NTRO PS 26162)"*.
   - 3 Compact Feature Cards:
     1. *Contextual Spatial AI:* Distinguish industrial gas flares from accidental fires and farm stubble.
-    2. *Historical Baseline Engine:* Automated $Z$-Score anomaly detection comparing current FRP against 12-month facility history.
+    2. *Historical Baseline Engine:* Automated `Z`-Score anomaly detection comparing current FRP against 12-month facility history.
     3. *Tactical Reporting & Grounded Chat:* Instant multi-section PDF dossiers and strict zero-hallucination RAG assistant.
   - Action Button: `Launch Command Center →` (Dismisses modal, sets `localStorage`, reveals full GIS).
 
@@ -243,7 +243,7 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
      - 4-Card Telemetry Grid: Peak FRP (`450 MW`), Max Temp (`482 K`), Sensor Hits (`8 Hits`), Area (`14.2 Ha`).
      - AI Attribution List: `1. Distance to Refinery: 45m`, `2. FRP Anomaly: +5.8σ`, `3. Night Persistence`.
   2. **Tab 2: Historical Baseline:**
-     - Chart: Observed FRP Curve vs. Facility Normal Envelope ($\mu \pm 1\sigma, 2\sigma$).
+     - Chart: Observed FRP Curve vs. Facility Normal Envelope (`μ \pm 1σ, 2σ`).
      - Recurrence Breakdown: `28 Active Days past 30 Days` (Persistent Source).
   3. **Tab 3: Geographic Context:**
      - Associated Facility Card: *Reliance Jamnagar Refinery Complex (Petrochemical)*.
@@ -316,16 +316,16 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 +---------------------+-------------------+---------------------+------------------------------------------------+
 | Screen Breakpoint   | Viewport Width    | Navigation Layout   | Map & Panel Behavior                           |
 +---------------------+-------------------+---------------------+------------------------------------------------+
-| **Desktop Wide**    | $\ge 1440\text{px}$| Persistent Sidebar  | Map takes 70% width; Investigation drawer      |
+| **Desktop Wide**    | `>= 1440px`| Persistent Sidebar  | Map takes 70% width; Investigation drawer      |
 |                     |                   | (200px Expanded)    | open persistently on right (380px).            |
 +---------------------+-------------------+---------------------+------------------------------------------------+
-| **Standard Laptop** | $1024\text{px} - 1439\text{px}$| Icon Sidebar  | Map takes full width; Investigation drawer     |
+| **Standard Laptop** | `1024px - 1439px`| Icon Sidebar  | Map takes full width; Investigation drawer     |
 |                     |                   | (64px Collapsed)    | slides over map with backdrop dimming.         |
 +---------------------+-------------------+---------------------+------------------------------------------------+
-| **Tablet**          | $768\text{px} - 1023\text{px}$ | Icon Sidebar  | Map takes full width; Investigation drawer     |
+| **Tablet**          | `768px - 1023px` | Icon Sidebar  | Map takes full width; Investigation drawer     |
 |                     |                   | (64px)              | opens as 450px side sheet from right.          |
 +---------------------+-------------------+---------------------+------------------------------------------------+
-| **Mobile**          | $< 768\text{px}$  | Bottom Navigation   | Map takes 100% viewport; Investigation drawer  |
+| **Mobile**          | `< 768px`  | Bottom Navigation   | Map takes 100% viewport; Investigation drawer  |
 |                     |                   | Bar (60px Fixed)    | operates as a swipeable bottom sheet drawer.   |
 +---------------------+-------------------+---------------------+------------------------------------------------+
 ```
@@ -375,10 +375,10 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 | Acceptance Code | Verification Criteria | Expected Result |
 | :--- | :--- | :--- |
 | **UI-AC-1: Aesthetics** | Visual audit of full application. | Zero neon/gamer glow; zero robot/sparkle AI graphics; consistent matte palette. |
-| **UI-AC-2: Map Dominance**| Open application on 1920×1080 display. | Map canvas occupies $\ge 70\%$ of screen real estate with clear visual hierarchy. |
-| **UI-AC-3: Event Drawer** | Click any event marker on GIS. | Investigation drawer opens in $<150\text{ms}$ displaying 4 tabs and telemetry grid. |
+| **UI-AC-2: Map Dominance**| Open application on 1920×1080 display. | Map canvas occupies `>= 70\%` of screen real estate with clear visual hierarchy. |
+| **UI-AC-3: Event Drawer** | Click any event marker on GIS. | Investigation drawer opens in `<150ms` displaying 4 tabs and telemetry grid. |
 | **UI-AC-4: Mobile Sheet** | Open app on iPhone / Android (375px). | Bottom navigation renders; bottom sheet swipes smoothly between peek, half, and full. |
-| **UI-AC-5: Contrast** | Run automated axe-core / Lighthouse audit. | 100% WCAG 2.1 AA compliance score with $>7.0:1$ text contrast. |
+| **UI-AC-5: Contrast** | Run automated axe-core / Lighthouse audit. | 100% WCAG 2.1 AA compliance score with `>7.0:1` text contrast. |
 | **UI-AC-6: News Fly-to** | Click `"View on Map"` on Thermo News card. | GIS camera smoothly pans/zooms to coordinates and highlights bounding envelope. |
 | **UI-AC-7: Report Print** | Click `"Download PDF"` in Report Generator. | Compiles clean A4 formatted dossier with vector charts and zero layout clipping. |
 

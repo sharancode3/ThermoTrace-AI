@@ -134,7 +134,7 @@ The final logical state consumed by downstream APIs:
 
 ## 46. Temporal GIS & 47. Earlier vs Now
 * **Map Filter**: Displays events active within the filter window.
-* **Earlier vs Now**: A specific backend query fetching a historical satellite pass alongside the current pass to calculate the $\Delta \text{FRP}$ and $\Delta \text{Area}$ for visualization in the investigation drawer.
+* **Earlier vs Now**: A specific backend query fetching a historical satellite pass alongside the current pass to calculate the `Δ FRP` and `Δ Area` for visualization in the investigation drawer.
 
 ## 48. Satellite Imagery & 49. Image ML Boundary
 Imagery (Sentinel/Landsat) is **supporting evidence**. It is fetched asynchronously when an investigation is opened. It is NOT the primary detection mechanism (which relies solely on FIRMS) and Image ML is out of scope for the MVP.

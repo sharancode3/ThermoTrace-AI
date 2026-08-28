@@ -19,7 +19,7 @@ This Product Requirements Document (PRD) establishes the authoritative product, 
 ## 2. Problem Statement & Background
 
 ### 2.1 The Problem
-Satellite-based thermal sensors—predominantly **NASA FIRMS** (utilizing VIIRS 375m and MODIS 1km instruments)—detect thermal hotspots by measuring brightness temperatures ($T_b$) and Fire Radiative Power (FRP). However, satellite sensors only register raw radiometric anomalies; they possess **no native understanding** of ground truth or industrial context.
+Satellite-based thermal sensors—predominantly **NASA FIRMS** (utilizing VIIRS 375m and MODIS 1km instruments)—detect thermal hotspots by measuring brightness temperatures (`T_b`) and Fire Radiative Power (FRP). However, satellite sensors only register raw radiometric anomalies; they possess **no native understanding** of ground truth or industrial context.
 
 As a result:
 - Routine operational gas flaring at an oil refinery is visually indistinguishable from an uncontrolled structural blaze or pipeline rupture.
@@ -56,7 +56,7 @@ The system explicitly separates two foundational analytical questions:
 | Axis | Core Question | Example Outputs |
 | :--- | :--- | :--- |
 | **Axis A: Source Identity** | *What is the physical source of this thermal event?* | Industrial Flaring, Accidental Industrial Fire, Steel Smelter / Kiln, Agricultural Residue, Wildfire, Urban / Unknown. |
-| **Axis B: Operational Behavior** | *Is this thermal signature behaving normally or abnormally?* | **Normal:** Recurring flare within 1.0$\sigma$ baseline FRP.<br>**Elevated:** Persistent flare operating at 1.5$\sigma$–2.5$\sigma$.<br>**Abnormal:** Thermal footprint expanded by >300% in 3h.<br>**Critical / Emergency:** Sudden FRP surge (>4.0$\sigma$) indicating explosion or uncontrolled fire. |
+| **Axis B: Operational Behavior** | *Is this thermal signature behaving normally or abnormally?* | **Normal:** Recurring flare within 1.0σ baseline FRP.<br>**Elevated:** Persistent flare operating at 1.5σ–2.5σ.<br>**Abnormal:** Thermal footprint expanded by >300% in 3h.<br>**Critical / Emergency:** Sudden FRP surge (>4.0σ) indicating explosion or uncontrolled fire. |
 
 ---
 
@@ -65,7 +65,7 @@ The system explicitly separates two foundational analytical questions:
 ### 4.1 Product Goals
 1. **Contextual Event Synthesis:** Group raw FIRMS hotspot detections into cohesive, multi-observation "Thermal Events" with defined centroids, convex hulls, and lifecycles.
 2. **Automated Source Classification:** Accurately classify thermal events using tabular/geospatial features (distance to industrial sites, facility category, FRP density, diurnal signatures, land-use) with explicit confidence scores.
-3. **Persistence & Baseline Profiling:** Maintain multi-temporal historical records for critical facilities across India, computing historical normal FRP ranges ($Q_{25}$, $Q_{50}$, $Q_{75}$, $\mu$, $\sigma$) to detect operational anomalies.
+3. **Persistence & Baseline Profiling:** Maintain multi-temporal historical records for critical facilities across India, computing historical normal FRP ranges (`Q_25`, `Q_50`, `Q_75`, μ, σ) to detect operational anomalies.
 4. **Professional GIS Command Interface:** Provide a fluid, dark-mode geospatial dashboard supporting dynamic multi-layer toggles, timeline scrubbers, and "Earlier vs. Now" change detection.
 5. **Real-time Event Dispatch:** Generate instant intelligence feeds (**Thermo News**) and push notifications for high-severity or anomalous events.
 6. **Grounded Conversational Intelligence:** Enable natural language querying over live and historical application data via a Retrieval-Augmented Generation (RAG) assistant that never hallucinates unobserved data.
@@ -100,14 +100,14 @@ The system explicitly separates two foundational analytical questions:
 2. **System Action:**
    - Clusters 8 raw FIRMS detections into `EVT-IN-GUJ-202608-0042`.
    - Spatially intersects with the Reliance Jamnagar Industrial Polygon.
-   - Calculates FRP $Z$-score = $+5.8\sigma$ above historical baseline.
+   - Calculates FRP `Z`-score = `+5.8σ` above historical baseline.
    - Classifier labels event: **Industrial Accidental Fire / Severe Flaring Anomaly** (Confidence: 94%).
    - Generates a **Thermo News** item: *"CRITICAL: Abnormal Thermal Surge (450 MW) at Jamnagar Petrochemical Complex"*.
    - Dispatches a High-Severity in-app toast and browser push alert.
 3. **User Action:**
-   - Analyst clicks notification $\rightarrow$ Map automatically flies and zooms to Jamnagar with the thermal bounding box highlighted.
-   - Opens **Event Investigation Drawer** $\rightarrow$ Views "Earlier vs. Now" comparison showing a 700% expansion in thermal radius over 4 hours.
-   - Clicks **"Generate Tactical Report"** $\rightarrow$ Configures sections $\rightarrow$ Exports official PDF intelligence dossier for senior command.
+   - Analyst clicks notification -> Map automatically flies and zooms to Jamnagar with the thermal bounding box highlighted.
+   - Opens **Event Investigation Drawer** -> Views "Earlier vs. Now" comparison showing a 700% expansion in thermal radius over 4 hours.
+   - Clicks **"Generate Tactical Report"** -> Configures sections -> Exports official PDF intelligence dossier for senior command.
 
 ### 6.2 Journey 2: Distinguishing Seasonal Stubble Fires from Nearby Steel Plant
 1. **Trigger:** November harvest season in Punjab/Haryana creates dense regional thermal clusters near a captive power plant in Bathinda.
@@ -116,7 +116,7 @@ The system explicitly separates two foundational analytical questions:
    - Labels agricultural clusters as **Agricultural / Stubble Burning** (Confidence: 91%, Transient, Duration: 4h).
    - Labels the power plant point source as **Routine Industrial High-Temp Facility** (Confidence: 89%, Persistent 180+ days).
 3. **User Action:**
-   - Analyst applies filter `Classification = Industrial Only` $\rightarrow$ The 500+ agricultural dots fade out, leaving only verified industrial points visible for focused monitoring.
+   - Analyst applies filter `Classification = Industrial Only` -> The 500+ agricultural dots fade out, leaving only verified industrial points visible for focused monitoring.
 
 ### 6.3 Journey 3: Conversational Intelligence Query
 1. **User Action:** Types into the Application Chat: *"Show me all persistent industrial thermal sources in Odisha active for more than 30 days with average FRP > 25 MW."*
@@ -161,9 +161,9 @@ The system explicitly separates two foundational analytical questions:
 | :--- | :--- | :--- | :--- |
 | **1. Thermal Intelligence Layer (Primary)** | Color-coded glowing circles & cluster badges with pulsating halos for critical anomalies. | Clustered events showing FRP, classification color, confidence badge, active hotspot count. | Visible at all zoom levels (Clusters at Zoom 1–7; Individual event footprints at Zoom 8+). |
 | **2. Industrial Infrastructure Layer** | Crisp vector polygons and facility icons (Refinery, Power, Steel, Mine, Chemical). | Facility Name, Sector, Operator, Capacity, Baseline FRP, Historical Anomaly Count. | Polygons emerge at Zoom 7+; Detailed equipment/tank bounds at Zoom 12+. |
-| **3. Raw FIRMS Hotspot Layer** | Micro-points (orange/red/yellow based on $T_b$). | Individual VIIRS/MODIS sensor pixels, scan angle, track, confidence percentage. | Visible on toggle at Zoom 9+. |
+| **3. Raw FIRMS Hotspot Layer** | Micro-points (orange/red/yellow based on `T_b`). | Individual VIIRS/MODIS sensor pixels, scan angle, track, confidence percentage. | Visible on toggle at Zoom 9+. |
 | **4. Land-Use / Land-Cover (LULC) Layer** | Semi-transparent tinting (Forest=Green, Cropland=Amber, Urban=Gray, Water=Blue). | Land classification category, vegetation health indicator (NDVI proxy). | Toggleable at Zoom 6+. |
-| **5. Anomaly & Risk Contour Layer** | Dynamic gradient heatmaps & safety radius buffer rings (1km, 5km, 10km zones). | $Z$-score anomaly heat concentration, nearest populated settlement distance. | Zoom 8+. |
+| **5. Anomaly & Risk Contour Layer** | Dynamic gradient heatmaps & safety radius buffer rings (1km, 5km, 10km zones). | `Z`-score anomaly heat concentration, nearest populated settlement distance. | Zoom 8+. |
 
 ### 8.3 Dynamic Loading & Level-of-Detail (LOD) Strategy
 To guarantee sub-second rendering performance on all devices:
@@ -195,7 +195,7 @@ The system must ingest both near-real-time (NRT) and historical thermal anomaly 
 ### 9.2 Industrial Infrastructure Knowledge Base
 Pre-populated, verified spatial registry of India's major industrial installations:
 - **Coverage:** Major Oil Refineries (Jamnagar, Paradip, Panipat, Mumbai, Kochi, Barauni, Bina, Tatipaka), Petrochemical Complexes (Dahej, Hazira, Nagothane), Thermal Power Stations (Singrauli, Korba, Vindhyachal, Mundra), Integrated Steel Plants (Rourkela, Bhilai, Jamshedpur, Bokaro, Vijayanagar), LNG Terminals, and Coal Mining Belts (Jharia, Raniganj, Talcher).
-- **Attributes:** Facility ID, Name, Category, State, District, Operating Authority, Precise Polygon Bounds / Centroid, Normal Operating Baseline ($FRP_{median}$, $FRP_{std}$).
+- **Attributes:** Facility ID, Name, Category, State, District, Operating Authority, Precise Polygon Bounds / Centroid, Normal Operating Baseline (`FRP_median`, `FRP_std`).
 
 ### 9.3 Environmental & Land-Cover Data
 - Multi-class spatial raster/vector indexing: Forest/Deciduous/Evergreen, Agricultural/Cropland, Urban/Built-up, Water Bodies, Barren/Scrubland.
@@ -218,9 +218,9 @@ Raw satellite passes often produce dozens of discrete point detections for a sin
 ```
 
 ### 10.1 Clustering Parameters
-- **Spatial Radius Threshold ($\epsilon_{spatial}$):** $750\text{ meters}$ (adaptive for industrial zones; $1.5\text{ km}$ for rural/forest zones).
-- **Temporal Window Threshold ($\epsilon_{temporal}$):** $12\text{ hours}$ for continuous active grouping.
-- **Minimum Hotspots ($MinPts$):** 1 (single isolated high-confidence detection can initiate an event entity).
+- **Spatial Radius Threshold (`ε_spatial`):** `750 meters` (adaptive for industrial zones; `1.5 km` for rural/forest zones).
+- **Temporal Window Threshold (`ε_temporal`):** `12 hours` for continuous active grouping.
+- **Minimum Hotspots (`MinPts`):** 1 (single isolated high-confidence detection can initiate an event entity).
 
 ### 10.2 Computed Event Entity Properties
 - `event_id` (Unique string, e.g., `EVT-IN-GUJ-202608-0042`)
@@ -246,17 +246,17 @@ Raw satellite passes often produce dozens of discrete point detections for a sin
 
 | Class Code | Class Name | Definition & Typical Signatures |
 | :--- | :--- | :--- |
-| **`IND_FIRE`** | **Industrial Accidental Fire / Explosion** | Uncontrolled blazes inside or adjacent to industrial assets. High FRP surge ($>3.5\sigma$), rapid spatial expansion, nocturnal & diurnal presence, high confidence. |
-| **`IND_FLARE`** | **Industrial Persistent Flare / Stack** | Routine or maintenance gas flaring at refineries, petrochemical facilities, or offshore platforms. Compact footprint ($<300\text{m}$), highly persistent ($>30\text{ days}$), stable FRP profile. |
+| **`IND_FIRE`** | **Industrial Accidental Fire / Explosion** | Uncontrolled blazes inside or adjacent to industrial assets. High FRP surge (`>3.5σ`), rapid spatial expansion, nocturnal & diurnal presence, high confidence. |
+| **`IND_FLARE`** | **Industrial Persistent Flare / Stack** | Routine or maintenance gas flaring at refineries, petrochemical facilities, or offshore platforms. Compact footprint (`<300m`), highly persistent (`>30 days`), stable FRP profile. |
 | **`IND_ROUTINE`** | **Routine High-Temp Industrial Facility** | Blast furnaces, steel converters, cement kilns, slag pits. Fixed coordinates directly matching OSM industrial polygons. |
-| **`AGRI_BURN`** | **Agricultural / Stubble Burning** | Crop residue burning in agricultural parcels. Seasonal (Oct–Nov, Apr–May), transient duration ($<8\text{ hours}$), low-to-medium FRP ($5–35\text{ MW}$), broad spatial dispersion. |
+| **`AGRI_BURN`** | **Agricultural / Stubble Burning** | Crop residue burning in agricultural parcels. Seasonal (Oct–Nov, Apr–May), transient duration (`<8 hours`), low-to-medium FRP (`5–35 MW`), broad spatial dispersion. |
 | **`WILDFIRE`** | **Wildfire / Forest Fire** | Uncontrolled vegetation fire in forest reserves/scrubland. High FRP, advancing linear/curved perimeter, zero industrial overlap. |
 | **`OTHER_UNCERTAIN`**| **Other / Uncertain / Non-Industrial** | Low confidence, isolated single-pixel anomalies, or cloud-edge reflections. |
 
 ### 11.2 Feature Engineering Vectors
 The ML classifier takes a multi-dimensional feature vector:
 1. **Spatial Proximity:** Distance to nearest industrial boundary (m), facility type weight.
-2. **Thermal Radiometry:** Max Brightness Temp ($K$), Background Temp Diff ($\Delta T$), Max FRP (MW), FRP Density ($\text{MW}/\text{km}^2$).
+2. **Thermal Radiometry:** Max Brightness Temp (`K`), Background Temp Diff (`Δ T`), Max FRP (MW), FRP Density (`MW/km2`).
 3. **Temporal Dynamics:** Detection duration (hours), day/night observation ratio, hour of acquisition.
 4. **Historical Persistence:** Number of detections within 1km over past 30/90/365 days, historical recurrence frequency.
 5. **Land-Cover Context:** Percentage overlap with Industrial, Agricultural, Forest, Urban, or Water masks.
@@ -272,11 +272,11 @@ The ML classifier takes a multi-dimensional feature vector:
 ### 12.1 Persistence Profiling Engine
 The system queries the multi-year thermal historical repository for each spatial cluster:
 - **First Recorded Detection Date** vs. **Most Recent Detection Date**.
-- **Historical Detection Count ($N_{hist}$):** Total satellite hits within a 500m radius over the trailing 12 months.
+- **Historical Detection Count (`N_hist`):** Total satellite hits within a 500m radius over the trailing 12 months.
 - **Persistence Categorization:**
-  - *Transient:* Active $< 24\text{ hours}$, 0 historical detections in past 90 days (e.g., farm fires).
+  - *Transient:* Active `< 24 hours`, 0 historical detections in past 90 days (e.g., farm fires).
   - *Intermittent:* Active periodically (e.g., batch kilns, periodic maintenance flaring).
-  - *Permanent / Highly Persistent:* $>15\text{ detection days per month}$ over 6+ months (e.g., continuous refinery flares).
+  - *Permanent / Highly Persistent:* `>15 detection days per month` over 6+ months (e.g., continuous refinery flares).
 
 ### 12.2 Facility-Specific Baseline & Anomaly Engine
 For every registered industrial asset, the system maintains a running baseline distribution:
@@ -315,9 +315,9 @@ Clicking any event card, map marker, or news bulletin opens a comprehensive inve
 - Primary Feature Attribution (Why the AI made this classification).
 
 #### Tab 2: Historical Baseline
-- Interactive Chart: **Observed Thermal FRP vs. Facility Historical Baseline ($\pm 1\sigma, 2\sigma$ envelopes)**.
+- Interactive Chart: **Observed Thermal FRP vs. Facility Historical Baseline (`\pm 1σ, 2σ` envelopes)**.
 - 30-Day Activity Heatmap (Day-by-day recurrence density).
-- Historical Anomaly Summary ($Z$-Score, percentile rank).
+- Historical Anomaly Summary (`Z`-Score, percentile rank).
 
 #### Tab 3: Geographic & Asset Context
 - Associated Facility Name, Sector, Operator, and Emergency Contact details.
@@ -325,7 +325,7 @@ Clicking any event card, map marker, or news bulletin opens a comprehensive inve
 - Vulnerability Proximity: Distance to nearest residential settlement, critical fuel storage tanks, and water reservoirs.
 
 #### Tab 4: "Earlier vs. Now" Timeline & Satellite Visual Evidence
-- **Interactive Temporal Slider:** Scrub back through previous satellite passes (e.g., *T-18h $\rightarrow$ T-12h $\rightarrow$ T-6h $\rightarrow$ Current Pass*).
+- **Interactive Temporal Slider:** Scrub back through previous satellite passes (e.g., *T-18h -> T-12h -> T-6h -> Current Pass*).
 - Side-by-Side Visual Comparison Card:
   - *Earlier Pass:* Footprint map / SWIR false-color rendering.
   - *Current Pass:* Expanded thermal plume / anomaly delta indicator.
@@ -352,7 +352,7 @@ A dedicated, event-driven situational awareness stream that converts raw satelli
 ### 15.2 Bulletin Generation Logic
 Bulletins are generated exclusively when a meaningful event threshold is reached:
 - New Critical / Abnormal Industrial Fire detected.
-- Significant FRP surge ($>+100\%$) at a persistent facility.
+- Significant FRP surge (`>+100\%`) at a persistent facility.
 - New high-persistence thermal cluster confirmed.
 - Containment / Resolution of a major tracked industrial incident.
 
@@ -361,7 +361,7 @@ Bulletins are generated exclusively when a meaningful event threshold is reached
 - Timestamp (e.g., *"12 mins ago — NOAA-20 VIIRS Pass"*).
 - Headline (e.g., *"Thermal Surge Detected at Dahej Petrochemical Zone"*).
 - One-Sentence Tactical Summary.
-- Mini Metric Badges (FRP: 184 MW, Area: 12 Ha, Anomaly: $+3.8\sigma$).
+- Mini Metric Badges (FRP: 184 MW, Area: 12 Ha, Anomaly: `+3.8σ`).
 - **Direct Action Button:** *"Investigate on Map"* (smoothly pans and zooms the GIS camera to the event coordinates and opens the investigation drawer).
 
 ---
@@ -424,9 +424,9 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 | :--- | :--- | :--- |
 | **SEC-1** | **Executive Incident Brief** | Event ID, Classification, Confidence, Severity Level, Timestamp, Location, Facility Name, Overall Assessment Summary. |
 | **SEC-2** | **Radiometric & Spatial Telemetry** | Peak FRP, Mean FRP, Maximum Brightness Temperature, Sensor Type, Hotspot Pixel Count, Estimated Bounding Area (Ha). |
-| **SEC-3** | **Historical Baseline & Anomaly Delta** | Facility Baseline Comparison Table ($\mu_{hist}, \sigma, Z$-score), 30-Day FRP Trend Graph, Persistence Duration. |
+| **SEC-3** | **Historical Baseline & Anomaly Delta** | Facility Baseline Comparison Table (`μ_hist, σ, Z`-score), 30-Day FRP Trend Graph, Persistence Duration. |
 | **SEC-4** | **Geographic & Environmental Context** | Land-Use Breakdown Pie Chart, Nearest Residential Settlement Distance, Vulnerable Asset Proximity Buffer. |
-| **SEC-5** | **Chronological Event Timeline** | Multi-pass progression table (*First Detection $\rightarrow$ Peak Surge $\rightarrow$ Current State*). |
+| **SEC-5** | **Chronological Event Timeline** | Multi-pass progression table (*First Detection -> Peak Surge -> Current State*). |
 | **SEC-6** | **Visual Satellite Evidence** | Embedded True-Color / SWIR satellite comparison thumbnails and bounding footprint overlay. |
 | **SEC-7** | **Tactical Recommendations & Next Steps** | Action checklist for on-ground verification, emergency services liaison, and regulatory dispatch. |
 
@@ -450,7 +450,7 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 - **Classification Filter:** Multi-select checkboxes (`Industrial Fire`, `Industrial Flare`, `Routine Facility`, `Agricultural`, `Wildfire`, `Uncertain`).
 - **Severity Filter:** Single/Multi-select (`Normal`, `Elevated`, `Abnormal`, `Critical`).
 - **Temporal Filter:** Quick chips (`Last 6 Hours`, `Last 24 Hours`, `Last 7 Days`, `Last 30 Days`, `Custom Date Range`).
-- **FRP Intensity Range Slider:** $0\text{ MW}$ to $1000+\text{ MW}$.
+- **FRP Intensity Range Slider:** `0 MW` to `1000+ MW`.
 - **Persistence Filter:** Toggle (`All Events`, `Persistent Sources Only (>15 days)`, `Transient Only (<24h)`).
 
 ---
@@ -476,14 +476,14 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 +---------------------+-----------------------------------+------------------------------------------+
 | Device Type         | Screen Width                      | Layout Configuration                     |
 +---------------------+-----------------------------------+------------------------------------------+
-| **Desktop / Widescreen** | $\ge 1200\text{px}$          | Fullscreen GIS with persistent Top Bar,  |
+| **Desktop / Widescreen** | `>= 1200px`          | Fullscreen GIS with persistent Top Bar,  |
 |                     |                                   | collapsible Left Filter/News Sidebar,    |
 |                     |                                   | and slide-in Right Investigation Drawer. |
 +---------------------+-----------------------------------+------------------------------------------+
-| **Tablet / Laptop** | $768\text{px} - 1199\text{px}$    | Fullscreen GIS with overlay toggle       |
+| **Tablet / Laptop** | `768px - 1199px`    | Fullscreen GIS with overlay toggle       |
 |                     |                                   | drawers and bottom quick-stats bar.      |
 +---------------------+-----------------------------------+------------------------------------------+
-| **Mobile**          | $< 768\text{px}$                  | Bottom Navigation Bar (Map, News, Chat,  |
+| **Mobile**          | `< 768px`                  | Bottom Navigation Bar (Map, News, Chat,  |
 |                     |                                   | Alerts), Swipeable Bottom Sheet Drawer   |
 |                     |                                   | for Event Investigation & Filters.       |
 +---------------------+-----------------------------------+------------------------------------------+
@@ -513,7 +513,7 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 | **NASA FIRMS API Latency / Downtime** | Fall back seamlessly to cached near-real-time records and historical baseline database with an in-app status banner: *"Operating on Cached Satellite Telemetry"*. |
 | **Missing / Incomplete OSM Facility Data** | Event is classified based on radiometry + LULC context. Marked as *"Unregistered Industrial Zone"* if spectral traits match industrial flaring. |
 | **Cloud-Obscured Satellite Imagery** | Display synthetic vector bounding box and thermal radiometry curve with a *"Visible pass obscured by clouds"* notification. |
-| **Low ML Confidence ($<50\%$)** | Flag event explicitly as `OTHER_UNCERTAIN` / `Under Analysis`. Never force false certainty. |
+| **Low ML Confidence (`<50\%`)** | Flag event explicitly as `OTHER_UNCERTAIN` / `Under Analysis`. Never force false certainty. |
 | **LLM Provider API Timeout** | Fall back to pre-structured template-based summaries and rule-based conversational query answers without breaking the UI. |
 
 ---
@@ -535,7 +535,7 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 | **Data Ingestion** | NASA FIRMS VIIRS (375m) + MODIS (1km) + Mock Stream | Direct ISRO INSAT-3D/3DR + European Sentinel-3 SLSTR |
 | **Industrial Database** | Comprehensive Indian Refineries, Power, Steel, Mines | Global Overpass / OpenStreetMap Industrial Registry |
 | **ML Classification** | Multi-Class Tabular + Geospatial Spatio-Temporal Model | Multi-Modal Deep Learning (SWIR + Tabular Transformer) |
-| **Baseline Analytics** | Facility FRP Baseline Envelopes & Anomaly $Z$-Scores | Automated Predictive Flaring Forecasts (Prophet/LSTM) |
+| **Baseline Analytics** | Facility FRP Baseline Envelopes & Anomaly `Z`-Scores | Automated Predictive Flaring Forecasts (Prophet/LSTM) |
 | **GIS Interface** | Leaflet / MapLibre Dark Aerospace Platform | 3D Cesium / Photorealistic Globe with 3D Facility BIM |
 | **News & Alerts** | Real-time Thermo News Feed + Web Push Toasts | Automated SMS / WhatsApp / Telegram Emergency Bot |
 | **AI Assistant** | Grounded Domain RAG Chatbot (Gemini / FastAPI) | Multi-Lingual Voice-Activated Emergency Assistant |
@@ -546,16 +546,16 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 ## 25. Acceptance Criteria
 
 ### AC-1: Data Ingestion & Clustering
-- [ ] Raw NASA FIRMS observations over India are parsed with coordinates, FRP, $T_b$, confidence, and timestamps preserved.
+- [ ] Raw NASA FIRMS observations over India are parsed with coordinates, FRP, `T_b`, confidence, and timestamps preserved.
 - [ ] Detections within 750m and 12h are aggregated into a single `Thermal Event` with convex hull geometry.
 
 ### AC-2: Machine Learning Classification
 - [ ] Every formed event receives a classification label (`IND_FIRE`, `IND_FLARE`, `IND_ROUTINE`, `AGRI_BURN`, `WILDFIRE`, `OTHER_UNCERTAIN`).
-- [ ] Classification output includes a probability score ($0–100\%$) and primary feature attribution drivers.
+- [ ] Classification output includes a probability score (`0–100\%`) and primary feature attribution drivers.
 
 ### AC-3: Facility Baseline & Anomaly Engine
-- [ ] Industrial facilities with historical records display normal baseline FRP bands ($\mu \pm \sigma$).
-- [ ] Events exceeding $+2.5\sigma$ and $+4.0\sigma$ are designated as `ABNORMAL` and `CRITICAL` respectively.
+- [ ] Industrial facilities with historical records display normal baseline FRP bands (`μ \pm σ`).
+- [ ] Events exceeding `+2.5σ` and `+4.0σ` are designated as `ABNORMAL` and `CRITICAL` respectively.
 
 ### AC-4: GIS Command Platform
 - [ ] User can pan, zoom, search, and toggle all 5 GIS layers (Thermal, Industrial, Raw Hotspots, Land-Cover, Anomaly Buffers).
@@ -578,11 +578,11 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 
 ## 26. Success Metrics & Key Performance Indicators (KPIs)
 
-1. **Classification Accuracy:** $>90\%$ precision in separating industrial thermal events from agricultural stubble burning and wildfires.
-2. **Alert Turnaround Time:** $<3\text{ seconds}$ from satellite data ingestion to GIS visualization and Thermo News dispatch.
-3. **GIS Performance:** 60 FPS smooth map pan/zoom with $<500\text{ms}$ initial layer render time.
-4. **Zero-Hallucination Rate:** $100\%$ of conversational AI factual claims directly verifiable against underlying database records.
-5. **Dossier Generation Speed:** $<2\text{ seconds}$ to compile and render a complete tactical PDF report.
+1. **Classification Accuracy:** `>90\%` precision in separating industrial thermal events from agricultural stubble burning and wildfires.
+2. **Alert Turnaround Time:** `<3 seconds` from satellite data ingestion to GIS visualization and Thermo News dispatch.
+3. **GIS Performance:** 60 FPS smooth map pan/zoom with `<500ms` initial layer render time.
+4. **Zero-Hallucination Rate:** `100\%` of conversational AI factual claims directly verifiable against underlying database records.
+5. **Dossier Generation Speed:** `<2 seconds` to compile and render a complete tactical PDF report.
 
 ---
 
@@ -594,7 +594,7 @@ Users can generate structured, print-ready intelligence dossiers for any selecte
 | :--- | :--- | :--- | :--- |
 | **R1: Extreme Cloud Cover during Monsoons** | Medium | High | Rely on VIIRS I-band SWIR thermal penetration; display explicit cloud-obscuration flags in UI. |
 | **R2: FIRMS API Rate Limits during Live Demo** | High | Medium | Implement robust local SQLite/JSON caching and realistic high-fidelity offline playback simulator. |
-| **R3: Ambiguous Mixed-Land-Use Boundaries** | Medium | Medium | Implement confidence thresholds ($<60\%$ triggers `OTHER_UNCERTAIN` for human review). |
+| **R3: Ambiguous Mixed-Land-Use Boundaries** | Medium | Medium | Implement confidence thresholds (`<60\%` triggers `OTHER_UNCERTAIN` for human review). |
 | **R4: High Browser Memory Usage with 10k+ Points** | Medium | Low | Use spatial clustering (ST-DBSCAN) and Level-of-Detail (LOD) viewport culling. |
 
 ### 27.2 Core Assumptions

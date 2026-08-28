@@ -191,7 +191,7 @@ flowchart LR
 
 ## 15. Baseline/Anomaly Architecture
 * **Baseline Engine**: Periodically (e.g., weekly) calculates `mean_frp` and `std_frp` for all historical events associated with a facility and stores it in `facility_baselines`.
-* **Anomaly Engine**: For active events, reads the facility baseline, calculates $Z = (FRP - \mu) / \sigma$, maps to `NORMAL/ELEVATED/ABNORMAL/CRITICAL`, and writes to `event_anomalies`.
+* **Anomaly Engine**: For active events, reads the facility baseline, calculates `Z = (FRP - μ) / σ`, maps to `NORMAL/ELEVATED/ABNORMAL/CRITICAL`, and writes to `event_anomalies`.
 
 ## 16. GIS Architecture
 * **Client**: MapLibre GL JS maintains bounding box (`bbox`) and `zoom`.

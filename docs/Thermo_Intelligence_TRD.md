@@ -15,7 +15,7 @@
 
 This Technical Requirements Document (TRD) translates the product requirements defined in the PRD into an authoritative, scalable, and mathematically rigorous engineering specification. The system is designed under the following core technical principles:
 
-1. **Zero Raw-Observation Hallucination:** Raw NASA FIRMS satellite observations ($T_b, FRP, \text{coordinates}$) are immutable ground telemetry. They are preserved intact in append-only tables and never overwritten by derived heuristics or ML predictions.
+1. **Zero Raw-Observation Hallucination:** Raw NASA FIRMS satellite observations (`T_b, FRP, coordinates`) are immutable ground telemetry. They are preserved intact in append-only tables and never overwritten by derived heuristics or ML predictions.
 2. **Deterministic Spatial Pipeline:** Spatio-temporal event clustering (ST-DBSCAN) and facility intersection queries run strictly within **PostGIS** and **GeoPandas** with indexed spatial geometry operators (`ST_DWithin`, `ST_Intersects`, `ST_ConvexHull`), avoiding unbounded in-memory spatial loops.
 3. **Dual-Tier ML Inference:** Fast tabular gradient boosting (XGBoost/LightGBM) handles real-time multi-class classification based on derived spatial/radiometric vectors. Deep image models (PyTorch/Sentinel-2 SWIR) remain optional asynchronous background evaluators.
 4. **Strict RAG Grounding:** The Conversational Assistant and Report Generator operate via structured parameter extraction and SQL/vector execution. The LLM acts solely as a natural-language synthesiser and is structurally forbidden from inventing telemetry facts.
@@ -146,9 +146,9 @@ dedup_key = SHA256(lat_4dec || lon_4dec || acq_date || acq_time || satellite || 
 - **Upsert Logic:** `INSERT INTO thermal_observations ... ON CONFLICT (dedup_key) DO NOTHING;`
 
 ### 4.3 Validation & Hygiene Rules
-- **Coordinate Clamping:** $-90.0 \le \text{lat} \le 90.0$ and $-180.0 \le \text{lon} \le 180.0$.
-- **Radiometry Clamping:** $250.0\text{ K} \le T_b \le 600.0\text{ K}$; $0.0\text{ MW} \le FRP \le 5000.0\text{ MW}$.
-- **Clock Drift Filter:** Any observation timestamp $> \text{now()} + 2\text{ hours}$ or $< 2000\text{-01-01}$ is rejected and routed to dead-letter logs.
+- **Coordinate Clamping:** `-90.0 <= lat <= 90.0` and `-180.0 <= lon <= 180.0`.
+- **Radiometry Clamping:** `250.0 K <= T_b <= 600.0 K`; `0.0 MW <= FRP <= 5000.0 MW`.
+- **Clock Drift Filter:** Any observation timestamp `> now() + 2 hours` or `< 2000-01-01` is rejected and routed to dead-letter logs.
 
 ---
 
@@ -330,7 +330,7 @@ CREATE INDEX idx_events_anomaly ON thermal_events(anomaly_tier);
 ## 6. Spatio-Temporal Event Formation Engine (ST-DBSCAN)
 
 ### 6.1 Clustering Formulation
-Raw observations arriving within temporal window $\Delta T$ are clustered into unified events using a hybrid Spatio-Temporal DBSCAN algorithm.
+Raw observations arriving within temporal window `Δ T` are clustered into unified events using a hybrid Spatio-Temporal DBSCAN algorithm.
 
 **Mathematical Distance Metric:**
 ```text
@@ -340,13 +340,13 @@ D((p1, t1), (p2, t2)) =
 ```
 
 **Configured Parameters:**
-- $\epsilon_{temporal} = 12\text{ hours}$ (maximum elapsed time between consecutive satellite passes before splitting into a distinct event).
-- $MinPts = 1$ (single high-FRP detections initiate a tracking event).
+- `ε_temporal = 12 hours` (maximum elapsed time between consecutive satellite passes before splitting into a distinct event).
+- `MinPts = 1` (single high-FRP detections initiate a tracking event).
 
 ### 6.2 Convex Hull & Extent Computation
-For a clustered set of points $\{p_1, p_2, \dots, p_k\}$:
-1. If $k = 1$: `boundary_geom` is generated via `ST_Buffer(p_1::geography, 187.5)::geometry` (representing the 375m VIIRS pixel envelope).
-2. If $k \ge 2$: `boundary_geom` is computed via `ST_ConvexHull(ST_Collect(geom))` with an outer buffer of $100\text{m}$.
+For a clustered set of points `p_1, p_2, ..., p_k`:
+1. If `k = 1`: `boundary_geom` is generated via `ST_Buffer(p_1::geography, 187.5)::geometry` (representing the 375m VIIRS pixel envelope).
+2. If `k >= 2`: `boundary_geom` is computed via `ST_ConvexHull(ST_Collect(geom))` with an outer buffer of `100m`.
 3. Bounding area in hectares is computed via:
 ```text
 Area_Ha = ST_Area(boundary_geom::geography) / 10000.0
@@ -400,16 +400,16 @@ The classifier targets 6 mutually exclusive classes:
 - **Model Artifact Packaging:** Serialized via `joblib` with pinned feature schema hashes: `thermo_xgb_v1.0.0.joblib`.
 
 ### 7.3 Model Evaluation Criteria & Acceptance Thresholds
-- **Macro F1-Score:** $\ge 0.88$ across all 6 classes.
-- **Industrial Precision (`IND_FIRE` & `IND_FLARE`):** $\ge 92\%$ (minimizing false alarms for national defense and safety operators).
-- **Agricultural vs. Wildfire Separation:** $\ge 90\%$ accuracy.
+- **Macro F1-Score:** `>= 0.88` across all 6 classes.
+- **Industrial Precision (`IND_FIRE` & `IND_FLARE`):** `>= 92\%` (minimizing false alarms for national defense and safety operators).
+- **Agricultural vs. Wildfire Separation:** `>= 90\%` accuracy.
 
 ---
 
 ## 8. Persistence & Historical Baseline Profiling Engine
 
 ### 8.1 Facility Baseline Computation
-For each industrial facility $F$, the historical baseline profile is recalculated on an automated weekly cycle using a rolling 12-month window:
+For each industrial facility `F`, the historical baseline profile is recalculated on an automated weekly cycle using a rolling 12-month window:
 
 ```text
 mean_FRP = sum(FRP) / N
@@ -417,7 +417,7 @@ std_FRP = sqrt(sum((FRP - mean_FRP)^2) / (N-1))
 ```
 
 ### 8.2 Anomaly Z-Score & Severity Matrix
-When active event $E$ occurs within the spatial perimeter of facility $F$:
+When active event `E` occurs within the spatial perimeter of facility `F`:
 ```text
 Z_score = (Peak_FRP_event - mean_FRP_facility) / max(std_FRP_facility, 2.0)
 ```
@@ -428,10 +428,10 @@ Z_score = (Peak_FRP_event - mean_FRP_facility) / max(std_FRP_facility, 2.0)
 +---------------------+-------------------------------+----------------------------------------------+
 | Anomaly Tier        | Z-Score Range                 | System Reaction & Notification Trigger       |
 +---------------------+-------------------------------+----------------------------------------------+
-| **NORMAL**          | $Z < 1.5$                     | Logged as routine operational flaring.       |
-| **ELEVATED**        | $1.5 \le Z < 2.5$             | Highlighted in GIS; added to weekly report.  |
-| **ABNORMAL**        | $2.5 \le Z < 4.0$             | High-priority badge; Thermo News generated.  |
-| **CRITICAL**        | $Z \ge 4.0$ or $\Delta A>300\%$| Emergency toast + Web Push + Audio alert.     |
+| **NORMAL**          | `Z < 1.5`                     | Logged as routine operational flaring.       |
+| **ELEVATED**        | `1.5 <= Z < 2.5`             | Highlighted in GIS; added to weekly report.  |
+| **ABNORMAL**        | `2.5 <= Z < 4.0`             | High-priority badge; Thermo News generated.  |
+| **CRITICAL**        | `Z >= 4.0` or `Δ A>300\%`| Emergency toast + Web Push + Audio alert.     |
 +---------------------+-------------------------------+----------------------------------------------+
 ```
 
@@ -440,7 +440,7 @@ Z_score = (Peak_FRP_event - mean_FRP_facility) / max(std_FRP_facility, 2.0)
 ## 9. Dynamic GIS Delivery & Vector Tile Pipeline
 
 ### 9.1 Viewport Culling & Bounding Box Queries
-The client requests data dynamically based on the current MapLibre viewport bounding box (`min_lon, min_lat, max_lon, max_lat`) and zoom level $Z$:
+The client requests data dynamically based on the current MapLibre viewport bounding box (`min_lon, min_lat, max_lon, max_lat`) and zoom level `Z`:
 
 ```
 GET /api/v1/gis/events?bbox=68.0,18.0,75.0,24.0&zoom=8&time_range=24h&category=all
@@ -463,7 +463,7 @@ LIMIT 500;
 
 ### 9.2 Zoom-Dependent Level-of-Detail (LOD) Strategy
 1. **Zoom 1–6 (National Overview):** Pre-clustered macro-aggregations (`ST_ClusterKMeans`) returning regional count, total FRP, and worst-case anomaly flag.
-2. **Zoom 7–10 (State / Regional Level):** Event centroid points with dynamic glowing halos scaled by $\log(\text{Peak\_FRP})$.
+2. **Zoom 7–10 (State / Regional Level):** Event centroid points with dynamic glowing halos scaled by `\log(Peak_FRP)`.
 3. **Zoom 11–18 (Facility / Street Level):** Exact satellite pixel footprint polygons (`boundary_geom`), industrial site boundaries, and safety radius buffer rings (1km, 5km).
 
 ---
@@ -607,17 +607,17 @@ STRICT OPERATIONAL DIRECTIVES:
 | Test Layer          | Framework & Tools       | Target Scope & Coverage Requirements               |
 +---------------------+-------------------------+----------------------------------------------------+
 | **Unit Tests**      | `pytest`, `pytest-cov`  | ST-DBSCAN clustering logic, Haversine calculators, |
-|                     |                         | Z-score formulas, FIRMS deduplication hash ($>90\%$).|
+|                     |                         | Z-score formulas, FIRMS deduplication hash (`>90\%`).|
 +---------------------+-------------------------+----------------------------------------------------+
 | **Integration Tests**| `pytest-asyncio`, `httpx`| PostGIS spatial queries, FastAPI REST endpoints,   |
 |                     | `testcontainers-postgres`| Redis task queuing, Celery worker task execution.  |
 +---------------------+-------------------------+----------------------------------------------------+
 | **ML Model Tests**  | `pytest`, `scikit-learn`| Feature vector consistency, zero-NaN verification,  |
-|                     |                         | inference latency benchmark ($<25\text{ms}$).       |
+|                     |                         | inference latency benchmark (`<25ms`).       |
 +---------------------+-------------------------+----------------------------------------------------+
-| **E2E Browser Tests**| `Playwright`            | End-to-end user flows: Page load $\rightarrow$ GIS |
-|                     |                         | zoom $\rightarrow$ event selection $\rightarrow$   |
-|                     |                         | earlier vs now slider $\rightarrow$ PDF export.    |
+| **E2E Browser Tests**| `Playwright`            | End-to-end user flows: Page load -> GIS |
+|                     |                         | zoom -> event selection ->   |
+|                     |                         | earlier vs now slider -> PDF export.    |
 +---------------------+-------------------------+----------------------------------------------------+
 ```
 
@@ -713,13 +713,13 @@ volumes:
 
 | Module | Verification Criteria | Expected Result |
 | :--- | :--- | :--- |
-| **TAC-1: Ingestion** | Execute `POST /api/v1/admin/ingest/trigger` with sample VIIRS CSV. | $100\%$ valid records saved; duplicates rejected via unique hash; zero data loss. |
-| **TAC-2: Clustering** | Ingest 10 proximate detections within Jamnagar refinery perimeter ($<750\text{m}, <12\text{h}$). | Formed into a single `thermal_event` entity with calculated convex hull and summed FRP. |
-| **TAC-3: Classification** | Run inference on feature vector with `dist_ind_m = 30m` and $Z = +5.2$. | Output label: `IND_FIRE`, Confidence $\ge 90\%$, execution time $<15\text{ms}$. |
-| **TAC-4: GIS Viewport** | Fetch `/api/v1/gis/events` for bounding box covering Gujarat state. | Sub-second response ($<350\text{ms}$), valid GeoJSON, zero non-intersecting points returned. |
-| **TAC-5: News Stream** | Insert event with $Z = +4.5\sigma$. | SSE client receives automated news item JSON within $<1.5\text{ seconds}$. |
+| **TAC-1: Ingestion** | Execute `POST /api/v1/admin/ingest/trigger` with sample VIIRS CSV. | `100\%` valid records saved; duplicates rejected via unique hash; zero data loss. |
+| **TAC-2: Clustering** | Ingest 10 proximate detections within Jamnagar refinery perimeter (`<750m, <12h`). | Formed into a single `thermal_event` entity with calculated convex hull and summed FRP. |
+| **TAC-3: Classification** | Run inference on feature vector with `dist_ind_m = 30m` and `Z = +5.2`. | Output label: `IND_FIRE`, Confidence `>= 90\%`, execution time `<15ms`. |
+| **TAC-4: GIS Viewport** | Fetch `/api/v1/gis/events` for bounding box covering Gujarat state. | Sub-second response (`<350ms`), valid GeoJSON, zero non-intersecting points returned. |
+| **TAC-5: News Stream** | Insert event with `Z = +4.5σ`. | SSE client receives automated news item JSON within `<1.5 seconds`. |
 | **TAC-6: RAG AI Chat** | Query *"Show highest FRP event in India past 24h"*. | Returns factual event ID, coordinates, and FRP directly matching PostgreSQL records. |
-| **TAC-7: Report Engine** | Trigger `POST /api/v1/reports/generate`. | Compiles and returns downloadable PDF dossier in $<2.5\text{ seconds}$ with valid charts. |
+| **TAC-7: Report Engine** | Trigger `POST /api/v1/reports/generate`. | Compiles and returns downloadable PDF dossier in `<2.5 seconds` with valid charts. |
 
 ---
 

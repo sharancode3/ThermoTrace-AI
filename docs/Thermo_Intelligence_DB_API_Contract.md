@@ -69,18 +69,18 @@ This document constitutes the **immutable development contract** across all syst
 |                      | `WILDFIRE`               | Wildfire / Forest & Vegetation Blaze             |
 |                      | `OTHER_UNCERTAIN`        | Ambiguous / Cloud Edge / Unverified              |
 +----------------------+--------------------------+--------------------------------------------------+
-| **Anomaly Tier**     | `NORMAL`                 | $Z < 1.5$ (Routine operational flaring)          |
-|                      | `ELEVATED`               | $1.5 \le Z < 2.5$ (Process venting / surge)      |
-|                      | `ABNORMAL`               | $2.5 \le Z < 4.0$ (Significant flare deviation)  |
-|                      | `CRITICAL`               | $Z \ge 4.0$ or Footprint Expansion $>300\%$      |
+| **Anomaly Tier**     | `NORMAL`                 | `Z < 1.5` (Routine operational flaring)          |
+|                      | `ELEVATED`               | `1.5 <= Z < 2.5` (Process venting / surge)      |
+|                      | `ABNORMAL`               | `2.5 <= Z < 4.0` (Significant flare deviation)  |
+|                      | `CRITICAL`               | `Z >= 4.0` or Footprint Expansion `>300\%`      |
 +----------------------+--------------------------+--------------------------------------------------+
-| **Persistence Tier** | `TRANSIENT`              | Active $< 24\text{h}$, 0 prior hits past 90 days |
-|                      | `INTERMITTENT`           | Recurring $3–14\text{ days/year}$ (Batch kilns)  |
-|                      | `PERSISTENT`             | $>15\text{ active days/month}$ over $>6\text{m}$ |
+| **Persistence Tier** | `TRANSIENT`              | Active `< 24h`, 0 prior hits past 90 days |
+|                      | `INTERMITTENT`           | Recurring `3–14 days/year` (Batch kilns)  |
+|                      | `PERSISTENT`             | `>15 active days/month` over `>6m` |
 +----------------------+--------------------------+--------------------------------------------------+
 | **Lifecycle Status** | `ACTIVE`                 | Hotspots detected within trailing 12 hours       |
 |                      | `COOLING`                | No detections in 12h–36h; residual heat decay    |
-|                      | `RESOLVED`               | No detections $>36\text{h}$; thermal signature 0 |
+|                      | `RESOLVED`               | No detections `>36h`; thermal signature 0 |
 +----------------------+--------------------------+--------------------------------------------------+
 | **News Severity**    | `CRITICAL`               | Requires immediate disaster/defense response     |
 |                      | `ALERT`                  | High-priority abnormal industrial flaring        |
@@ -764,7 +764,7 @@ Search and list facilities across India.
 Retrieve complete facility dossier, baseline metrics, and associated historical thermal events.
 
 #### `GET /api/v1/facilities/{facility_code}/baseline`
-Retrieve historical baseline distributions ($Q_{25}, Q_{50}, Q_{75}, \mu, \sigma$) and 30-day thermal calendar.
+Retrieve historical baseline distributions (`Q_25, Q_50, Q_75, μ, σ`) and 30-day thermal calendar.
 
 ---
 
@@ -966,16 +966,16 @@ Protected administrative trigger to force an incremental NASA FIRMS satellite in
 | `in_facility`       | `int32 (0/1)` | 1 if centroid is strictly inside an industrial polygon       |
 | `facility_type_enc` | `int32 (0..7)`| One-hot integer encoding of sector category                  |
 | `peak_frp_mw`       | `float32`     | Maximum single-pixel Fire Radiative Power (MW)               |
-| `frp_density`       | `float32`     | Total FRP / Bounding Area in Ha ($\text{MW}/\text{Ha}$)      |
+| `frp_density`       | `float32`     | Total FRP / Bounding Area in Ha (`MW/Ha`)      |
 | `max_tb_k`          | `float32`     | Maximum channel 21/I-4 brightness temperature (K)            |
 | `delta_tb_k`        | `float32`     | Max brightness temp minus background channel 31/I-5 temp (K) |
 | `duration_h`        | `float32`     | Total elapsed hours between first and latest detection       |
-| `night_ratio`       | `float32`     | Fraction of observations captured during night passes ($0..1$)|
+| `night_ratio`       | `float32`     | Fraction of observations captured during night passes (`0..1`)|
 | `obs_count`         | `int32`       | Total number of satellite sensor hits in cluster             |
 | `hist_30d_hits`     | `int32`       | Number of historical detections within 500m past 30 days     |
 | `hist_365d_freq`    | `int32`       | Number of active thermal days at site past 365 days          |
-| `lc_crop_pct`       | `float32`     | Percentage of cluster area intersecting Cropland mask ($0..1$)|
-| `lc_forest_pct`     | `float32`     | Percentage of cluster area intersecting Forest mask ($0..1$) |
+| `lc_crop_pct`       | `float32`     | Percentage of cluster area intersecting Cropland mask (`0..1`)|
+| `lc_forest_pct`     | `float32`     | Percentage of cluster area intersecting Forest mask (`0..1`) |
 +---------------------+---------------+--------------------------------------------------------------+
 ```
 
