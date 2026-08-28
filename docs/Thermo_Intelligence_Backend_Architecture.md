@@ -167,7 +167,7 @@ flowchart TD
     DB --> Data[Structured Event Data]
     Data --> Prompt[Inject into LLM Prompt Context]
     Prompt --> LLM[External LLM API]
-    LLM --> Resp[Format Response with [EVT-ID]]
+    LLM --> Resp["Format Response with [EVT-ID]"]
 ```
 * **Strict Boundary**: The LLM *cannot* execute SQL directly (Text2SQL is unsafe for MVP). The backend translates the intent, executes safe SQLAlchemy queries, and injects the results into the prompt context.
 
