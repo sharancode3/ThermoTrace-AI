@@ -71,9 +71,8 @@ flowchart TD
     ML_W <--> PG
     AlertW <--> PG
     AlertW --> Redis
-    
-    Background <..> Redis
-    Core <..> Redis
+    Background <--> Redis
+    Core <--> Redis
     
     Core <--> PG
     Core --> LocalFs
