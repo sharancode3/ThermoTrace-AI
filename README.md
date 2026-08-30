@@ -1,297 +1,253 @@
-<div align="center">
+# ThermoTrace AI
 
-# 🛰️ ThermoTrace AI (Thermo Intelligence)
-### National-Scale Satellite Thermal Monitoring, Industrial Flaring Detection & Autonomous Intelligence Platform
+### Real-Time Satellite Thermal Monitoring, Industrial Flaring Detection, and Geospatial Intelligence Platform
 
-[![Docker](https://img.shields.io/badge/Docker-Compose_v2-2496ED?style=for-the-badge&logo=docker&logoColor=white)](docker-compose.yml)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](backend/)
-[![Next.js](https://img.shields.io/badge/Next.js-14_App_Router-000000?style=for-the-badge&logo=next.js&logoColor=white)](frontend/)
-[![PostgreSQL](https://img.shields.io/badge/PostGIS-16--3.4-336791?style=for-the-badge&logo=postgresql&logoColor=white)](backend/app/db/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-EB5424?style=for-the-badge&logo=xgboost&logoColor=white)](backend/app/ml/)
-[![NASA FIRMS](https://img.shields.io/badge/NASA_FIRMS-NRT_Active-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://firms.modaps.eosdis.nasa.gov/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](frontend/)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](backend/)
-
-<p align="center">
-  <b>Near-Real-Time Thermal Anomaly Intelligence • Spatio-Temporal Clustering • Calibrated XGBoost Machine Learning • Explainable SHAP Attribution • 90-Day Statistical Emission Baselines</b>
-</p>
+[![Docker](https://img.shields.io/badge/Docker-Compose_v2-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=flat-square&logo=fastapi&logoColor=white)](backend/)
+[![Next.js](https://img.shields.io/badge/Next.js-14_App_Router-000000?style=flat-square&logo=next.js&logoColor=white)](frontend/)
+[![PostgreSQL](https://img.shields.io/badge/PostGIS-16--3.4-336791?style=flat-square&logo=postgresql&logoColor=white)](backend/app/db/)
+[![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-EB5424?style=flat-square&logo=xgboost&logoColor=white)](backend/app/ml/)
+[![NASA FIRMS](https://img.shields.io/badge/NASA_FIRMS-NRT_Active-0B3D91?style=flat-square&logo=nasa&logoColor=white)](https://firms.modaps.eosdis.nasa.gov/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white)](frontend/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](backend/)
 
 ---
 
-</div>
+## 1. System Overview
 
-## 📌 Executive Overview
+ThermoTrace AI is an automated thermal intelligence platform designed for national-scale satellite monitoring of industrial emissions, flare stacks, refinery furnaces, and high-temperature thermal incidents. 
 
-**ThermoTrace AI** is an enterprise-grade defense and environmental compliance intelligence platform engineered for real-time monitoring of industrial emissions, gas flaring anomalies, refinery furnace operations, and high-heat incidents across sovereign India.
+The system continuously ingests Near-Real-Time (NRT) satellite telemetry from NASA FIRMS sensors (VIIRS NOAA-20, NOAA-21, Suomi-NPP, and MODIS Terra/Aqua), applies spatio-temporal clustering (ST-DBSCAN), extracts a 14-dimensional feature matrix, executes multi-class XGBoost classification with Shapley value attributions (SHAP), and calculates 90-day statistical emission baselines to detect anomalous thermal activity across sovereign Indian territory.
 
-By ingesting live satellite telemetry from **NASA FIRMS** (VIIRS NOAA-20, NOAA-21, Suomi-NPP, and MODIS Terra/Aqua), ThermoTrace AI eliminates manual geospatial tracking. It transforms raw orbital pixel coordinates into classified, statistically grounded, and actionable tactical dossiers within milliseconds.
+---
+
+## 2. System Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Space ["🛰️ Space-Borne Satellite Constellation"]
-        V20["VIIRS NOAA-20 (375m)"]
-        V21["VIIRS NOAA-21 (375m)"]
-        SNPP["VIIRS Suomi-NPP (375m)"]
-        MODIS["MODIS Terra / Aqua (1km)"]
+    subgraph Data_Sources ["Satellite Telemetry & Reference Data"]
+        S1["NASA FIRMS NRT Feed
+(VIIRS NOAA-20/21/SNPP + MODIS)"]
+        S2["Industrial Facility Database
+(GEM, PPAC, WRI India - 3,000+ Assets)"]
+        S3["ESA WorldCover 10m Landcover
+(GeoTIFF Raster Surface Masks)"]
     end
 
-    subgraph Ingestion ["⚡ Ingestion & Sovereign Filtering Engine"]
-        API["NASA FIRMS NRT API"]
-        DAEMON["5-Minute Async Poller"]
-        MASK["Sovereign India Boundary Mask\n(8.30°N–36.74°N, 68.00°E–96.98°E)"]
-        DEDUP["Composite Key Deduplication"]
+    subgraph Ingestion_Layer ["Ingestion & Preprocessing Engine"]
+        I1["5-Minute Scheduled Polling Daemon"]
+        I2["Sovereign India Geographic Bounding Box
+(8.30°N–36.74°N, 68.00°E–96.98°E)"]
+        I3["Composite Key Deduplication"]
     end
 
-    subgraph Storage ["🗄️ Geospatial Database Layer"]
-        PG[("PostgreSQL 16 + PostGIS 3.4")]
-        GIST["GIST Spatio-Temporal Spatial Indices"]
-        FAC_DB["3,000+ Industrial Facility Registry\n(GEM, PPAC, WRI India)"]
+    subgraph Persistence_Layer ["Geospatial Storage Layer"]
+        DB[("PostgreSQL 16 + PostGIS 3.4")]
+        IDX["GIST Spatio-Temporal Spatial Indices"]
     end
 
-    subgraph Processing ["🧠 Autonomous Intelligence Pipeline"]
-        CLUST["ST-DBSCAN Clustering\n(ε = 1500m, Δt = 24h)"]
-        FEAT["14-D Canonical Feature Extraction"]
-        XGB["Calibrated XGBoost Multi-Class ML"]
-        SHAP["TreeSHAP Additive Attribution"]
-        BASE["Rolling 90-Day Gaussian Baseline\n(μ ± kσ Anomaly Tiers)"]
-        LLM["Grounded Structured Brief Generator\n(OBSERVED / DERIVED / MODELLED)"]
+    subgraph Analytical_Engine ["Analytical & Intelligence Pipeline"]
+        A1["ST-DBSCAN Spatio-Temporal Aggregation
+(ε = 1500m, Δt = 24h)"]
+        A2["14-Dimensional Feature Engineering"]
+        A3["Calibrated Multi-Class XGBoost Model"]
+        A4["TreeSHAP Feature Attribution Engine"]
+        A5["Rolling 90-Day Gaussian Baseline Engine
+(Z-Score & Exceedance Probability)"]
+        A6["Grounded 4-Part Intelligence Synthesizer
+(OBSERVED / DERIVED / MODELLED / UNKNOWN)"]
     end
 
-    subgraph Presentation ["🖥️ Command & Control Dashboard"]
-        FASTAPI["FastAPI High-Performance Async Gateway"]
-        MAP["Locked Google Maps Engine\n(Deep Zoom Roadmap & Hybrid Satellite)"]
-        DOSSIER["3-Column Tactical Command Dossier"]
-        HUD["Vector SVG HUD & Real-Time Alert Engine"]
+    subgraph API_Layer ["Application Gateway"]
+        GW["FastAPI Async REST & GeoJSON Gateway"]
     end
 
-    Space --> API
-    API --> DAEMON --> MASK --> DEDUP --> PG
-    PG <--> GIST
-    FAC_DB --> PG
+    subgraph Client_Layer ["Tactical Command Interface"]
+        UI1["Map Workspace (Google Roadmap & Satellite Hybrid)"]
+        UI2["Radiant Thermal Energy Overlays"]
+        UI3["3-Column Event Dossier & SHAP Contribution Grid"]
+        UI4["Real-Time Classified Thermal Newsfeed"]
+    end
 
-    PG --> CLUST --> FEAT --> XGB & BASE
-    XGB --> SHAP --> LLM
-    BASE --> LLM
+    S1 --> I1 --> I2 --> I3 --> DB
+    S2 --> DB
+    S3 --> A2
+    DB <--> IDX
 
-    CLUST & XGB & BASE & LLM --> FASTAPI
-    FASTAPI --> MAP & DOSSIER & HUD
+    DB --> A1 --> A2 --> A3 --> A4 --> A6
+    A2 --> A5 --> A6
+    A1 & A3 & A5 & A6 --> GW
 
-    classDef space fill:#0B3D91,stroke:#4A90E2,stroke-width:2px,color:#ffffff;
-    classDef ing fill:#1E293B,stroke:#0284C7,stroke-width:2px,color:#ffffff;
-    classDef db fill:#0F172A,stroke:#3B82F6,stroke-width:2px,color:#ffffff;
-    classDef ml fill:#311042,stroke:#A855F7,stroke-width:2px,color:#ffffff;
-    classDef ui fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#ffffff;
-
-    class Space,V20,V21,SNPP,MODIS space;
-    class Ingestion,API,DAEMON,MASK,DEDUP ing;
-    class Storage,PG,GIST,FAC_DB db;
-    class Processing,CLUST,FEAT,XGB,SHAP,BASE,LLM ml;
-    class Presentation,FASTAPI,MAP,DOSSIER,HUD ui;
+    GW --> UI1
+    GW --> UI2
+    GW --> UI3
+    GW --> UI4
 ```
 
 ---
 
-## 🔬 Scientific & Technical Architecture
-
-### 1. Spatio-Temporal Event Aggregation (ST-DBSCAN)
-Individual satellite detections represent transient pixel observations. ThermoTrace AI groups multi-sensor detections into persistent physical thermal events using Spatio-Temporal Density-Based Clustering:
-
-$$\mathcal{D}(p_i, p_j) = \sqrt{\left(\frac{\text{haversine}(p_i, p_j)}{\epsilon_s}\right)^2 + \left(\frac{|t_i - t_j|}{\epsilon_t}\right)^2} \le 1.0$$
-
-* **Spatial Threshold ($\epsilon_s$):** $1500\text{ meters}$
-* **Temporal Window ($\epsilon_t$):** $24\text{ hours}$
-* **Minimum Core Detections ($MinPts$):** $1\text{ detection}$
+## 3. Data Processing & Analytical Pipeline
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Raw_Detections: NASA FIRMS Polling
-    Raw_Detections --> Sovereign_Mask: India Geo-Fence Check
-    Sovereign_Mask --> ST_DBSCAN: Distance ≤ 1500m & Δt ≤ 24h
-    ST_DBSCAN --> Feature_Extraction: Compute 14-D Vector
-    Feature_Extraction --> XGBoost_Classification: Class Probability
-    Feature_Extraction --> Baseline_Assessment: Rolling 90-Day Gaussian Bell
-    XGBoost_Classification --> Tactical_Dossier: SHAP Attributions
-    Baseline_Assessment --> Tactical_Dossier: Z-Score & Exceedance %
-    Tactical_Dossier --> [*]: Live Web Command Map
+sequenceDiagram
+    autonumber
+    participant Satellite as NASA FIRMS API
+    participant Ingestion as Ingestion Daemon
+    participant DB as PostGIS Database
+    participant Clustering as ST-DBSCAN Engine
+    participant ML as XGBoost & SHAP
+    participant Baseline as Gaussian Baseline
+    participant API as FastAPI Gateway
+    participant Client as Web Dashboard
+
+    Satellite->>Ingestion: Stream NRT active fire observations (VIIRS/MODIS)
+    Ingestion->>Ingestion: Filter sovereign Indian boundaries & deduplicate
+    Ingestion->>DB: Bulk insert normalized ThermalObservations
+    DB->>Clustering: Query unclustered points within spatial window (1500m)
+    Clustering->>Clustering: Generate Spatio-Temporal Event Clusters
+    Clustering->>ML: Extract 14-D canonical feature vectors
+    ML->>ML: Infer operational class & compute SHAP values
+    Clustering->>Baseline: Compute facility/sector 90-day Z-score
+    Baseline->>DB: Persist EventClassification, AnomalyMetrics, Dossier
+    Client->>API: Request GeoJSON active clusters (`/api/v1/gis/events`)
+    API->>Client: Return GeoJSON FeatureCollection
+    Client->>API: Request tactical dossier (`/api/v1/events/{id}`)
+    API->>Client: Return 14-D features, SHAP attributions & baseline statistics
 ```
 
 ---
 
-### 2. The 14-Dimensional Canonical Feature Matrix
-Every cluster is transformed into a standardized 14-dimensional feature vector $\mathbf{x} \in \mathbb{R}^{14}$ feeding the classification and anomaly models:
+## 4. Mathematical Formulations & Algorithms
 
-| # | Feature Name | Mathematical Description | Physical Intuition |
-|:---|:---|:---|:---|
-| 1 | `peak_frp` | $\max_{p \in C} \text{FRP}(p)$ | Peak Fire Radiative Power in Megawatts ($MW$) |
-| 2 | `mean_frp` | $\frac{1}{|C|}\sum_{p \in C} \text{FRP}(p)$ | Mean continuous energy release rate |
-| 3 | `frp_variance` | $\text{Var}_{p \in C}(\text{FRP}(p))$ | Flame intermittency vs steady-state heat |
-| 4 | `max_brightness_temp` | $\max_{p \in C} T_{4}(p)$ | 4-micron Mid-Infrared Brightness Temp ($K$) |
-| 5 | `detection_count` | $|C|$ | Total satellite pixel hits in cluster |
-| 6 | `pass_count` | $|\{t_p \mid p \in C\}|$ | Independent orbital satellite overpasses |
-| 7 | `duration_hours` | $(t_{\max} - t_{\min}) / 3600$ | Temporal lifespan of the thermal release |
-| 8 | `night_ratio` | $|C_{\text{night}}| / |C|$ | Fraction of detections during night passes |
-| 9 | `footprint_area_km2` | $\text{Area}(\text{ConvexHull}(C))$ | Physical surface extent of the thermal zone |
-| 10 | `facility_dist_km` | $\min_{f \in \mathcal{F}} \text{dist}(C, f)$ | Proximity to registered industrial plant |
-| 11 | `is_near_facility` | $\mathbb{I}(\text{dist} < 2.5\text{ km})$ | Binary indicator for industrial zone co-location |
-| 12 | `facility_type_code` | $\text{OneHot}(\text{Category}(f))$ | Refinery, Steel, Cement, Power, Chemical |
-| 13 | `landcover_class` | $\text{ESA WorldCover}(C_{\text{centroid}})$ | Built-up (50), Cropland (40), Tree (10), etc. |
-| 14 | `frp_density` | $\text{Peak FRP} / (\text{Area} + \epsilon)$ | Radiative intensity per unit ground area |
+### 4.1 Spatio-Temporal Event Clustering (ST-DBSCAN)
+Individual satellite detections represent instantaneous pixel observations. Detections are aggregated into discrete physical events using density-based clustering across spatial and temporal dimensions:
+
+$$\mathcal{D}(p_i, p_j) = \sqrt{\left(rac{	ext{haversine}(p_i, p_j)}{\epsilon_s}ight)^2 + \left(rac{|t_i - t_j|}{\epsilon_t}ight)^2} \le 1.0$$
+
+* **Spatial Distance Threshold ($\epsilon_s$):** $1500	ext{ m}$
+* **Temporal Window ($\epsilon_t$):** $24	ext{ hours}$
+* **Minimum Cluster Core Points ($MinPts$):** $1	ext{ detection}$
 
 ---
 
-### 3. Calibrated XGBoost Classifier & Explainable AI (SHAP)
-The platform trains an optimized Gradient Boosted Decision Tree (XGBoost) model with log-loss multi-class objective calibrated via Platt scaling:
+### 4.2 The 14-Dimensional Canonical Feature Matrix
 
-$$\hat{y} = \arg\max_{c \in \mathcal{C}} P(Y = c \mid \mathbf{x})$$
+Every aggregated thermal cluster is characterized by a deterministic 14-dimensional feature vector $\mathbf{x} \in \mathbb{R}^{14}$:
 
-$$\text{with } \mathcal{C} = \{\text{Industrial Flare}, \text{Industrial Fire}, \text{Routine Process Heat}, \text{Wildfire / Agri}, \text{Urban Noise}\}$$
+| Index | Feature Key | Mathematical Definition | Physical Description |
+|:---:|:---|:---|:---|
+| 1 | `peak_frp` | $\max_{p \in C} 	ext{FRP}(p)$ | Peak Fire Radiative Power in Megawatts ($MW$) |
+| 2 | `mean_frp` | $rac{1}{|C|}\sum_{p \in C} 	ext{FRP}(p)$ | Mean radiative heat emission across observations |
+| 3 | `frp_variance` | $	ext{Var}_{p \in C}(	ext{FRP}(p))$ | Variance in radiative output (flaring instability vs steady process) |
+| 4 | `max_brightness_temp` | $\max_{p \in C} T_{4}(p)$ | Maximum 4-micron brightness temperature in Kelvin ($K$) |
+| 5 | `detection_count` | $|C|$ | Total count of raw satellite observations in cluster |
+| 6 | `pass_count` | $|\{t_p \mid p \in C\}|$ | Number of distinct satellite overpasses covering the event |
+| 7 | `duration_hours` | $(t_{\max} - t_{\min}) / 3600$ | Observed lifespan of the thermal event |
+| 8 | `night_ratio` | $|C_{	ext{night}}| / |C|$ | Proportion of nighttime observations |
+| 9 | `footprint_area_km2` | $	ext{Area}(	ext{ConvexHull}(C))$ | Spatial surface area covered by clustered detections |
+| 10 | `facility_dist_km` | $\min_{f \in \mathcal{F}} 	ext{dist}(C, f)$ | Orthodromic distance to nearest registered industrial facility |
+| 11 | `is_near_facility` | $\mathbb{I}(	ext{dist} < 2.5	ext{ km})$ | Binary indicator for industrial zone co-location |
+| 12 | `facility_type_code` | $	ext{OneHot}(	ext{Type}(f))$ | Categorical sector encoding (Refinery, Steel, Power, Chemical, Mine) |
+| 13 | `landcover_class` | $	ext{ESA WorldCover}(C_{	ext{centroid}})$ | Landcover category (Built-up: 50, Cropland: 40, Forest: 10, Shrub: 20) |
+| 14 | `frp_density` | $	ext{Peak FRP} / (	ext{Area} + \epsilon)$ | Radiative intensity per unit ground surface area ($MW/km^2$) |
 
-**Explainable Attribution via TreeSHAP:**
-For every prediction, exact Shapley values $\phi_i$ are computed in real time to guarantee non-hallucinatory model transparency:
+---
+
+### 4.3 Supervised Multi-Class Classification & Explainability
+
+The classification engine employs a Gradient Boosted Decision Tree (XGBoost) trained on historical FIRMS observations cross-referenced against ground-truth industrial and agricultural inventories:
+
+$$\hat{y} = rg\max_{c \in \mathcal{C}} P(Y = c \mid \mathbf{x})$$
+
+$$\mathcal{C} = \{	ext{Industrial Flare}, 	ext{Industrial Fire}, 	ext{Routine Process Heat}, 	ext{Wildfire / Agricultural}, 	ext{Urban Non-Industrial}\}$$
+
+**Additive Feature Explanations (TreeSHAP):**
+Feature attributions are computed locally for each event to explain classification drivers without heuristic approximations:
 
 $$f(\mathbf{x}) = \phi_0 + \sum_{i=1}^{14} \phi_i(\mathbf{x})$$
 
-```mermaid
-gantt
-    title XGBoost Feature Importance (SHAP Relative Weights)
-    dateFormat  X
-    axisFormat %s
-    
-    section Core Radiometry
-    Peak FRP & Density         :active, 0, 92
-    Night-Time Ratio           :active, 0, 85
-    Brightness Temp (4μm)      :active, 0, 78
-    section Spatial Geometry
-    Industrial Proximity (<2.5km):crit, 0, 96
-    ESA WorldCover Built-Up    :crit, 0, 88
-    Footprint Area (km²)       :crit, 0, 65
-    section Temporal Dynamics
-    Multi-Pass Persistence     :0, 81
-    Observation Duration       :0, 74
-```
+Where $\phi_0$ is the expected model base value and $\phi_i(\mathbf{x})$ represents the exact marginal contribution of feature $i$.
 
 ---
 
-### 4. Rolling 90-Day Gaussian Baseline Anomaly Detection
-To distinguish routine plant flaring from hazardous operational surges, ThermoTrace AI maintains rolling 90-day emission profiles for every industrial sector and facility:
+### 4.4 Rolling 90-Day Gaussian Baseline Anomaly Detection
 
-$$Z = \frac{\text{Peak FRP} - \mu_{90}}{\sigma_{90}}$$
+To differentiate normal operational emissions from severe industrial surges or process upsets, historical baseline statistics ($\mu_{90}, \sigma_{90}$) are maintained per facility and sector:
 
-$$\text{Exceedance } = \Phi(Z) \times 100\% = \frac{1}{\sqrt{2\pi}} \int_{-\infty}^{Z} e^{-u^2/2} du$$
+$$Z = rac{	ext{Peak FRP} - \mu_{90}}{\sigma_{90}}$$
 
-```mermaid
-graph LR
-    subgraph Tiers ["🚨 Statistical Anomaly Classification Tiers"]
-        T1["🟢 NOMINAL\nZ < 1.50σ\nExpected Operational Heat"]
-        T2["🟡 ELEVATED\n1.50σ ≤ Z < 2.50σ\nAbove Baseline Warning"]
-        T3["🟠 ABNORMAL\n2.50σ ≤ Z < 4.00σ\nSignificant Surge Alert"]
-        T4["🔴 CRITICAL\nZ ≥ 4.00σ\nExtreme Hazardous Exceedance"]
-    end
+$$	ext{Exceedance } = \Phi(Z) 	imes 100\% = rac{1}{\sqrt{2\pi}} \int_{-\infty}^{Z} e^{-u^2/2} du$$
 
-    T1 --> T2 --> T3 --> T4
-
-    classDef t1 fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#ffffff;
-    classDef t2 fill:#78350F,stroke:#F59E0B,stroke-width:2px,color:#ffffff;
-    classDef t3 fill:#7C2D12,stroke:#EA580C,stroke-width:2px,color:#ffffff;
-    classDef t4 fill:#7F1D1D,stroke:#EF4444,stroke-width:2px,color:#ffffff;
-
-    class T1 t1;
-    class T2 t2;
-    class T3 t3;
-    class T4 t4;
-```
+| Anomaly Tier | Standard Deviation Threshold | Operational Interpretation |
+|:---|:---|:---|
+| **NOMINAL** | $Z < 1.50\sigma$ | Thermal emission is within expected operational envelope |
+| **ELEVATED** | $1.50\sigma \le Z < 2.50\sigma$ | Moderate emission increase above baseline historical mean |
+| **ABNORMAL** | $2.50\sigma \le Z < 4.00\sigma$ | Significant flaring or combustion event requiring surveillance |
+| **CRITICAL** | $Z \ge 4.00\sigma$ | Severe anomalous heat release indicative of hazardous flaring or fire |
 
 ---
 
-## 🗺️ Google Maps Tactical Command Center
+## 5. API Specification
 
-```mermaid
-classDiagram
-    class MapEngine {
-        +GoogleRoadmapTiles
-        +GoogleSatelliteHybrid
-        +MaxZoom: 22
-        +Pitch: 35deg
-        +SovereignBoundaryMask()
-        +FlyToEvent(lat, lon)
-    }
-
-    class RadiantThermalOverlay {
-        +OuterHeatHaze(Gaussian)
-        +MidDispersionHalo(OrangeRed)
-        +WhiteHotCoreMarker()
-        +RadarPulseRing()
-    }
-
-    class TacticalDossier {
-        +Column1_RadiometryTable()
-        +Column2_FeatureVector_SHAP()
-        +Column3_GaussianBellCurve()
-        +Bottom_GroundedLLMBrief()
-    }
-
-    MapEngine *-- RadiantThermalOverlay
-    MapEngine --> TacticalDossier : Interactively Triggers
-```
-
-* **Zero Watermark Deep Zoom:** Locked high-resolution Google Maps Hybrid Satellite enabling micro-inspection of refinery stacks, flare tips, furnace exhausts, and kiln zones.
-* **Sovereign India Bounds:** Strictly enforced coordinates (`8.30°N–36.74°N`, `68.00°E–96.98°E`), rejecting Sri Lanka or Indian Ocean false positives.
-* **Expanded Tactical Dossier (1080px):** 3-column analysis grid with interactive Gaussian curve, SHAP feature impact bars, sensor telemetry, and plain-English alerts.
-
----
-
-## ⚡ Interactive REST & Geospatial API Reference
-
-| Method | Endpoint | Description | Response Type |
+| HTTP Method | Route | Description | Response Content-Type |
 |:---|:---|:---|:---|
-| `GET` | `/api/v1/health` | Service health, model status & DB connectivity | `application/json` |
-| `GET` | `/api/v1/gis/events` | GeoJSON FeatureCollection of all active Indian events | `application/geo+json` |
-| `GET` | `/api/v1/events/{id}` | Full 14-D canonical dossier, SHAP values & Gaussian metrics | `application/json` |
+| `GET` | `/api/v1/health` | Service health status, database connection, and model availability | `application/json` |
+| `GET` | `/api/v1/gis/events` | GeoJSON FeatureCollection of all sovereign Indian thermal clusters | `application/geo+json` |
+| `GET` | `/api/v1/events/{id}` | Comprehensive event dossier including 14-D features, SHAP values, and baseline statistics | `application/json` |
 | `GET` | `/api/v1/news` | Real-time classified thermal incident newsfeed | `application/json` |
-| `GET` | `/api/v1/firms/status` | Satellite ingestion metrics & last sync timestamp | `application/json` |
+| `GET` | `/api/v1/firms/status` | Current FIRMS ingestion metrics and timestamp of latest satellite overpass | `application/json` |
 
 ---
 
-## 🛠️ Quick Start & Deployment
+## 6. Deployment & Environment Setup
 
-### Method 1: Instant Production Stack via Docker Compose (Recommended)
+### 6.1 Containerized Deployment (Docker Compose)
 
 ```bash
-# 1. Clone repository
+# Clone the repository
 git clone https://github.com/sharancode3/ThermoTrace-AI.git
 cd ThermoTrace-AI
 
-# 2. Configure environment
+# Copy environment configuration
 cp .env.example .env
 
-# 3. Launch full stack with Docker Compose
+# Build and start all services
 docker-compose up -d --build
 ```
 
-**Access Services:**
-* **Frontend Tactical Console:** [http://localhost:3000](http://localhost:3000)
-* **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **PostGIS Spatial Database:** `localhost:5432` (`thermotrace` / `thermotrace_dev_pwd`)
+**Service Endpoints:**
+* **Frontend Web Dashboard:** `http://localhost:3000`
+* **FastAPI Backend Gateway:** `http://localhost:8000`
+* **Interactive API Documentation:** `http://localhost:8000/docs`
+* **PostgreSQL / PostGIS Instance:** `localhost:5432`
 
 ---
 
-### Method 2: Local Developer Setup
+### 6.2 Local Development Setup
 
-#### Backend Setup (Python 3.11+)
+#### Backend (Python 3.11+)
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\Activate.ps1
+
+# Activate virtual environment
+# Windows:
+.env\Scripts\Activate.ps1
+# Linux/macOS:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Run Live Ingestion & ML Pipeline
+# Run database synchronization and live ingestion
+python scripts/sync_schema.py
 python scripts/live_firms_ingestion.py
 
-# Start FastAPI Gateway
+# Start development server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-#### Frontend Setup (Node.js 20+)
+#### Frontend (Node.js 20+)
 ```bash
 cd frontend
 npm install
@@ -300,44 +256,41 @@ npm run dev
 
 ---
 
-## 📂 Repository Directory Layout
+## 7. Directory Structure
 
 ```
 ThermoTrace-AI/
 ├── backend/
 │   ├── app/
-│   │   ├── api/             # FastAPI REST endpoints (GIS GeoJSON, dossiers, health)
-│   │   ├── core/            # System config, database sessions, environment settings
-│   │   ├── db/              # PostGIS SQLAlchemy models (ThermalDetections, Clusters)
-│   │   ├── domain/          # Anomaly detection, 14-D feature extraction, geocoding
-│   │   ├── ml/              # Trained XGBoost classifier & SHAP attribution engine
-│   │   └── schemas/         # Pydantic v2 schemas for events and intelligence briefs
+│   │   ├── api/             # FastAPI endpoint definitions (GIS, events, news, health)
+│   │   ├── core/            # Configuration settings and database connectivity
+│   │   ├── db/              # SQLAlchemy models and database session management
+│   │   ├── domain/          # Anomaly engine, feature extraction, ST-DBSCAN, geocoding
+│   │   ├── ml/              # Serialized XGBoost model loader and SHAP attribution
+│   │   └── schemas/         # Pydantic data validation models
 │   ├── data/
-│   │   └── models/          # Serialized models (thermo_xgb_v1.0.0.joblib, classes.npy)
-│   ├── scripts/             # Live FIRMS ingestion daemon, dataset builders, training
-│   ├── tests/               # Unit and integration test suite
-│   ├── Dockerfile           # Backend container definition
-│   └── requirements.txt     # Python ecosystem dependencies
+│   │   └── models/          # Model artifacts (thermo_xgb_v1.0.0.joblib, classes.npy)
+│   ├── scripts/             # Data ingestion daemons, baseline updater, ML training scripts
+│   ├── tests/               # Backend test suites
+│   ├── Dockerfile           # Backend container specification
+│   └── requirements.txt     # Python package requirements
 ├── frontend/
 │   ├── src/
-│   │   ├── app/             # Next.js 14 App Router (monitor, facilities, reports)
-│   │   ├── components/      # MapComponent (locked Google Maps), EventDetailPanel, Sidebar
+│   │   ├── app/             # Next.js App Router (monitor, facilities, reports)
+│   │   ├── components/      # UI components (MapComponent, EventDetailPanel, Sidebar)
 │   │   └── lib/             # API client, geospatial helpers, and telemetry hooks
-│   ├── public/              # Optimized vector SVG assets
-│   ├── Dockerfile           # Frontend container definition
-│   └── package.json         # Node.js dependencies & scripts
-├── data/                    # Industrial facility databases & WorldCover metadata
-├── docs/                    # PRD, TRD, UI/UX contracts, and ML audit reports
-├── docker-compose.yml       # Production/development stack orchestration
-├── .env.example             # Template environment variables
-└── README.md                # World-class system documentation
+│   ├── public/              # Static vector assets
+│   ├── Dockerfile           # Frontend container specification
+│   └── package.json         # Node.js dependencies and scripts
+├── data/                    # Industrial facility databases and WorldCover metadata
+├── docs/                    # Architectural requirements (PRD, TRD) and ML specifications
+├── docker-compose.yml       # Production container orchestration
+├── .env.example             # Environment variable template
+└── README.md                # Project documentation
 ```
 
 ---
 
-<div align="center">
+## 8. Compliance & Operational Standards
 
-### 🔒 Sovereign Compliance & Attribution
-*Developed for the Smart India Hackathon (SIH 2026) in alignment with National Technical Research Organisation (NTRO) and Central Pollution Control Board (CPCB) operational guidelines.*
-
-</div>
+Developed in alignment with operational requirements for the Smart India Hackathon (SIH 2026), supporting technical evaluation standards established by the National Technical Research Organisation (NTRO) and Central Pollution Control Board (CPCB).
