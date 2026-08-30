@@ -2,7 +2,7 @@
 
 Date: 2026-08-30
 Branch: `stage4-apis`
-Commit: pending local validation and review
+Implementation commit: `52571be0e8409790df9728b6878d33db55a923a0`
 
 ## Implemented surfaces
 
