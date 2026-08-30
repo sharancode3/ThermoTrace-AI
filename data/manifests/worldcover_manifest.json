@@ -1,0 +1,142 @@
+{
+  "source": "ESA WorldCover 10m 2021 v200",
+  "tile_count": 8,
+  "tiles": [
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E081_InputQuality.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N21E081_Map\\ESA_WorldCover_10m_2021_v200_N21E081_InputQuality.tif",
+      "crs": "EPSG:4326",
+      "width": 6000,
+      "height": 6000,
+      "bounds": {
+        "left": 81.0,
+        "bottom": 21.0,
+        "right": 84.0,
+        "top": 24.0
+      },
+      "resolution": [
+        0.0005,
+        0.0005
+      ]
+    },
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E081_Map.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N21E081_Map\\ESA_WorldCover_10m_2021_v200_N21E081_Map.tif",
+      "crs": "EPSG:4326",
+      "width": 36000,
+      "height": 36000,
+      "bounds": {
+        "left": 81.0,
+        "bottom": 21.0,
+        "right": 84.0,
+        "top": 24.0
+      },
+      "resolution": [
+        8.333333333333333e-05,
+        8.333333333333333e-05
+      ]
+    },
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E075_InputQuality.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N24E075_Map\\ESA_WorldCover_10m_2021_v200_N24E075_InputQuality.tif",
+      "crs": "EPSG:4326",
+      "width": 6000,
+      "height": 6000,
+      "bounds": {
+        "left": 75.0,
+        "bottom": 24.0,
+        "right": 78.0,
+        "top": 27.0
+      },
+      "resolution": [
+        0.0005,
+        0.0005
+      ]
+    },
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E075_Map.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N24E075_Map\\ESA_WorldCover_10m_2021_v200_N24E075_Map.tif",
+      "crs": "EPSG:4326",
+      "width": 36000,
+      "height": 36000,
+      "bounds": {
+        "left": 75.0,
+        "bottom": 24.0,
+        "right": 78.0,
+        "top": 27.0
+      },
+      "resolution": [
+        8.333333333333333e-05,
+        8.333333333333333e-05
+      ]
+    },
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E084_InputQuality.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N24E084_Map\\ESA_WorldCover_10m_2021_v200_N24E084_InputQuality.tif",
+      "crs": "EPSG:4326",
+      "width": 6000,
+      "height": 6000,
+      "bounds": {
+        "left": 84.0,
+        "bottom": 24.0,
+        "right": 87.0,
+        "top": 27.0
+      },
+      "resolution": [
+        0.0005,
+        0.0005
+      ]
+    },
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E084_Map.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N24E084_Map\\ESA_WorldCover_10m_2021_v200_N24E084_Map.tif",
+      "crs": "EPSG:4326",
+      "width": 36000,
+      "height": 36000,
+      "bounds": {
+        "left": 84.0,
+        "bottom": 24.0,
+        "right": 87.0,
+        "top": 27.0
+      },
+      "resolution": [
+        8.333333333333333e-05,
+        8.333333333333333e-05
+      ]
+    },
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E072_InputQuality.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N30E072_Map\\ESA_WorldCover_10m_2021_v200_N30E072_InputQuality.tif",
+      "crs": "EPSG:4326",
+      "width": 6000,
+      "height": 6000,
+      "bounds": {
+        "left": 72.0,
+        "bottom": 30.0,
+        "right": 75.0,
+        "top": 33.0
+      },
+      "resolution": [
+        0.0005,
+        0.0005
+      ]
+    },
+    {
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E072_Map.tif",
+      "filepath": "raw\\landcover\\WORLDCOVER\\ESA_WORLDCOVER_10M_2021_V200\\MAP\\ESA_WorldCover_10m_2021_v200_N30E072_Map\\ESA_WorldCover_10m_2021_v200_N30E072_Map.tif",
+      "crs": "EPSG:4326",
+      "width": 36000,
+      "height": 36000,
+      "bounds": {
+        "left": 72.0,
+        "bottom": 30.0,
+        "right": 75.0,
+        "top": 33.0
+      },
+      "resolution": [
+        8.333333333333333e-05,
+        8.333333333333333e-05
+      ]
+    }
+  ]
+}

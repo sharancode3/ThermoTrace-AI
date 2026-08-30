@@ -1,9 +1,9 @@
-# UI/UX Design Requirements Document
+﻿# UI/UX Design Requirements Document
 
 # Thermo Intelligence: Industrial Fire & Persistent Thermal Source Detection Platform
 
 **Document Version:** 1.0.0  
-**Project Identifier:** SIH-2026-PS26162 (National Technical Research Organisation — NTRO)  
+**Project Identifier:** SIH-2026-PS26162 (National Technical Research Organisation â€” NTRO)  
 **Product Reference:** [Thermo_Intelligence_PRD.md](file:///c:/SHARAN%20PROJECTS/SiH%202026-THERMOSCAN%20AI/docs/Thermo_Intelligence_PRD.md)  
 **Technical Reference:** [Thermo_Intelligence_TRD.md](file:///c:/SHARAN%20PROJECTS/SiH%202026-THERMOSCAN%20AI/docs/Thermo_Intelligence_TRD.md)  
 **Workflow Reference:** [Thermo_Intelligence_Workflow.md](file:///c:/SHARAN%20PROJECTS/SiH%202026-THERMOSCAN%20AI/docs/Thermo_Intelligence_Workflow.md)  
@@ -22,7 +22,7 @@ The design philosophy follows six non-negotiable operational principles:
 2. **Data & Cartography First:** The MapLibre GIS canvas is the primary command workspace; supporting panels frame and elevate map data rather than competing with it.
 3. **Restrained, High-Contrast Palette:** Strict avoidance of neon, glowing borders, gamer aesthetics, or rainbow hues. Colors are used strictly for semantic severity and operational state.
 4. **Zero AI Novelty Tropes:** Complete absence of generic robot icons, sparkle emojis, magic-wand graphics, or futuristic animated blobs. The conversational assistant is presented as an authoritative, structured intelligence query tool.
-5. **Calm, High-Density Information Hierarchy:** High data density achieved through clean typography, structured tables, and progressive disclosure—never by cramming illegible text into tiny cards.
+5. **Calm, High-Density Information Hierarchy:** High data density achieved through clean typography, structured tables, and progressive disclosureâ€”never by cramming illegible text into tiny cards.
 6. **Native Mobile Ergonomics:** Mobile is not a shrunken desktop iframe; it reorganizes into one-handed bottom sheets, touch-optimized map controls, and fluid bottom navigation while preserving full analytical capabilities.
 
 ---
@@ -40,7 +40,7 @@ The design philosophy follows six non-negotiable operational principles:
 | **Excessive Glassmorphism**        | Blurs text contrast over satellite imagery.                  |
 | (High blur, frosted cards)         | Use solid, high-contrast surfaces (`#111827`, `#1F2937`).    |
 | **Hyper-Rounded Cards (>16px)**    | Consumes valuable screen space on GIS viewports.             |
-|                                    | Enforce subtle, crisp radii (4px – 8px max).                  |
+|                                    | Enforce subtle, crisp radii (4px â€“ 8px max).                  |
 | **Constant Floating Animations**   | Distracts analysts from identifying real-world thermal spikes.|
 | (Pulsing blobs, particle meshes)   | Restrain animation to subtle micro-state transitions (<150ms).|
 
@@ -48,11 +48,11 @@ The design philosophy follows six non-negotiable operational principles:
 
 ## 3. Design System Tokens & Foundations
 
-### 3.1 Color System (Dual Theme: Dark Aerospace & Clean Light)
+### 3.1 Color System (Dual Theme: Clean Light Primary & Dark Aerospace)
 
 ### DESIGN COLOR TOKEN MATRIX
 
-| Token Name           | Dark Mode (Default)      | Light Mode (Operations)   | Semantic Role / Usage            |
+| Token Name           | Dark Mode (Secondary)      | Light Mode (Primary / Default)   | Semantic Role / Usage            |
 |:---|:---|:---|:---|
 | `bg-app`             | `#0B0F17` (Deep Obsidian)| `#F8FAFC` (Slate Cool)    | Root application background      |
 | `bg-surface`         | `#111827` (Carbon Gray)  | `#FFFFFF` (Pure White)    | Navigation sidebar, card panels  |
@@ -62,7 +62,7 @@ The design philosophy follows six non-negotiable operational principles:
 | `text-primary`       | `#F8FAFC` (Crisp Slate)  | `#0F172A` (Ink Dark)      | Headings, primary metrics        |
 | `text-secondary`     | `#94A3B8` (Medium Slate) | `#475569` (Charcoal)      | Labels, subheadings, metadata    |
 | `text-muted`         | `#64748B` (Muted Slate)  | `#94A3B8` (Cool Muted)    | Timestamps, disabled captions    |
-| `status-critical`    | `#DC2626` (Matte Crimson)| `#B91C1C` (Deep Crimson)  | Accidental Industrial Fire, Z>4σ |
+| `status-critical`    | `#DC2626` (Matte Crimson)| `#B91C1C` (Deep Crimson)  | Accidental Industrial Fire, Z>4Ïƒ |
 | `status-warning`     | `#D97706` (Amber Orange) | `#B45309` (Deep Amber)    | Elevated Anomaly, Unclassified   |
 | `status-persistent`  | `#0284C7` (Sky Steel)    | `#0369A1` (Ocean Steel)   | Routine Industrial Flare / Kiln  |
 | `status-vegetation`  | `#16A34A` (Forest Green) | `#15803D` (Deep Green)    | Wildfire / Forest Fire           |
@@ -85,7 +85,7 @@ The design philosophy follows six non-negotiable operational principles:
 | **Body Metadata**    | `12px` / `16px`   | Regular (400) | `0.0em`       | Secondary details, table rows       |
 | **Badge / Caption**  | `11px` / `14px`   | Medium (500)  | `+0.02em`     | Status badges, coordinate tags      |
 | **Data Metric Large**| `20px` / `26px`   | Bold (700)    | Monospace     | Peak FRP (`450 MW`), Max Temp (`482K`)|
-| **Data Metric Small**| `12px` / `16px`   | Medium (500)  | Monospace     | Lat/Lon (`22.4712°N, 70.0631°E`)    |
+| **Data Metric Small**| `12px` / `16px`   | Medium (500)  | Monospace     | Lat/Lon (`22.4712Â°N, 70.0631Â°E`)    |
 
 ### 3.3 Spacing, Radii, Borders & Shadows
 - **Base Grid:** Strict 4px modular grid (`4px`, `8px`, `12px`, `16px`, `20px`, `24px`, `32px`).
@@ -108,16 +108,16 @@ The design philosophy follows six non-negotiable operational principles:
 | TOP BAR: Brand Logo | Live Telemetry Counter | Global Search Omnibox | Filter Chips | Freshness Ping | Profile   |
 +-----------+-------------------------------------------------------------------------+----------------------------+
 | LEFT NAV  | CENTRAL GIS COMMAND WORKSPACE (MapLibre GL JS)                          | RIGHT INVESTIGATION DRAWER |
-| (64px /   |                                                                         | (380px – Collapsible)      |
+| (64px /   |                                                                         | (380px â€“ Collapsible)      |
 | 200px)    | [ Floating Map Controls: Zoom, Pitch, Reset, Layer Toggle, Basemap ]    |                            |
 |           |                                                                         | [ Event ID: EVT-IN-GUJ-42 ]|
-| • Monitor |                                                                         | • Tab 1: Current State     |
-| • News    |                                                                         | • Tab 2: Historical Base   |
-| • Alerts  |                                                                         | • Tab 3: Geo Context       |
-| • Plant DB|                                                                         | • Tab 4: Earlier vs. Now   |
-| • History |                                                                         |                            |
-| • Reports | [ Bottom Floating Timeline Scrubber: 6h | 24h | 7d | 30d | Playback ]   | [ Action: Generate Dossier]|
-| • Chat    |                                                                         | [ Action: Focus / Share ]  |
+| â€¢ Monitor |                                                                         | â€¢ Tab 1: Current State     |
+| â€¢ News    |                                                                         | â€¢ Tab 2: Historical Base   |
+| â€¢ Alerts  |                                                                         | â€¢ Tab 3: Geo Context       |
+| â€¢ Plant DB|                                                                         | â€¢ Tab 4: Earlier vs. Now   |
+| â€¢ History |                                                                         |                            |
+| â€¢ Reports | [ Bottom Floating Timeline Scrubber: 6h | 24h | 7d | 30d | Playback ]   | [ Action: Generate Dossier]|
+| â€¢ Chat    |                                                                         | [ Action: Focus / Share ]  |
 +-----------+-------------------------------------------------------------------------+----------------------------+
 | FOOTER STATUS BAR: PostGIS Active | Satellite Pass: VIIRS NOAA-20 (14m ago) | Mode: Operational | Z-Score Engine: OK|
 +------------------------------------------------------------------------------------------------------------------+
@@ -173,9 +173,9 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 | **Uncertain**       | Circle (Dotted)   | `#D97706` (Amb) | 1.5px dashed `#F8FAFC`                 |
 
 ### 5.2 Dynamic Clustering Display
-- **Zoom 1–6 (Macro National Clusters):** Solid circular badge with dark background, crisp border, and white tabular count: `14 (2 Critical)`.
-- **Zoom 7–10 (Regional Groups):** Individual geometric markers scaled proportionally to `\log_10(Peak_FRP)`.
-- **Zoom 11–18 (Deep Inspection):** Exact satellite pixel footprint polygon (`boundary_geom`) rendered with 20% opacity fill and 1.5px high-contrast stroke + 1km/5km safety buffer rings.
+- **Zoom 1â€“6 (Macro National Clusters):** Solid circular badge with dark background, crisp border, and white tabular count: `14 (2 Critical)`.
+- **Zoom 7â€“10 (Regional Groups):** Individual geometric markers scaled proportionally to `\log_10(Peak_FRP)`.
+- **Zoom 11â€“18 (Deep Inspection):** Exact satellite pixel footprint polygon (`boundary_geom`) rendered with 20% opacity fill and 1.5px high-contrast stroke + 1km/5km safety buffer rings.
 
 ---
 
@@ -190,14 +190,14 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
     1. *Contextual Spatial AI:* Distinguish industrial gas flares from accidental fires and farm stubble.
     2. *Historical Baseline Engine:* Automated `Z`-Score anomaly detection comparing current FRP against 12-month facility history.
     3. *Tactical Reporting & Grounded Chat:* Instant multi-section PDF dossiers and strict zero-hallucination RAG assistant.
-  - Action Button: `Launch Command Center →` (Dismisses modal, sets `localStorage`, reveals full GIS).
+  - Action Button: `Launch Command Center â†’` (Dismisses modal, sets `localStorage`, reveals full GIS).
 
 ---
 
 ### 6.2 Screen 2: Main GIS Command Center (Default Monitor)
 - **User Goal:** Real-time spatial situational awareness over the Indian Subcontinent.
 - **Components:**
-  - **Global Header:** System Status (`ONLINE`), Satellite Feed Status (`VIIRS NOAA-20 — 18m ago`), Active Alert Counter.
+  - **Global Header:** System Status (`ONLINE`), Satellite Feed Status (`VIIRS NOAA-20 â€” 18m ago`), Active Alert Counter.
   - **Layer Controller (Top Left Floating):** Expandable popover with toggle switches for:
     - `[x] Thermal Events (Clustered)`
     - `[x] Industrial Facilities (OSM Registry)`
@@ -220,9 +220,9 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
   1. **Tab 1: Current Telemetry:**
      - Primary Classification Banner: `Industrial Accidental Fire (94.2% Confidence)`.
      - 4-Card Telemetry Grid: Peak FRP (`450 MW`), Max Temp (`482 K`), Sensor Hits (`8 Hits`), Area (`14.2 Ha`).
-     - AI Attribution List: `1. Distance to Refinery: 45m`, `2. FRP Anomaly: +5.8σ`, `3. Night Persistence`.
+     - AI Attribution List: `1. Distance to Refinery: 45m`, `2. FRP Anomaly: +5.8Ïƒ`, `3. Night Persistence`.
   2. **Tab 2: Historical Baseline:**
-     - Chart: Observed FRP Curve vs. Facility Normal Envelope (`μ \pm 1σ, 2σ`).
+     - Chart: Observed FRP Curve vs. Facility Normal Envelope (`Î¼ \pm 1Ïƒ, 2Ïƒ`).
      - Recurrence Breakdown: `28 Active Days past 30 Days` (Persistent Source).
   3. **Tab 3: Geographic Context:**
      - Associated Facility Card: *Reliance Jamnagar Refinery Complex (Petrochemical)*.
@@ -241,10 +241,10 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 - **Layout:** Clean 2-column list of event cards sorted by publication timestamp.
 - **Card Structure:**
   - Severity Chip: `CRITICAL` (Crimson) or `ALERT` (Amber).
-  - Timestamp & Sensor: `14m ago — VIIRS NOAA-20`.
-  - Headline: `Thermal Surge (+5.2σ) at Paradeep Refinery, Odisha`.
+  - Timestamp & Sensor: `14m ago â€” VIIRS NOAA-20`.
+  - Headline: `Thermal Surge (+5.2Ïƒ) at Paradeep Refinery, Odisha`.
   - Summary: `Abrupt 380 MW heat spike detected within crude distillation zone; footprint expanded by 220% in 4h.`
-  - Action Button: `[ View on Map → ]` (Flies GIS camera to coordinates, opens drawer).
+  - Action Button: `[ View on Map â†’ ]` (Flies GIS camera to coordinates, opens drawer).
 
 ---
 
@@ -303,7 +303,7 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 |                     |                   | Bar (60px Fixed)    | operates as a swipeable bottom sheet drawer.   |
 
 ### 7.1 Mobile Touch Targets & Usability Constraints
-- **Minimum Touch Target:** `44px × 44px` for all clickable buttons, map controls, and filter chips.
+- **Minimum Touch Target:** `44px Ã— 44px` for all clickable buttons, map controls, and filter chips.
 - **One-Hand Reachability:** Map layer toggles and search controls placed in the lower-right and bottom sheet zones.
 - **Zero Horizontal Overflow:** All tables, telemetry cards, and charts wrap fluidly with zero horizontal page scrolling.
 
@@ -340,7 +340,7 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 | Acceptance Code | Verification Criteria | Expected Result |
 | :--- | :--- | :--- |
 | **UI-AC-1: Aesthetics** | Visual audit of full application. | Zero neon/gamer glow; zero robot/sparkle AI graphics; consistent matte palette. |
-| **UI-AC-2: Map Dominance**| Open application on 1920×1080 display. | Map canvas occupies `>= 70\%` of screen real estate with clear visual hierarchy. |
+| **UI-AC-2: Map Dominance**| Open application on 1920Ã—1080 display. | Map canvas occupies `>= 70\%` of screen real estate with clear visual hierarchy. |
 | **UI-AC-3: Event Drawer** | Click any event marker on GIS. | Investigation drawer opens in `<150ms` displaying 4 tabs and telemetry grid. |
 | **UI-AC-4: Mobile Sheet** | Open app on iPhone / Android (375px). | Bottom navigation renders; bottom sheet swipes smoothly between peek, half, and full. |
 | **UI-AC-5: Contrast** | Run automated axe-core / Lighthouse audit. | 100% WCAG 2.1 AA compliance score with `>7.0:1` text contrast. |
@@ -359,3 +359,4 @@ Markers avoid generic circular pins. They use a precise geometric symbology:
 
 ---
 *End of UI/UX Design Requirements Document. This document serves as the authoritative visual and interaction specification for all frontend components, design tokens, responsive layouts, and cartographic styles.*
+
