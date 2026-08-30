@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import Map, { MapRef, Marker, Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { fetchGisEvents } from "@/lib/apiClient";
+import { fetchGisEvents, fetchGisFacilities, fetchGisObservations, GeoCollection, Viewport } from "@/lib/apiClient";
 import { Layers, MapPin, Compass, Navigation } from "lucide-react";
 
 // Google Maps Basemap Styles (Zero API Key required, High-Resolution Global Coverage)
@@ -63,13 +63,24 @@ const GOOGLE_HYBRID: any = {
 
 export default function MapComponent({ 
   onEventClick, 
-  selectedEventId 
+  selectedEventId,
+  startTime,
+  endTime,
+  showFacilities = false,
+  showObservations = false,
 }: { 
   onEventClick: (id: string) => void;
   selectedEventId?: string | null;
+  startTime?: string;
+  endTime?: string;
+  showFacilities?: boolean;
+  showObservations?: boolean;
 }) {
   const mapRef = useRef<MapRef>(null);
-  const [geoData, setGeoData] = useState<any>(null);
+  const [geoData, setGeoData] = useState<GeoCollection | null>(null);
+  const [facilityData, setFacilityData] = useState<GeoCollection | null>(null);
+  const [observationData, setObservationData] = useState<GeoCollection | null>(null);
+  const [viewport, setViewport] = useState<Viewport>({ west: 68, south: 8.3, east: 96.98, north: 36.74, zoom: 4.8 });
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
   const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
   const [error, setError] = useState<string | null>(null);
@@ -90,13 +101,18 @@ export default function MapComponent({
   };
 
   useEffect(() => {
-    fetchGisEvents()
-      .then((data) => setGeoData(data))
-      .catch((err) => {
-        console.error("Failed to fetch GIS events:", err);
-        setError(err.message);
-      });
-  }, []);
+    const timer = window.setTimeout(() => {
+      setError(null);
+      Promise.all([
+        fetchGisEvents(viewport, { start_time: startTime, end_time: endTime }),
+        showFacilities ? fetchGisFacilities(viewport) : Promise.resolve(null),
+        showObservations ? fetchGisObservations(viewport, { start_time: startTime, end_time: endTime }) : Promise.resolve(null),
+      ])
+        .then(([events, facilities, observations]) => { setGeoData(events); setFacilityData(facilities); setObservationData(observations); })
+        .catch((err) => { console.error("Failed to fetch GIS events:", err); setError(err.message); });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [viewport, startTime, endTime, showFacilities, showObservations]);
 
   // Compute selected event feature
   const selectedFeature = useMemo(() => {
@@ -165,6 +181,10 @@ export default function MapComponent({
             if (eventId) onEventClick(eventId);
           }
         }}
+        onMoveEnd={(event) => {
+          const bounds = event.target.getBounds();
+          setViewport({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth(), zoom: Number(event.viewState.zoom.toFixed(2)) });
+        }}
       >
         {userLocation && (
           <Marker longitude={userLocation.lon} latitude={userLocation.lat} anchor="center">
@@ -200,6 +220,17 @@ export default function MapComponent({
                 "circle-opacity": 0.85
               }}
             />
+          </Source>
+        )}
+
+        {facilityData && (
+          <Source id="facilities-source" type="geojson" data={facilityData}>
+            <Layer id="facilities-circle-layer" type="circle" paint={{ "circle-radius": 4, "circle-color": "#0369A1", "circle-stroke-width": 1, "circle-stroke-color": "#ffffff" }} />
+          </Source>
+        )}
+        {observationData && (
+          <Source id="firms-source" type="geojson" data={observationData}>
+            <Layer id="firms-circle-layer" type="circle" paint={{ "circle-radius": 2.5, "circle-color": "#EA580C", "circle-opacity": 0.75 }} />
           </Source>
         )}
 
@@ -346,6 +377,7 @@ export default function MapComponent({
             </svg>
           </button>
         </div>
+        {error && <div role="alert" className="absolute top-4 left-4 z-20 rounded-md border border-red-200 bg-white px-3 py-2 text-xs text-red-700 shadow-sm">Map data unavailable: {error}</div>}
       </Map>
     </div>
   );
