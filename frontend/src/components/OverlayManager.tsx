@@ -4,10 +4,11 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { 
   X, Newspaper, Bell, MessageSquare, Settings, Flame, 
   AlertTriangle, ShieldCheck, Activity, Satellite, CheckCircle2, 
-  MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon
+  MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon,
+  Send, Sparkles, Bot, LoaderCircle
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { fetchNews, fetchFirmsStatus } from "@/lib/apiClient";
+import { useEffect, useMemo, useState } from "react";
+import { askThermalChat, fetchNews, fetchFirmsStatus } from "@/lib/apiClient";
 
 export function OverlayManager() {
   const searchParams = useSearchParams();
@@ -22,6 +23,16 @@ export function OverlayManager() {
   const [filterType, setFilterType] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [theme, setTheme] = useState<string>("light");
+  const [chatDraft, setChatDraft] = useState<string>("");
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
+  const [sessionId, setSessionId] = useState<string>(`sess_${Date.now()}`);
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; role: "user" | "assistant"; content: string; events?: Array<any> }>>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content: "Ask about abnormal thermal events, fire clusters, or facilities in a state. I’ll filter authoritative records and answer only from the current event dataset.",
+    },
+  ]);
 
   useEffect(() => {
     setMounted(true);
@@ -62,6 +73,12 @@ export function OverlayManager() {
     loadData();
   }, [overlay]);
 
+  const quickPrompts = useMemo(() => [
+    "Show abnormal industrial flares in Gujarat",
+    "List critical anomalies in Maharashtra",
+    "Which events are currently elevated?"
+  ], []);
+
   if (!mounted || !overlay) return null;
 
   const closeOverlay = () => {
@@ -92,6 +109,46 @@ export function OverlayManager() {
     if (filterType === "INDUSTRIAL") return item.classification.startsWith("IND_") || item.severity_tag === "ROUTINE";
     return true;
   });
+
+  const handleChatSubmit = async () => {
+    const trimmed = chatDraft.trim();
+    if (!trimmed || chatLoading) return;
+
+    const userMessage = { id: `user-${Date.now()}`, role: "user" as const, content: trimmed };
+    setChatMessages((current) => [...current, userMessage]);
+    setChatDraft("");
+    setChatLoading(true);
+
+    try {
+      const response = await askThermalChat(trimmed, sessionId);
+      const payload = response?.data ?? {};
+      const answer = payload.answer_markdown || "No answer available.";
+      const groundedEvents = Array.isArray(payload.grounded_events) ? payload.grounded_events : [];
+
+      setChatMessages((current) => [
+        ...current,
+        {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: answer,
+          events: groundedEvents,
+        },
+      ]);
+    } catch (error) {
+      setChatMessages((current) => [
+        ...current,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: "assistant",
+          content: "I couldn’t retrieve the event dataset right now. Please try again in a moment.",
+          events: [],
+        },
+      ]);
+      console.error("Chat query failed:", error);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   return (
     <div className="fixed top-0 right-0 h-full w-[460px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 text-slate-700">
@@ -392,6 +449,128 @@ export function OverlayManager() {
             ) : (
               <div className="text-center text-slate-500 py-12 text-xs">FIRMS status unavailable.</div>
             )}
+          </div>
+        ) : overlay === "chat" ? (
+          <div className="flex-1 flex flex-col bg-slate-50/50">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-200 bg-white/80 backdrop-blur-sm shrink-0">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm">
+                  <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <span>Grounded event analysis</span>
+                </div>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-slate-400 font-semibold">Session {sessionId}</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => setChatDraft(prompt)}
+                    className="px-2.5 py-1.5 text-[11px] font-medium rounded-full border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {chatMessages.map((message) => (
+                <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[88%] rounded-2xl border px-3 py-2.5 shadow-sm ${
+                    message.role === "user"
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-white text-slate-700 border-slate-200"
+                  }`}>
+                    {message.role === "assistant" && (
+                      <div className="flex items-center gap-2 mb-2 text-[10px] uppercase tracking-[0.10em] text-slate-500 font-semibold">
+                        <Bot className="w-3.5 h-3.5 text-indigo-500" />
+                        Thermo AI
+                      </div>
+                    )}
+
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap break-words">
+                      {message.content}
+                    </p>
+
+                    {message.events && message.events.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {message.events.map((event: any) => (
+                          <button
+                            key={`${message.id}-${event.event_id}`}
+                            type="button"
+                            onClick={() => handleSelectEvent(event.event_id)}
+                            className="w-full text-left p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:border-orange-300 hover:bg-orange-50 transition"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-bold tracking-wider uppercase text-slate-700">{event.event_id}</span>
+                              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${
+                                event.anomaly_tier === "CRITICAL" ? "bg-red-100 text-red-700" :
+                                event.anomaly_tier === "ABNORMAL" ? "bg-orange-100 text-orange-700" :
+                                event.anomaly_tier === "ELEVATED" ? "bg-amber-100 text-amber-700" :
+                                "bg-emerald-100 text-emerald-700"
+                              }`}>
+                                {event.anomaly_tier || "NORMAL"}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-[11px] text-slate-600">{event.facility_name || "Unknown facility"}</div>
+                            <div className="mt-2 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                              <span>{Number(event.peak_frp_mw || 0).toFixed(1)} MW</span>
+                              <span>{Number(event.latitude || 0).toFixed(4)}, {Number(event.longitude || 0).toFixed(4)}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="max-w-[88%] rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm text-slate-600">
+                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.10em] text-slate-500 font-semibold mb-2">
+                      <LoaderCircle className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                      Thermal AI
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+                      Grounding data and preparing response...
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-200 bg-white shrink-0">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
+                <textarea
+                  value={chatDraft}
+                  onChange={(event) => setChatDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void handleChatSubmit();
+                    }
+                  }}
+                  rows={1}
+                  placeholder="Ask about thermal activity in a state or facility..."
+                  className="flex-1 resize-none bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none min-h-[36px] max-h-[120px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleChatSubmit()}
+                  disabled={chatLoading || !chatDraft.trim()}
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-900 text-white disabled:bg-slate-300 disabled:cursor-not-allowed transition hover:bg-slate-800"
+                  aria-label="Send query"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-center py-16 bg-white rounded-xl border border-slate-200 p-6 shadow-sm">

@@ -39,3 +39,21 @@ export async function fetchFirmsStatus() {
   if (!res.ok) throw new Error("Failed to fetch FIRMS status");
   return res.json();
 }
+
+export async function askThermalChat(query: string, sessionId?: string) {
+  const res = await fetch(`${API_BASE_URL}/chat/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query,
+      session_id: sessionId,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to query Thermal AI");
+  }
+
+  return res.json();
+}

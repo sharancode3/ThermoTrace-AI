@@ -1,5 +1,5 @@
-﻿import uuid
-from sqlalchemy import Column, String, Float, Integer, DateTime, Date, Time, SmallInteger, JSON, Boolean, Numeric, ForeignKey, Text
+import uuid
+from sqlalchemy import Column, String, Float, Integer, DateTime, Date, Time, SmallInteger, JSON, Boolean, Numeric, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from geoalchemy2 import Geometry
 from sqlalchemy.sql import func
@@ -183,14 +183,16 @@ class User(Base):
 class Notification(Base):
     __tablename__ = "notifications"
 
+    __table_args__ = (
+        UniqueConstraint("event_id", "notification_type", name="uq_notifications_event_type"),
+    )
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
     event_id = Column(UUID(as_uuid=True), ForeignKey("thermal_events.id", ondelete="CASCADE"), nullable=False)
-    title = Column(String(255), nullable=False)
-    message = Column(Text, nullable=False)
+    notification_type = Column(String(32), nullable=False)
     severity = Column(String(32), nullable=False)
+    message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)
-    read_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 class Report(Base):
