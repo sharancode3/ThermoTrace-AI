@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Event Dossier - {{ event_id }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            background-color: #fff;
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+        
+        .page-break {
+            page-break-after: always;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28pt;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 12pt;
+            opacity: 0.9;
+        }
+        
+        .metadata {
+            background-color: #f5f5f5;
+            border-left: 4px solid #2a5298;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            font-size: 10pt;
+        }
+        
+        .metadata-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .metadata-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 9pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metadata-value {
+            font-size: 11pt;
+            color: #333;
+            margin-top: 3px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .section-title {
+            font-size: 16pt;
+            font-weight: 700;
+            color: #1e3c72;
+            border-bottom: 3px solid #2a5298;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .subsection-title {
+            font-size: 12pt;
+            font-weight: 600;
+            color: #2a5298;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            border-left: 3px solid #2a5298;
+            padding-left: 10px;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .data-grid-full {
+            grid-column: 1 / -1;
+        }
+        
+        .data-item {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 12px;
+        }
+        
+        .data-label {
+            font-size: 9pt;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+        
+        .data-value {
+            font-size: 12pt;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 3px;
+            font-size: 10pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .severity-critical {
+            background-color: #d32f2f;
+            color: white;
+        }
+        
+        .severity-elevated {
+            background-color: #f57c00;
+            color: white;
+        }
+        
+        .severity-normal {
+            background-color: #388e3c;
+            color: white;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50 0%, #2196f3 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 8pt;
+            font-weight: 600;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 10pt;
+        }
+        
+        .table thead {
+            background-color: #2a5298;
+            color: white;
+        }
+        
+        .table th {
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.3px;
+        }
+        
+        .table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .alert-box {
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+        
+        .alert-info {
+            background-color: #e3f2fd;
+            border-color: #1976d2;
+            color: #1565c0;
+        }
+        
+        .alert-warning {
+            background-color: #fff3e0;
+            border-color: #f57c00;
+            color: #e65100;
+        }
+        
+        .alert-critical {
+            background-color: #ffebee;
+            border-color: #d32f2f;
+            color: #b71c1c;
+        }
+        
+        .coordinates {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            word-break: break-all;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            font-size: 9pt;
+            color: #999;
+            text-align: center;
+        }
+        
+        .no-data {
+            color: #999;
+            font-style: italic;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+        }
+        
+        .highlight {
+            background-color: #fffacd;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- ================================================================== -->
+    <!-- HEADER & TITLE -->
+    <!-- ================================================================== -->
+    <div class="header">
+        <h1>🌡️ THERMAL EVENT DOSSIER</h1>
+        <p>ThermoTrace-AI Industrial Thermal Anomaly Intelligence Report</p>
+    </div>
+    
+    <!-- ================================================================== -->
+    <!-- METADATA STRIP -->
+    <!-- ================================================================== -->
+    <div class="metadata">
+        <div class="metadata-item">
+            <span class="metadata-label">Event ID</span>
+            <span class="metadata-value"><strong>{{ event_id }}</strong></span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Classification</span>
+            <span class="metadata-value"><strong>{{ classification }}</strong></span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Anomaly Tier</span>
+            <span class="metadata-value">
+                {% if anomaly_tier == 'CRITICAL' %}
+                    <span class="severity-badge severity-critical">{{ anomaly_tier }}</span>
+                {% elif anomaly_tier == 'ELEVATED' %}
+                    <span class="severity-badge severity-elevated">{{ anomaly_tier }}</span>
+                {% else %}
+                    <span class="severity-badge severity-normal">{{ anomaly_tier }}</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Detection Period</span>
+            <span class="metadata-value">
+                {% if first_detected_utc %}{{ first_detected_utc[:10] }}{% else %}N/A{% endif %} 
+                to 
+                {% if latest_detected_utc %}{{ latest_detected_utc[:10] }}{% else %}N/A{% endif %}
+            </span>
+        </div>
+    </div>
+    
+    <!-- ================================================================== -->
+    <!-- SECTION 1: EXECUTIVE SUMMARY -->
+    <!-- ================================================================== -->
+    <div class="section">
+        <h2 class="section-title">📋 Executive Summary</h2>
+        
+        <div class="alert-box {% if anomaly_tier == 'CRITICAL' %}alert-critical{% elif anomaly_tier == 'ELEVATED' %}alert-warning{% else %}alert-info{% endif %}">
+            <strong>Anomaly Assessment:</strong>
+            A thermal event has been detected at coordinates 
+            <span class="highlight">{{ latitude|round(4) }}, {{ longitude|round(4) }}</span>
+            with classification <span class="highlight">{{ classification }}</span>
+            and anomaly tier <span class="highlight">{{ anomaly_tier }}</span>.
+            {% if anomaly_z_score %}
+            The z-score of <span class="highlight">{{ anomaly_z_score|round(2) }}</span>
+            indicates a statistical anomaly of significant magnitude.
+            {% endif %}
+        </div>
+        
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">Persistence Classification</div>
+                <div class="data-value">{{ persistence_tier or 'Not Classified' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Confidence Level</div>
+                <div class="data-value">{{ (classification_confidence * 100)|round(1) }}%</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Observation Count</div>
+                <div class="data-value">{{ observation_count }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Bounding Area</div>
+                <div class="data-value">{{ bounding_area_ha|round(2) }} ha</div>
+            </div>
+        </div>
+        
+        {% if ml_model_name %}
+        <div class="subsection-title">Machine Learning Assessment</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">ML Model</div>
+                <div class="data-value">{{ ml_model_name }} v{{ ml_model_version or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Predicted Class</div>
+                <div class="data-value">{{ ml_predicted_class or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">ML Confidence</div>
+                <div class="data-value">{{ (ml_confidence_pct or 0)|round(1) }}%</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Industrial Precision</div>
+                <div class="data-value">{{ (ml_industrial_precision or 0)|round(3) }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- ================================================================== -->
+    <!-- SECTION 2: TELEMETRY -->
+    <!-- ================================================================== -->
+    <div class="section">
+        <h2 class="section-title">📡 Telemetry & Radiative Properties</h2>
+        
+        <div class="subsection-title">Fire Radiative Power (FRP) Metrics</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">Peak FRP</div>
+                <div class="data-value">{{ peak_frp_mw|round(2) }} MW</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Mean FRP</div>
+                <div class="data-value">{{ mean_frp_mw|round(2) }} MW</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Aggregate FRP</div>
+                <div class="data-value">{{ aggregate_frp_mw|round(2) }} MW</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Max Brightness</div>
+                <div class="data-value">{{ max_brightness_k|round(1) }} K</div>
+            </div>
+        </div>
+        
+        <div class="subsection-title">Temporal Properties</div>
+        <div class="data-grid">
+            <div class="data-item data-grid-full">
+                <div class="data-label">First Detection (UTC)</div>
+                <div class="data-value">{{ first_detected_utc or 'N/A' }}</div>
+            </div>
+            <div class="data-item data-grid-full">
+                <div class="data-label">Latest Detection (UTC)</div>
+                <div class="data-value">{{ latest_detected_utc or 'N/A' }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ================================================================== -->
+    <!-- SECTION 3: HISTORICAL BASELINE -->
+    <!-- ================================================================== -->
+    <div class="section">
+        <h2 class="section-title">📊 Historical Baseline & Anomaly Analysis</h2>
+        
+        {% if baseline_mean_frp_mw is defined and baseline_mean_frp_mw is not none %}
+        <div class="subsection-title">Facility Baseline Statistics</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">Baseline Window</div>
+                <div class="data-value">{{ baseline_window or 'ROLLING_12M' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Sample Observations</div>
+                <div class="data-value">{{ baseline_sample_observation_count or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Baseline Mean FRP</div>
+                <div class="data-value">{{ baseline_mean_frp_mw|round(2) }} MW</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Baseline Std Dev</div>
+                <div class="data-value">{{ baseline_std_frp_mw|round(2) }} MW</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Baseline Median</div>
+                <div class="data-value">{{ baseline_median_frp_mw|round(2) }} MW</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Baseline Q95</div>
+                <div class="data-value">{{ baseline_q95_frp_mw|round(2) }} MW</div>
+            </div>
+        </div>
+        
+        <div class="subsection-title">Anomaly Metrics</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">Observed FRP</div>
+                <div class="data-value">{{ anomaly_observed_frp_mw|round(2) if anomaly_observed_frp_mw else 'N/A' }} MW</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Z-Score</div>
+                <div class="data-value">{{ anomaly_z_score|round(3) if anomaly_z_score is defined and anomaly_z_score is not none else 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Percentile Rank</div>
+                <div class="data-value">{{ (anomaly_percentile_rank or 0)|round(1) }}%</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Anomaly Severity</div>
+                <div class="data-value">{{ anomaly_severity or 'Not Classified' }}</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="no-data">No baseline data available for this event.</div>
+        {% endif %}
+    </div>
+    
+    <!-- ================================================================== -->
+    <!-- SECTION 4: CONTEXTUAL GEOGRAPHY -->
+    <!-- ================================================================== -->
+    <div class="section">
+        <h2 class="section-title">🗺️ Contextual Geography</h2>
+        
+        <div class="subsection-title">Event Location</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">Latitude</div>
+                <div class="data-value">{{ latitude|round(6) if latitude else 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Longitude</div>
+                <div class="data-value">{{ longitude|round(6) if longitude else 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Land Use Category</div>
+                <div class="data-value">{{ primary_land_use or 'Unknown' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Bounding Area</div>
+                <div class="data-value">{{ bounding_area_ha|round(2) }} hectares</div>
+            </div>
+        </div>
+        
+        <div class="coordinates">
+            WGS84 Coordinates: {{ latitude|round(6) if latitude else 'N/A' }}, {{ longitude|round(6) if longitude else 'N/A' }}
+        </div>
+        
+        {% if facility_name %}
+        <div class="subsection-title">Associated Industrial Facility</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">Facility Name</div>
+                <div class="data-value">{{ facility_name }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Facility Code</div>
+                <div class="data-value">{{ facility_code or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Sector Category</div>
+                <div class="data-value">{{ facility_sector_category or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Sub Type</div>
+                <div class="data-value">{{ facility_sub_type or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Operator</div>
+                <div class="data-value">{{ facility_operator_name or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Distance to Facility</div>
+                <div class="data-value">
+                    {% if distance_to_facility_m %}
+                        {{ distance_to_facility_m|round(2) }} meters
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">State</div>
+                <div class="data-value">{{ facility_state or 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">District</div>
+                <div class="data-value">{{ facility_district or 'N/A' }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- ================================================================== -->
+    <!-- SECTION 5: SATELLITE EVIDENCE (IF AVAILABLE) -->
+    <!-- ================================================================== -->
+    {% if ml_feature_importances or ml_input_feature_vector %}
+    <div class="section">
+        <h2 class="section-title">🛰️ Satellite Evidence & Feature Analysis</h2>
+        
+        {% if ml_feature_importances %}
+        <div class="subsection-title">Feature Importance (ML Model Decision Drivers)</div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Importance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for feature, importance in ml_feature_importances.items() %}
+                <tr>
+                    <td>{{ feature }}</td>
+                    <td>{{ (importance|float)|round(4) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        
+        {% if ml_input_feature_vector %}
+        <div class="subsection-title">Input Feature Vector</div>
+        <div class="data-grid">
+            {% for feature, value in ml_input_feature_vector.items() %}
+            <div class="data-item">
+                <div class="data-label">{{ feature }}</div>
+                <div class="data-value">
+                    {% if value is number %}
+                        {{ (value|float)|round(4) }}
+                    {% else %}
+                        {{ value }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- ================================================================== -->
+    <!-- SECTION 6: ASSESSMENT & RECOMMENDATIONS -->
+    <!-- ================================================================== -->
+    <div class="section">
+        <h2 class="section-title">✅ Assessment & Recommendations</h2>
+        
+        <div class="subsection-title">Event Summary</div>
+        <div class="alert-box alert-info">
+            <strong>Classification:</strong> {{ classification }}<br>
+            <strong>Anomaly Tier:</strong> {{ anomaly_tier }}<br>
+            <strong>Persistence:</strong> {{ persistence_tier }}<br>
+            <strong>Lifecycle Status:</strong> {{ lifecycle_status or 'ACTIVE' }}
+        </div>
+        
+        <div class="subsection-title">Data Quality Indicators</div>
+        <div class="data-grid">
+            <div class="data-item">
+                <div class="data-label">Classification Confidence</div>
+                <div class="data-value">{{ (classification_confidence * 100)|round(1) }}%</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Demo Event</div>
+                <div class="data-value">{{ 'Yes' if is_demo else 'No' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Report Generated</div>
+                <div class="data-value">{{ created_at[:10] if created_at else 'N/A' }}</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Last Updated</div>
+                <div class="data-value">{{ updated_at[:10] if updated_at else 'N/A' }}</div>
+            </div>
+        </div>
+        
+        {% if anomaly_tier == 'CRITICAL' %}
+        <div class="alert-box alert-critical">
+            <strong>⚠️ CRITICAL ALERT:</strong> This event has been classified as CRITICAL.
+            Immediate verification and escalation to relevant authorities is recommended.
+        </div>
+        {% elif anomaly_tier == 'ELEVATED' %}
+        <div class="alert-box alert-warning">
+            <strong>⚠️ ELEVATED ALERT:</strong> This event shows elevated anomaly characteristics.
+            Closer monitoring and routine verification procedures are recommended.
+        </div>
+        {% else %}
+        <div class="alert-box alert-info">
+            <strong>ℹ️ INFORMATIONAL:</strong> This event is within normal operational parameters
+            but has been flagged for informational purposes.
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- ================================================================== -->
+    <!-- FOOTER -->
+    <!-- ================================================================== -->
+    <div class="footer">
+        <p><strong>ThermoTrace-AI Thermal Intelligence Platform</strong></p>
+        <p>Event ID: {{ event_id }} | UUID: {{ event_uuid }}</p>
+        <p style="margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;">
+            This dossier contains confidential thermal intelligence data. 
+            All values represent exact pipeline-computed metrics with no further interpretation or modification.
+        </p>
+    </div>
+</body>
+</html>

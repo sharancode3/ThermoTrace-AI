@@ -64,6 +64,32 @@
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # ---------------------------------------------------------
+  # Celery Worker (Task Processing)
+  # ---------------------------------------------------------
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: thermotrace_celery_worker
+    restart: unless-stopped
+    environment:
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-thermo_db}
+      - REDIS_URL=redis://redis:6379/0
+      - FIRMS_MAP_KEY=5ee48ea9900661577c1dc26dfcc70550
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command: celery -A app.celery_config.celery_app worker --loglevel=info --concurrency=4
+
+  # ---------------------------------------------------------
   # NASA FIRMS 5-Minute Ingestion Daemon
   # ---------------------------------------------------------
   firms_daemon:
