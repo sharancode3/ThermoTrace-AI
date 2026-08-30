@@ -15,7 +15,7 @@
 
 ## 1. System Overview
 
-ThermoTrace AI is an automated thermal intelligence platform designed for national-scale satellite monitoring of industrial emissions, flare stacks, refinery furnaces, and high-temperature thermal incidents. 
+ThermoTrace AI is an automated thermal intelligence platform designed for national-scale satellite monitoring of industrial emissions, flare stacks, refinery furnaces, and high-temperature thermal incidents.
 
 The system continuously ingests Near-Real-Time (NRT) satellite telemetry from NASA FIRMS sensors (VIIRS NOAA-20, NOAA-21, Suomi-NPP, and MODIS Terra/Aqua), applies spatio-temporal clustering (ST-DBSCAN), extracts a 14-dimensional feature matrix, executes multi-class XGBoost classification with Shapley value attributions (SHAP), and calculates 90-day statistical emission baselines to detect anomalous thermal activity across sovereign Indian territory.
 
@@ -25,58 +25,64 @@ The system continuously ingests Near-Real-Time (NRT) satellite telemetry from NA
 
 ```mermaid
 flowchart TB
-    subgraph Data_Sources ["Satellite Telemetry & Reference Data"]
-        S1["NASA FIRMS NRT Feed
-(VIIRS NOAA-20/21/SNPP + MODIS)"]
-        S2["Industrial Facility Database
-(GEM, PPAC, WRI India - 3,000+ Assets)"]
-        S3["ESA WorldCover 10m Landcover
-(GeoTIFF Raster Surface Masks)"]
+    subgraph Data_Sources [Data Sources]
+        S1[NASA FIRMS Satellite Stream<br/>VIIRS NOAA-20/21/SNPP and MODIS]
+        S2[Industrial Facilities Database<br/>3000+ Verified Assets]
+        S3[ESA WorldCover 10m Landcover<br/>GeoTIFF Surface Raster]
     end
 
-    subgraph Ingestion_Layer ["Ingestion & Preprocessing Engine"]
-        I1["5-Minute Scheduled Polling Daemon"]
-        I2["Sovereign India Geographic Bounding Box
-(8.30°N–36.74°N, 68.00°E–96.98°E)"]
-        I3["Composite Key Deduplication"]
+    subgraph Ingestion_Layer [Ingestion and Filtering]
+        I1[5-Minute Automated Daemon]
+        I2[Sovereign India Boundary Filter<br/>8.30N-36.74N, 68.00E-96.98E]
+        I3[Composite Key Deduplication]
     end
 
-    subgraph Persistence_Layer ["Geospatial Storage Layer"]
-        DB[("PostgreSQL 16 + PostGIS 3.4")]
-        IDX["GIST Spatio-Temporal Spatial Indices"]
+    subgraph Persistence_Layer [Geospatial Database]
+        DB[(PostgreSQL 16 and PostGIS 3.4)]
+        IDX[GIST Spatial Indices]
     end
 
-    subgraph Analytical_Engine ["Analytical & Intelligence Pipeline"]
-        A1["ST-DBSCAN Spatio-Temporal Aggregation
-(ε = 1500m, Δt = 24h)"]
-        A2["14-Dimensional Feature Engineering"]
-        A3["Calibrated Multi-Class XGBoost Model"]
-        A4["TreeSHAP Feature Attribution Engine"]
-        A5["Rolling 90-Day Gaussian Baseline Engine
-(Z-Score & Exceedance Probability)"]
-        A6["Grounded 4-Part Intelligence Synthesizer
-(OBSERVED / DERIVED / MODELLED / UNKNOWN)"]
+    subgraph Processing_Layer [Intelligence and ML Engine]
+        A1[ST-DBSCAN Cluster Aggregation<br/>Radius 1500m, Time 24h]
+        A2[14-Dimensional Feature Vector]
+        A3[Calibrated XGBoost Classifier]
+        A4[TreeSHAP Attribution Engine]
+        A5[Rolling 90-Day Gaussian Baseline<br/>Z-Score and Anomaly Tiers]
+        A6[Grounded 4-Part Intelligence Brief]
     end
 
-    subgraph API_Layer ["Application Gateway"]
-        GW["FastAPI Async REST & GeoJSON Gateway"]
+    subgraph Gateway_Layer [Application Gateway]
+        GW[FastAPI High-Performance Async Gateway]
     end
 
-    subgraph Client_Layer ["Tactical Command Interface"]
-        UI1["Map Workspace (Google Roadmap & Satellite Hybrid)"]
-        UI2["Radiant Thermal Energy Overlays"]
-        UI3["3-Column Event Dossier & SHAP Contribution Grid"]
-        UI4["Real-Time Classified Thermal Newsfeed"]
+    subgraph Client_Layer [Command Dashboard]
+        UI1[Locked Google Maps Engine]
+        UI2[Radiant Thermal Overlays]
+        UI3[3-Column Tactical Dossier Grid]
+        UI4[Live Real-Time Newsfeed]
     end
 
-    S1 --> I1 --> I2 --> I3 --> DB
+    S1 --> I1
+    I1 --> I2
+    I2 --> I3
+    I3 --> DB
     S2 --> DB
     S3 --> A2
-    DB <--> IDX
+    DB --> IDX
+    IDX --> DB
 
-    DB --> A1 --> A2 --> A3 --> A4 --> A6
-    A2 --> A5 --> A6
-    A1 & A3 & A5 & A6 --> GW
+    DB --> A1
+    A1 --> A2
+    A2 --> A3
+    A3 --> A4
+    A4 --> A6
+    A2 --> A5
+    A5 --> A6
+
+    A1 --> GW
+    A3 --> GW
+    A5 --> GW
+    A6 --> GW
 
     GW --> UI1
     GW --> UI2
@@ -90,29 +96,28 @@ flowchart TB
 
 ```mermaid
 sequenceDiagram
-    autonumber
     participant Satellite as NASA FIRMS API
     participant Ingestion as Ingestion Daemon
     participant DB as PostGIS Database
     participant Clustering as ST-DBSCAN Engine
-    participant ML as XGBoost & SHAP
+    participant ML as XGBoost and SHAP
     participant Baseline as Gaussian Baseline
     participant API as FastAPI Gateway
     participant Client as Web Dashboard
 
-    Satellite->>Ingestion: Stream NRT active fire observations (VIIRS/MODIS)
-    Ingestion->>Ingestion: Filter sovereign Indian boundaries & deduplicate
-    Ingestion->>DB: Bulk insert normalized ThermalObservations
-    DB->>Clustering: Query unclustered points within spatial window (1500m)
+    Satellite->>Ingestion: Stream NRT active fire observations
+    Ingestion->>Ingestion: Apply sovereign boundary filter and deduplicate
+    Ingestion->>DB: Bulk insert normalized observations
+    DB->>Clustering: Query unclustered points within 1500m and 24h
     Clustering->>Clustering: Generate Spatio-Temporal Event Clusters
     Clustering->>ML: Extract 14-D canonical feature vectors
-    ML->>ML: Infer operational class & compute SHAP values
-    Clustering->>Baseline: Compute facility/sector 90-day Z-score
-    Baseline->>DB: Persist EventClassification, AnomalyMetrics, Dossier
-    Client->>API: Request GeoJSON active clusters (`/api/v1/gis/events`)
+    ML->>ML: Infer operational class and compute SHAP values
+    Clustering->>Baseline: Compute facility 90-day Z-score
+    Baseline->>DB: Persist classifications, anomalies, and briefs
+    Client->>API: Request active cluster GeoJSON (/api/v1/gis/events)
     API->>Client: Return GeoJSON FeatureCollection
-    Client->>API: Request tactical dossier (`/api/v1/events/{id}`)
-    API->>Client: Return 14-D features, SHAP attributions & baseline statistics
+    Client->>API: Request event dossier (/api/v1/events/{id})
+    API->>Client: Return 14-D features, SHAP attributions, and baseline statistics
 ```
 
 ---
@@ -122,11 +127,11 @@ sequenceDiagram
 ### 4.1 Spatio-Temporal Event Clustering (ST-DBSCAN)
 Individual satellite detections represent instantaneous pixel observations. Detections are aggregated into discrete physical events using density-based clustering across spatial and temporal dimensions:
 
-$$\mathcal{D}(p_i, p_j) = \sqrt{\left(rac{	ext{haversine}(p_i, p_j)}{\epsilon_s}ight)^2 + \left(rac{|t_i - t_j|}{\epsilon_t}ight)^2} \le 1.0$$
+$$\mathcal{D}(p_i, p_j) = \sqrt{\left(\frac{\text{haversine}(p_i, p_j)}{\epsilon_s}\right)^2 + \left(\frac{|t_i - t_j|}{\epsilon_t}\right)^2} \le 1.0$$
 
-* **Spatial Distance Threshold ($\epsilon_s$):** $1500	ext{ m}$
-* **Temporal Window ($\epsilon_t$):** $24	ext{ hours}$
-* **Minimum Cluster Core Points ($MinPts$):** $1	ext{ detection}$
+* **Spatial Distance Threshold ($\epsilon_s$):** $1500\text{ m}$
+* **Temporal Window ($\epsilon_t$):** $24\text{ hours}$
+* **Minimum Cluster Core Points ($MinPts$):** $1\text{ detection}$
 
 ---
 
@@ -136,20 +141,20 @@ Every aggregated thermal cluster is characterized by a deterministic 14-dimensio
 
 | Index | Feature Key | Mathematical Definition | Physical Description |
 |:---:|:---|:---|:---|
-| 1 | `peak_frp` | $\max_{p \in C} 	ext{FRP}(p)$ | Peak Fire Radiative Power in Megawatts ($MW$) |
-| 2 | `mean_frp` | $rac{1}{|C|}\sum_{p \in C} 	ext{FRP}(p)$ | Mean radiative heat emission across observations |
-| 3 | `frp_variance` | $	ext{Var}_{p \in C}(	ext{FRP}(p))$ | Variance in radiative output (flaring instability vs steady process) |
+| 1 | `peak_frp` | $\max_{p \in C} \text{FRP}(p)$ | Peak Fire Radiative Power in Megawatts ($MW$) |
+| 2 | `mean_frp` | $\frac{1}{|C|}\sum_{p \in C} \text{FRP}(p)$ | Mean radiative heat emission across observations |
+| 3 | `frp_variance` | $\text{Var}_{p \in C}(\text{FRP}(p))$ | Variance in radiative output (flaring instability vs steady process) |
 | 4 | `max_brightness_temp` | $\max_{p \in C} T_{4}(p)$ | Maximum 4-micron brightness temperature in Kelvin ($K$) |
 | 5 | `detection_count` | $|C|$ | Total count of raw satellite observations in cluster |
 | 6 | `pass_count` | $|\{t_p \mid p \in C\}|$ | Number of distinct satellite overpasses covering the event |
 | 7 | `duration_hours` | $(t_{\max} - t_{\min}) / 3600$ | Observed lifespan of the thermal event |
-| 8 | `night_ratio` | $|C_{	ext{night}}| / |C|$ | Proportion of nighttime observations |
-| 9 | `footprint_area_km2` | $	ext{Area}(	ext{ConvexHull}(C))$ | Spatial surface area covered by clustered detections |
-| 10 | `facility_dist_km` | $\min_{f \in \mathcal{F}} 	ext{dist}(C, f)$ | Orthodromic distance to nearest registered industrial facility |
-| 11 | `is_near_facility` | $\mathbb{I}(	ext{dist} < 2.5	ext{ km})$ | Binary indicator for industrial zone co-location |
-| 12 | `facility_type_code` | $	ext{OneHot}(	ext{Type}(f))$ | Categorical sector encoding (Refinery, Steel, Power, Chemical, Mine) |
-| 13 | `landcover_class` | $	ext{ESA WorldCover}(C_{	ext{centroid}})$ | Landcover category (Built-up: 50, Cropland: 40, Forest: 10, Shrub: 20) |
-| 14 | `frp_density` | $	ext{Peak FRP} / (	ext{Area} + \epsilon)$ | Radiative intensity per unit ground surface area ($MW/km^2$) |
+| 8 | `night_ratio` | $|C_{\text{night}}| / |C|$ | Proportion of nighttime observations |
+| 9 | `footprint_area_km2` | $\text{Area}(\text{ConvexHull}(C))$ | Spatial surface area covered by clustered detections |
+| 10 | `facility_dist_km` | $\min_{f \in \mathcal{F}} \text{dist}(C, f)$ | Orthodromic distance to nearest registered industrial facility |
+| 11 | `is_near_facility` | $\mathbb{I}(\text{dist} < 2.5\text{ km})$ | Binary indicator for industrial zone co-location |
+| 12 | `facility_type_code` | $\text{OneHot}(\text{Type}(f))$ | Categorical sector encoding (Refinery, Steel, Power, Chemical, Mine) |
+| 13 | `landcover_class` | $\text{ESA WorldCover}(C_{\text{centroid}})$ | Landcover category (Built-up: 50, Cropland: 40, Forest: 10, Shrub: 20) |
+| 14 | `frp_density` | $\text{Peak FRP} / (\text{Area} + \epsilon)$ | Radiative intensity per unit ground surface area ($MW/km^2$) |
 
 ---
 
@@ -157,9 +162,9 @@ Every aggregated thermal cluster is characterized by a deterministic 14-dimensio
 
 The classification engine employs a Gradient Boosted Decision Tree (XGBoost) trained on historical FIRMS observations cross-referenced against ground-truth industrial and agricultural inventories:
 
-$$\hat{y} = rg\max_{c \in \mathcal{C}} P(Y = c \mid \mathbf{x})$$
+$$\hat{y} = \arg\max_{c \in \mathcal{C}} P(Y = c \mid \mathbf{x})$$
 
-$$\mathcal{C} = \{	ext{Industrial Flare}, 	ext{Industrial Fire}, 	ext{Routine Process Heat}, 	ext{Wildfire / Agricultural}, 	ext{Urban Non-Industrial}\}$$
+$$\mathcal{C} = \{\text{Industrial Flare}, \text{Industrial Fire}, \text{Routine Process Heat}, \text{Wildfire / Agricultural}, \text{Urban Non-Industrial}\}$$
 
 **Additive Feature Explanations (TreeSHAP):**
 Feature attributions are computed locally for each event to explain classification drivers without heuristic approximations:
@@ -174,9 +179,9 @@ Where $\phi_0$ is the expected model base value and $\phi_i(\mathbf{x})$ represe
 
 To differentiate normal operational emissions from severe industrial surges or process upsets, historical baseline statistics ($\mu_{90}, \sigma_{90}$) are maintained per facility and sector:
 
-$$Z = rac{	ext{Peak FRP} - \mu_{90}}{\sigma_{90}}$$
+$$Z = \frac{\text{Peak FRP} - \mu_{90}}{\sigma_{90}}$$
 
-$$	ext{Exceedance } = \Phi(Z) 	imes 100\% = rac{1}{\sqrt{2\pi}} \int_{-\infty}^{Z} e^{-u^2/2} du$$
+$$\text{Exceedance } = \Phi(Z) \times 100\% = \frac{1}{\sqrt{2\pi}} \int_{-\infty}^{Z} e^{-u^2/2} du$$
 
 | Anomaly Tier | Standard Deviation Threshold | Operational Interpretation |
 |:---|:---|:---|
@@ -232,7 +237,7 @@ python -m venv venv
 
 # Activate virtual environment
 # Windows:
-.env\Scripts\Activate.ps1
+.\venv\Scripts\Activate.ps1
 # Linux/macOS:
 source venv/bin/activate
 
