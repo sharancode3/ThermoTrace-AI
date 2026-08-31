@@ -1,5 +1,7 @@
-﻿import math
+import math
 from typing import Dict, Any, Optional
+from app.domain.sovereign_geofencing import is_within_sovereign_india
+
 
 # Comprehensive Indian Administrative & Industrial Spatial Database (Covering all 28 States & UTs)
 INDIAN_DISTRICTS_HUBS = [
@@ -109,8 +111,18 @@ def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
 def resolve_indian_location(lat: float, lon: float, facility_name: Optional[str] = None) -> Dict[str, Any]:
     """
     High-precision resolution of Indian coordinates to District, State, and Industrial Hub.
-    Guarantees 100% human-readable location descriptions across all Indian territories.
+    FIRST GATE: Strict point-in-polygon sovereign check. Never assigns Indian district to foreign points.
     """
+    if not is_within_sovereign_india(lat, lon):
+        return {
+            "state": "Non-Sovereign / Transboundary",
+            "district": "Cross-Border Buffer",
+            "location_formatted": f"Transboundary Coordinates ({lat:.4f}N, {lon:.4f}E) [OUTSIDE_SOVEREIGN_BOUNDS]",
+            "hub_description": "Non-Sovereign Territory",
+            "distance_to_ref_hub_km": None,
+            "is_sovereign_india": False
+        }
+
     best_region = None
     min_dist = float('inf')
     
@@ -152,12 +164,6 @@ def resolve_indian_location(lat: float, lon: float, facility_name: Optional[str]
 def is_within_india_landmass(lat: float, lon: float) -> bool:
     """
     Guarantees strict geographic isolation to the sovereign land territory of India.
-    Explicitly excludes Sri Lanka, Indian Ocean, Arabian Sea, Bay of Bengal, and adjacent territories.
+    Point-in-polygon gate via official Survey of India boundary representation.
     """
-    # Exclude Sri Lanka territory (lat 5.5 to 10.0, lon 79.4 to 82.0)
-    if 5.5 <= lat <= 10.0 and 79.4 <= lon <= 82.0:
-        return False
-    # General India envelope
-    if not (8.0 <= lat <= 37.5 and 68.0 <= lon <= 97.5):
-        return False
-    return True
+    return is_within_sovereign_india(lat, lon)

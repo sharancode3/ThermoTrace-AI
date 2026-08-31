@@ -1,8 +1,8 @@
-﻿import os
+import os
 import sys
 import numpy as np
 from datetime import timedelta
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -111,6 +111,23 @@ def get_evidence_completeness(obs_count: int, has_facility: bool, has_history: b
     elif obs_count >= 1:
         return "LIMITED"
     return "INSUFFICIENT"
+
+def get_evidence_strength(obs_count: int, hist_days: int, has_facility: bool, facility_name: Optional[str] = None) -> Tuple[str, str]:
+    """
+    Computes evidence strength tag (STRONG / MODERATE / LIMITED) and human rationale.
+    Driven strictly by real data volume: observation count, facility baseline depth, and facility association.
+    """
+    if obs_count >= 4 and (hist_days >= 15 or has_facility):
+        fac_ctx = f"at {facility_name}" if facility_name else f"{hist_days}-day facility history"
+        return "STRONG", f"{obs_count} satellite passes, {fac_ctx}"
+    elif obs_count >= 2 or (has_facility and hist_days >= 3):
+        fac_ctx = f"{hist_days}-day facility history" if hist_days > 0 else "associated facility"
+        return "MODERATE", f"{obs_count} observation{'s' if obs_count > 1 else ''}, {fac_ctx}"
+    else:
+        obs_text = f"{obs_count} satellite pass" if obs_count == 1 else f"{obs_count} observations"
+        fac_text = "unassociated facility" if not has_facility else "sparse baseline"
+        return "LIMITED", f"{obs_text}, {fac_text}"
+
 
 def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
     event = session.query(ThermalEvent).filter(ThermalEvent.id == event_uuid).first()

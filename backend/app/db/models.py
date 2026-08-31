@@ -28,6 +28,7 @@ class ThermalObservation(Base):
     confidence_level = Column(String(16))
     confidence_pct = Column(SmallInteger)
     day_night = Column(String(1), nullable=False)
+    is_within_india_sovereign_bounds = Column(Boolean, default=True, nullable=False)
     source_product = Column(String(32), default='FIRMS_NRT', nullable=False)
     scan_angle = Column(Float)
     track_pixel_size = Column(Float)
@@ -124,6 +125,7 @@ class EventClassification(Base):
     input_feature_vector = Column(JSONB, nullable=False)
     is_current = Column(Boolean, default=True, nullable=False)
     classified_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    tier2_computed_at = Column(DateTime(timezone=True), nullable=True)
 
 class FacilityBaseline(Base):
     __tablename__ = "facility_baselines"
@@ -183,16 +185,14 @@ class User(Base):
 class Notification(Base):
     __tablename__ = "notifications"
 
-    __table_args__ = (
-        UniqueConstraint("event_id", "notification_type", name="uq_notifications_event_type"),
-    )
-
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
     event_id = Column(UUID(as_uuid=True), ForeignKey("thermal_events.id", ondelete="CASCADE"), nullable=False)
-    notification_type = Column(String(32), nullable=False)
-    severity = Column(String(32), nullable=False)
+    title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
+    severity = Column(String(32), nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)
+    read_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 class Report(Base):

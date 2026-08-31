@@ -4,7 +4,10 @@ import sys
 
 # Ensure backend path is in sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from backend.scripts.ingest_firms import compute_dedup_key
+try:
+    from scripts.ingest_firms import compute_dedup_key
+except ImportError:
+    from backend.scripts.ingest_firms import compute_dedup_key
 
 def test_compute_dedup_key_consistency():
     """Test that the same input always yields the same SHA256 deduplication key."""
