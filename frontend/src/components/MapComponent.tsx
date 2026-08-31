@@ -9,6 +9,7 @@ import {
   fetchGisObservations,
   fetchEventDetail,
   GeoCollection,
+  GeoFeature,
   Viewport,
 } from "@/lib/apiClient";
 import {
@@ -300,29 +301,39 @@ export default function MapComponent({
     return geoData?.features.find((f) => f.properties.event_id === selectedEventId) || null;
   }, [geoData, selectedEventId]);
 
-  // Computed features list ensuring the selected event is ALWAYS visible even if time/category filter would hide it
-  const displayFeatures = useMemo(() => {
-    const list = geoData?.features ? [...geoData.features] : [];
-    if (selectedEventData && selectedEventId) {
-      const exists = list.some((f) => f.properties.event_id === selectedEventId);
-      if (!exists) {
-        const lon = Number(selectedEventData.longitude ?? selectedEventData.centroid?.coordinates?.[0]);
-        const lat = Number(selectedEventData.latitude ?? selectedEventData.centroid?.coordinates?.[1]);
-        if (Number.isFinite(lon) && Number.isFinite(lat)) {
-          list.push({
-            type: "Feature",
-            geometry: { type: "Point", coordinates: [lon, lat] },
-            properties: {
-              event_id: selectedEventData.event_id || selectedEventId,
-              classification: selectedEventData.classification || "OTHER_UNCERTAIN",
-              anomaly_tier: selectedEventData.anomaly_tier || "NORMAL",
-              peak_frp_mw: selectedEventData.peak_frp_mw,
-              max_brightness_k: selectedEventData.max_brightness_k,
-            }
-          } as any);
-        }
+  // Computed features list ensuring the selected event is ALWAYS visible and strictly deduplicated
+  const displayFeatures = useMemo<GeoFeature[]>(() => {
+    const rawList: GeoFeature[] = geoData?.features || [];
+    const seen = new Set<string>();
+    const list: GeoFeature[] = [];
+
+    for (const f of rawList) {
+      const id = String(f.properties?.event_id || "");
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        list.push(f);
       }
     }
+
+    if (selectedEventData && selectedEventId && !seen.has(selectedEventId)) {
+      const lon = Number(selectedEventData.longitude ?? selectedEventData.centroid?.coordinates?.[0]);
+      const lat = Number(selectedEventData.latitude ?? selectedEventData.centroid?.coordinates?.[1]);
+      if (Number.isFinite(lon) && Number.isFinite(lat)) {
+        seen.add(selectedEventId);
+        list.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lon, lat] },
+          properties: {
+            event_id: selectedEventData.event_id || selectedEventId,
+            classification: selectedEventData.classification || "OTHER_UNCERTAIN",
+            anomaly_tier: selectedEventData.anomaly_tier || "NORMAL",
+            peak_frp_mw: selectedEventData.peak_frp_mw,
+            max_brightness_k: selectedEventData.max_brightness_k,
+          },
+        });
+      }
+    }
+
     return list;
   }, [geoData, selectedEventData, selectedEventId]);
 
@@ -400,7 +411,7 @@ export default function MapComponent({
 
           return (
             <Marker
-              key={event_id}
+              key={`thermal-marker-${event_id}`}
               longitude={lon}
               latitude={lat}
               anchor="center"

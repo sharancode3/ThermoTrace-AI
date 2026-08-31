@@ -127,6 +127,15 @@ def get_gis_events(
         if focus_evt:
             events.insert(0, focus_evt)
 
+    # Strictly deduplicate by event_id
+    seen_ids = set()
+    deduped_events = []
+    for evt in events:
+        if evt.event_id not in seen_ids:
+            seen_ids.add(evt.event_id)
+            deduped_events.append(evt)
+    events = deduped_events
+
     features = []
 
     for evt in events:
