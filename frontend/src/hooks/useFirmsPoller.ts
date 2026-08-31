@@ -5,15 +5,23 @@ import { useEffect, useRef } from "react";
 /**
  * Foreground-Triggered Polling Hook for NASA FIRMS Telemetry.
  * Active ONLY when the browser tab/window is active and visible.
- * Triggers initial poll on mount to recover any gap while app was closed,
- * then polls at a 2-minute (120,000ms) cadence.
+ * Triggers poll strictly every 5 minutes (300,000ms).
  */
 export function useFirmsPoller(onNewData?: () => void) {
   const isPollingRef = useRef<boolean>(false);
+  const lastPollTimeRef = useRef<number>(0);
 
   const executePoll = async (force: boolean = false) => {
+    const now = Date.now();
+    // Guard: Prevent polling more than once per 5 minutes (300,000 ms) unless explicitly forced
+    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 300000) {
+      return;
+    }
+
     if (isPollingRef.current) return;
     isPollingRef.current = true;
+    lastPollTimeRef.current = now;
+
     try {
       const resp = await fetch(`/api/v1/ingest/poll${force ? '?force=true' : ''}`, {
         method: "POST",
@@ -32,28 +40,18 @@ export function useFirmsPoller(onNewData?: () => void) {
   };
 
   useEffect(() => {
-    // 1. Initial poll on application mount
+    // 1. Initial check on mount
     executePoll();
 
-    // 2. 2-minute foreground cadence
+    // 2. Strict 5-minute foreground interval
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         executePoll();
       }
-    }, 120000);
-
-    // 3. Tab visibility change listener: poll immediately when user returns to tab
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        executePoll();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    }, 300000);
 
     return () => {
       clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 }

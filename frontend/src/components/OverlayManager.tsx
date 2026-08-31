@@ -13,6 +13,28 @@ import {
   markAllNotificationsRead, fetchFirmsStatus 
 } from "@/lib/apiClient";
 
+
+function formatTemp(kelvin?: number | null) {
+  if (!kelvin || kelvin <= 0) return null;
+  const celsius = Math.round(kelvin - 273.15);
+  return `${kelvin.toFixed(0)} K (${celsius > 0 ? `+${celsius}` : celsius} °C)`;
+}
+
+function cleanLocationName(loc?: string | null, lat?: number, lon?: number) {
+  if (!loc || loc.includes("[OUTSIDE_SOVEREIGN_BOUNDS]") || loc.startsWith("Transboundary Coordinates")) {
+    if (lat && lon) {
+      if (lat >= 21.0 && lat <= 24.5 && lon >= 68.5 && lon <= 74.5) return "Gujarat Industrial Corridor";
+      if (lat >= 18.0 && lat <= 20.5 && lon >= 72.5 && lon <= 75.5) return "Maharashtra Industrial Region";
+      if (lat >= 22.0 && lat <= 24.5 && lon >= 85.0 && lon <= 87.5) return "Jharkhand Mining Belt";
+      if (lat >= 19.5 && lat <= 22.5 && lon >= 84.5 && lon <= 87.5) return "Odisha Industrial Belt";
+      if (lat >= 8.0 && lat <= 13.5 && lon >= 76.5 && lon <= 80.5) return "Tamil Nadu Coastal Region";
+      return `Indian Monitored Zone (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)`;
+    }
+    return "Sovereign Indian Territory";
+  }
+  return loc;
+}
+
 function formatRelativeTime(dateStr?: string | null) {
   if (!dateStr) return "Live";
   const d = new Date(dateStr);
@@ -530,7 +552,7 @@ export function OverlayManager() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1 text-slate-900 font-bold text-xs truncate">
                       <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                      <span className="truncate">{item.location_name || "Indian Monitored Zone"}</span>
+                      <span className="truncate">{cleanLocationName(item.location_name, item.latitude, item.longitude)}</span>
                     </div>
                     <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-400" />
@@ -562,14 +584,14 @@ export function OverlayManager() {
                     {item.headline || item.summary}
                   </p>
 
-                  {/* Bottom Row: Radiance MW, Temperature K, and Focus Prompt */}
+                  {/* Bottom Row: Radiance MW, Temperature K/C, and Focus Prompt */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-mono">
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <span className="text-orange-600 font-bold">{item.peak_frp_mw?.toFixed(1)} MW</span>
+                    <div className="flex items-center gap-1.5 text-slate-700 flex-wrap">
+                      <span className="text-orange-600 font-bold">{item.peak_frp_mw ? `${Number(item.peak_frp_mw).toFixed(1)} MW` : "N/A"}</span>
                       {item.brightness_temp_k ? (
                         <>
                           <span className="text-slate-300">·</span>
-                          <span className="text-slate-600">{item.brightness_temp_k?.toFixed(1)} K</span>
+                          <span className="text-slate-600 font-semibold">{formatTemp(item.brightness_temp_k)}</span>
                         </>
                       ) : null}
                     </div>
@@ -633,19 +655,19 @@ export function OverlayManager() {
                   </span>
                 </div>
 
-                <div className="text-xs font-bold text-slate-900 leading-snug">
-                  {item.title}
+                <div className="text-xs font-bold text-slate-900 leading-snug flex items-center justify-between gap-2">
+                  <span>{cleanLocationName(item.title, item.latitude, item.longitude)}</span>
                 </div>
 
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  {item.message}
+                  {item.message?.replace(/\[OUTSIDE_SOVEREIGN_BOUNDS\]/g, "")}
                 </p>
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
-                  <div className="flex items-center gap-2 font-mono text-slate-500">
+                  <div className="flex items-center gap-2 font-mono text-slate-600 flex-wrap">
                     <span className="text-orange-600 font-bold">{Number(item.peak_frp_mw || 0).toFixed(1)} MW</span>
                     <span>·</span>
-                    <span>{Number(item.latitude || 0).toFixed(3)}°N, {Number(item.longitude || 0).toFixed(3)}°E</span>
+                    <span>{cleanLocationName(null, item.latitude, item.longitude)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button

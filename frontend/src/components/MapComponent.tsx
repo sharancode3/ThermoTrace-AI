@@ -295,6 +295,32 @@ export default function MapComponent({
     return geoData?.features.find((f) => f.properties.event_id === selectedEventId) || null;
   }, [geoData, selectedEventId]);
 
+  // Computed features list ensuring the selected event is ALWAYS visible even if time/category filter would hide it
+  const displayFeatures = useMemo(() => {
+    const list = geoData?.features ? [...geoData.features] : [];
+    if (selectedEventData && selectedEventId) {
+      const exists = list.some((f) => f.properties.event_id === selectedEventId);
+      if (!exists) {
+        const lon = Number(selectedEventData.longitude ?? selectedEventData.centroid?.coordinates?.[0]);
+        const lat = Number(selectedEventData.latitude ?? selectedEventData.centroid?.coordinates?.[1]);
+        if (Number.isFinite(lon) && Number.isFinite(lat)) {
+          list.push({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [lon, lat] },
+            properties: {
+              event_id: selectedEventData.event_id || selectedEventId,
+              classification: selectedEventData.classification || "OTHER_UNCERTAIN",
+              anomaly_tier: selectedEventData.anomaly_tier || "NORMAL",
+              peak_frp_mw: selectedEventData.peak_frp_mw,
+              max_brightness_k: selectedEventData.max_brightness_k,
+            }
+          } as any);
+        }
+      }
+    }
+    return list;
+  }, [geoData, selectedEventData, selectedEventId]);
+
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
       <Map
@@ -361,8 +387,8 @@ export default function MapComponent({
           </Source>
         )}
 
-        {/* Thermal Event Markers */}
-        {geoData?.features.map((feature) => {
+        {/* Thermal Event Markers (Guaranteed Selected Event Inclusion) */}
+        {displayFeatures.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k } = feature.properties;
           const isSelected = selectedEventId === event_id;
