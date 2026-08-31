@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 
 # Add backend directory to sys.path

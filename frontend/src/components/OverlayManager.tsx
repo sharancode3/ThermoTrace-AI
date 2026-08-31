@@ -1,408 +1,923 @@
 "use client";
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { 
-  X, Newspaper, Bell, MessageSquare, Settings, Flame, 
-  AlertTriangle, ShieldCheck, Activity, Satellite, CheckCircle2, 
-  MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon
+import {
+  X, Newspaper, Bell, Settings, Flame, BookOpen, Info, ShieldCheck,
+  Factory, Sprout, HelpCircle, Layers, Cpu, Check,
+  CheckCircle2, MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon,
+  Send, LoaderCircle, CheckCheck, Clock, Radio, AlertTriangle, AlertOctagon
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { fetchNews, fetchFirmsStatus } from "@/lib/apiClient";
+import { useEffect, useMemo, useState } from "react";
+import { 
+  askThermalChat, fetchNews, fetchNotifications, markNotificationRead, 
+  markAllNotificationsRead, fetchFirmsStatus 
+} from "@/lib/apiClient";
+
+function formatRelativeTime(dateStr?: string | null) {
+  if (!dateStr) return "Live";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diffSec < 60) return "Just now";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return `${Math.floor(diffSec / 86400)}d ago`;
+}
 
 export function OverlayManager() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const overlay = searchParams.get("overlay");
-  
+
   const [mounted, setMounted] = useState(false);
   const [news, setNews] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [firmsStatus, setFirmsStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [filterType, setFilterType] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [theme, setTheme] = useState<string>("light");
+  const [chatDraft, setChatDraft] = useState<string>("");
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
+  const [sessionId] = useState<string>(`sess_${Date.now()}`);
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    events?: any[];
+  }>>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content:
+        "Ask about abnormal thermal events, flaring clusters, or industrial facilities across India. I evaluate verified real-time satellite telemetry from PostGIS and answer with zero hallucinations.",
+    },
+  ]);
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem("thermo_theme") || "light";
-    setTheme(savedTheme);
+    setTheme(localStorage.getItem("thermo_theme") || "light");
   }, []);
 
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme);
-    localStorage.setItem("thermo_theme", newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+  const handleThemeChange = (t: string) => {
+    setTheme(t);
+    localStorage.setItem("thermo_theme", t);
+    if (t === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
   };
 
   const loadData = () => {
     if (!overlay) return;
     setLoading(true);
-
-    if (overlay === "news" || overlay === "alerts") {
+    if (overlay === "news") {
       fetchNews()
-        .then(data => setNews(data))
-        .catch(err => console.error("Error fetching news:", err))
+        .then((d) => {
+          // Sort strictly based on publishing time descending
+          const sorted = Array.isArray(d) 
+            ? [...d].sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+            : [];
+          setNews(sorted);
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    } else if (overlay === "alerts") {
+      fetchNotifications()
+        .then((d) => {
+          // Filter strictly for CRITICAL, ABNORMAL, or INDUSTRIAL records (limit to 100)
+          const filtered = Array.isArray(d) 
+            ? d.filter((item: any) => 
+                item.severity === "CRITICAL" || 
+                item.severity === "ABNORMAL" || 
+                (item.classification && item.classification.startsWith("IND_")) ||
+                item.title?.toLowerCase().includes("industrial")
+              ).slice(0, 100)
+            : [];
+          setNotifications(filtered);
+        })
+        .catch(console.error)
         .finally(() => setLoading(false));
     } else if (overlay === "settings") {
       fetchFirmsStatus()
-        .then(data => setFirmsStatus(data))
-        .catch(err => console.error("Error fetching FIRMS status:", err))
+        .then((d) => setFirmsStatus(d))
+        .catch(console.error)
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [overlay]);
+  useEffect(() => { loadData(); }, [overlay]);
+
+  const quickPrompts = useMemo(() => [
+    "Show abnormal industrial flares in Gujarat",
+    "List critical anomalies in Maharashtra",
+    "Which events are currently elevated?",
+  ], []);
 
   if (!mounted || !overlay) return null;
 
   const closeOverlay = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("overlay");
-    const newQuery = params.toString();
-    router.push(`${pathname}${newQuery ? "?" + newQuery : ""}`);
+    const q = params.toString();
+    router.push(`${pathname}${q ? "?" + q : ""}`);
   };
 
-  const handleSelectEvent = (eventId: string) => {
+  const handleSelectEvent = (itemOrId: any) => {
+    const eventId = typeof itemOrId === "string" ? itemOrId : itemOrId?.event_id;
+    if (!eventId) return;
+
+    const coords = itemOrId?.coordinates || (
+      itemOrId?.latitude && itemOrId?.longitude ? [itemOrId.longitude, itemOrId.latitude] : null
+    );
+
+    // 1. Dispatch custom event for instantaneous map flyTo
+    if (coords && coords.length >= 2) {
+      window.dispatchEvent(
+        new CustomEvent("thermo-fly-to-event", {
+          detail: {
+            eventId,
+            coordinates: coords,
+            peakFrp: itemOrId?.peak_frp_mw || 0,
+            anomalyTier: itemOrId?.anomaly_tier || itemOrId?.severity || "NORMAL",
+          },
+        })
+      );
+    }
+
+    // 2. Set eventId in URL (preserving overlay so user has side-by-side drawers)
     const params = new URLSearchParams(searchParams.toString());
-    params.delete("overlay");
     params.set("eventId", eventId);
     router.push(`/monitor?${params.toString()}`);
   };
 
-  const filteredNews = news.filter(item => {
-    const matchesSearch = 
-      item.headline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.location_name.toLowerCase().includes(searchQuery.toLowerCase());
-      
-    if (!matchesSearch) return false;
-    if (filterType === "ALL") return true;
-    if (filterType === "CRITICAL") return item.anomaly_tier === "CRITICAL" || item.severity_tag === "CRITICAL" || item.classification === "IND_FIRE";
-    if (filterType === "ABNORMAL") return item.anomaly_tier === "ABNORMAL" || item.anomaly_tier === "ELEVATED" || item.severity_tag === "ABNORMAL" || item.severity_tag === "ALERT";
+  const handleMarkRead = async (notifId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await markNotificationRead(notifId);
+      setNotifications((curr) => curr.map((n) => n.id === notifId ? { ...n, is_read: true } : n));
+    } catch (err) {
+      console.error("Failed to mark read:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((curr) => curr.map((n) => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error("Failed to mark all read:", err);
+    }
+  };
+
+  const filteredNews = news.filter((item) => {
+    const q = searchQuery.toLowerCase();
+    if (q && !item.headline.toLowerCase().includes(q) && !item.summary.toLowerCase().includes(q) && !item.location_name.toLowerCase().includes(q)) return false;
+    if (filterType === "CRITICAL") return item.anomaly_tier === "CRITICAL" || item.classification === "IND_FIRE";
+    if (filterType === "ABNORMAL") return ["ABNORMAL", "ELEVATED"].includes(item.anomaly_tier) || ["ABNORMAL", "ALERT"].includes(item.severity_tag);
     if (filterType === "AGRI") return item.classification === "AGRI_BURN" || item.severity_tag === "AGRI";
-    if (filterType === "INDUSTRIAL") return item.classification.startsWith("IND_") || item.severity_tag === "ROUTINE";
+    if (filterType === "INDUSTRIAL") return item.classification?.startsWith("IND_") || item.severity_tag === "ROUTINE";
     return true;
   });
 
+  const filteredAlerts = notifications.filter((item) => {
+    const q = searchQuery.toLowerCase();
+    if (q && !item.title.toLowerCase().includes(q) && !item.message.toLowerCase().includes(q) && !item.event_id.toLowerCase().includes(q)) return false;
+    if (filterType === "UNREAD") return !item.is_read;
+    if (filterType === "CRITICAL") return item.severity === "CRITICAL";
+    if (filterType === "ABNORMAL") return item.severity === "ABNORMAL" || item.severity === "ELEVATED";
+    return true;
+  });
+
+  const unreadAlertCount = notifications.filter(n => !n.is_read).length;
+
+  const handleChatSubmit = async () => {
+    const trimmed = chatDraft.trim();
+    if (!trimmed || chatLoading) return;
+    setChatMessages((c) => [...c, { id: `u-${Date.now()}`, role: "user", content: trimmed }]);
+    setChatDraft("");
+    setChatLoading(true);
+    try {
+      const res = await askThermalChat(trimmed, sessionId);
+      const payload = res?.data ?? {};
+      setChatMessages((c) => [
+        ...c,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: payload.answer_markdown || "No answer available.",
+          events: Array.isArray(payload.grounded_events) ? payload.grounded_events : [],
+        },
+      ]);
+    } catch {
+      setChatMessages((c) => [
+        ...c,
+        { id: `e-${Date.now()}`, role: "assistant", content: "Backend connectivity error. Please try again.", events: [] },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const tierBadge = (tier: string) => {
+    if (tier === "CRITICAL") return "bg-red-100 text-red-700 border border-red-200";
+    if (tier === "ABNORMAL") return "bg-orange-100 text-orange-700 border border-orange-200";
+    if (tier === "ELEVATED") return "bg-amber-100 text-amber-700 border border-amber-200";
+    return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+  };
+
   return (
-    <div className="fixed top-0 right-0 h-full w-[460px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 text-slate-700">
+    <div className="fixed top-0 right-0 h-full w-full sm:w-[450px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right">
+
       {/* Header */}
-      <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 shrink-0 bg-slate-50/75 backdrop-blur-sm">
-        <div className="flex items-center text-slate-900 font-bold text-base tracking-tight">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-slate-50 shrink-0">
+        <div className="flex items-center gap-3">
           {overlay === "news" && (
-            <>
-              <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg mr-3">
-                <Newspaper className="w-5 h-5" />
-              </div>
-              <div>
-                <div>Thermo News Feed</div>
-                <div className="text-[11px] font-normal text-slate-500">Live Indian Thermal Intelligence</div>
-              </div>
-            </>
+            <div className="p-2 bg-orange-100 border border-orange-200 rounded-lg relative">
+              <Newspaper className="w-5 h-5 text-orange-600" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-600 rounded-full animate-ping ring-2 ring-white" />
+            </div>
           )}
           {overlay === "alerts" && (
-            <>
-              <div className="p-1.5 bg-red-100 text-red-600 rounded-lg mr-3">
-                <Bell className="w-5 h-5" />
-              </div>
-              <div>
-                <div>Operational Alerts</div>
-                <div className="text-[11px] font-normal text-slate-500">Priority Anomaly Bulletins</div>
-              </div>
-            </>
+            <div className="p-2 bg-red-100 border border-red-200 rounded-lg relative">
+              <Bell className="w-5 h-5 text-red-600" />
+              {unreadAlertCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                  {unreadAlertCount}
+                </span>
+              )}
+            </div>
           )}
           {overlay === "chat" && (
-            <>
-              <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg mr-3">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <div>
-                <div>Tactical AI Query</div>
-                <div className="text-[11px] font-normal text-slate-500">PostGIS Grounded Assistant</div>
-              </div>
-            </>
+            <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg relative flex items-center justify-center">
+              <Flame className="w-5 h-5 text-orange-600" />
+              <span className="absolute -top-1 -right-1 flex items-center justify-center w-3 h-3 rounded-full bg-orange-600 text-white font-black text-[8px] leading-none ring-1 ring-white">+</span>
+            </div>
           )}
           {overlay === "settings" && (
-            <>
-              <div className="p-1.5 bg-cyan-100 text-cyan-600 rounded-lg mr-3">
-                <Settings className="w-5 h-5" />
-              </div>
-              <div>
-                <div>System & Telemetry Settings</div>
-                <div className="text-[11px] font-normal text-slate-500">Appearance & NASA FIRMS Cadence</div>
-              </div>
-            </>
+            <div className="p-2 bg-slate-100 border border-slate-200 rounded-lg">
+              <Settings className="w-5 h-5 text-slate-600" />
+            </div>
           )}
+          {overlay === "info" && (
+            <div className="p-2 bg-orange-100 border border-orange-200 rounded-lg">
+              <BookOpen className="w-5 h-5 text-orange-600" />
+            </div>
+          )}
+          <div>
+            <div className="text-sm font-bold text-slate-900 leading-tight">
+              {overlay === "news" && "Thermo News (Past 24h)"}
+              {overlay === "alerts" && `Operational Alerts (${notifications.length})`}
+              {overlay === "chat" && "Tactical AI Query"}
+              {overlay === "settings" && "System Settings"}
+              {overlay === "info" && "Platform Guide & Symbology"}
+            </div>
+            <div className="text-[11px] text-slate-500">
+              {overlay === "news" && "Time-Ordered NASA FIRMS Bulletins"}
+              {overlay === "alerts" && `${unreadAlertCount} Unacknowledged • Max 100 Recent`}
+              {overlay === "chat" && "PostGIS Grounded Assistant"}
+              {overlay === "settings" && "Appearance & NASA FIRMS"}
+              {overlay === "info" && "9-Icon Matrix, Compute Tiers & Tech Stack"}
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-1">
-          <button 
-            onClick={loadData} 
-            title="Refresh Feed"
-            className="text-slate-400 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-100 transition"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-orange-600' : ''}`} />
+          <button onClick={loadData} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="Refresh Live Data">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-orange-600" : ""}`} />
           </button>
-          <button 
-            onClick={closeOverlay} 
-            className="text-slate-400 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-100 transition"
-          >
+          <button onClick={closeOverlay} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition">
             <X className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Subheader / Filters for News */}
-      {(overlay === "news" || overlay === "alerts") && (
-        <div className="p-4 border-b border-slate-100 bg-white space-y-3 shrink-0">
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text"
-              placeholder="Search by district, state, or plant name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
-            />
+      {/* News Filter Toolbar & 24h Live Stream Banner */}
+      {overlay === "news" && (
+        <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
+          {/* Live Ingestion Cadence Notice */}
+          <div className="flex items-center justify-between px-2.5 py-1 bg-orange-50/80 border border-orange-200/80 rounded-lg text-[10px] text-orange-800 font-medium">
+            <div className="flex items-center gap-1.5">
+              <Radio className="w-3 h-3 text-orange-600 animate-pulse" />
+              <span>NASA FIRMS Telemetry (5-min Polling)</span>
+            </div>
+            <span className="font-mono font-bold bg-orange-200/70 px-1.5 py-0.2 rounded text-[9px]">PAST 24H</span>
           </div>
 
-          {/* Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
-            <button 
-              onClick={() => setFilterType("ALL")}
-              className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
-                filterType === "ALL" 
-                  ? "bg-slate-900 text-white shadow-sm" 
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              All Bulletins ({news.length})
-            </button>
-            <button 
-              onClick={() => setFilterType("CRITICAL")}
-              className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
-                filterType === "CRITICAL" 
-                  ? "bg-red-600 text-white shadow-sm" 
-                  : "bg-red-50 text-red-700 hover:bg-red-100"
-              }`}
-            >
-              Critical Fires
-            </button>
-            <button 
-              onClick={() => setFilterType("ABNORMAL")}
-              className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
-                filterType === "ABNORMAL" 
-                  ? "bg-amber-600 text-white shadow-sm" 
-                  : "bg-amber-50 text-amber-700 hover:bg-amber-100"
-              }`}
-            >
-              Elevated Anomalies
-            </button>
-            <button 
-              onClick={() => setFilterType("INDUSTRIAL")}
-              className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
-                filterType === "INDUSTRIAL" 
-                  ? "bg-blue-600 text-white shadow-sm" 
-                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
-              }`}
-            >
-              Industrial
-            </button>
-            <button 
-              onClick={() => setFilterType("AGRI")}
-              className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
-                filterType === "AGRI" 
-                  ? "bg-yellow-600 text-white shadow-sm" 
-                  : "bg-yellow-50 text-yellow-800 hover:bg-yellow-100"
-              }`}
-            >
-              Crop Burns
-            </button>
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search news by district, state, or plant..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+            {[["ALL", `All (${news.length})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Elevated"], ["INDUSTRIAL", "Industrial"], ["AGRI", "Crop Burns"]].map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setFilterType(val)}
+                className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
+                  filterType === val
+                    ? val === "CRITICAL" ? "bg-red-600 text-white"
+                    : val === "ABNORMAL" ? "bg-amber-600 text-white"
+                    : val === "INDUSTRIAL" ? "bg-blue-600 text-white"
+                    : val === "AGRI" ? "bg-yellow-600 text-white"
+                    : "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
-        {loading ? (
-          <div className="space-y-3 animate-pulse">
-            <div className="h-28 bg-white border border-slate-200 rounded-xl p-4"></div>
-            <div className="h-28 bg-white border border-slate-200 rounded-xl p-4"></div>
-            <div className="h-28 bg-white border border-slate-200 rounded-xl p-4"></div>
+      {/* Alerts Filter Toolbar & 100-Alert Cap */}
+      {overlay === "alerts" && (
+        <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
+          {/* Alert Filter Policy Banner */}
+          <div className="flex items-center justify-between px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[10px] text-slate-700">
+            <span className="font-semibold flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3 text-amber-600" />
+              Critical, Abnormal & Industrial Alarms Only
+            </span>
+            <span className="font-mono text-slate-500">Max 100 Recent</span>
           </div>
-        ) : overlay === "news" || overlay === "alerts" ? (
-          filteredNews.length === 0 ? (
-            <div className="text-center text-slate-500 py-16 text-xs">
-              <div className="p-3 bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3 text-slate-400">
-                <Filter className="w-5 h-5" />
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search alerts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
+              />
+            </div>
+            {unreadAlertCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold transition shrink-0"
+              >
+                <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                Mark All Read
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+            {[["ALL", `All (${notifications.length})`], ["UNREAD", `Unread (${unreadAlertCount})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Abnormal"]].map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setFilterType(val)}
+                className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
+                  filterType === val
+                    ? val === "CRITICAL" ? "bg-red-600 text-white font-semibold"
+                    : val === "UNREAD" ? "bg-orange-600 text-white font-semibold"
+                    : val === "ABNORMAL" ? "bg-amber-600 text-white font-semibold"
+                    : "bg-slate-900 text-white font-semibold"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CHAT OVERLAY */}
+      {overlay === "chat" && (
+        <div className="flex-1 flex flex-col min-h-0 bg-white">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                <div className="p-1 rounded bg-orange-50 border border-orange-200 relative flex items-center justify-center">
+                  <Flame className="w-3.5 h-3.5 text-orange-600" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-orange-600 text-white flex items-center justify-center text-[7px] font-black ring-1 ring-white">+</span>
+                </div>
+                Grounded Event Analysis
               </div>
-              <p className="font-semibold text-slate-700 mb-1">No matching bulletins found</p>
-              <p className="text-slate-400">Try adjusting your filters or search keywords.</p>
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider bg-orange-50 border border-orange-200 text-orange-700 px-2 py-0.5 rounded">Live PostGIS</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {quickPrompts.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setChatDraft(p)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-slate-200 bg-white text-slate-700 hover:border-orange-400 hover:text-orange-700 hover:bg-orange-50 transition"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0 bg-slate-50/40">
+            {chatMessages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[88%] rounded-2xl border px-4 py-3 shadow-sm ${
+                  msg.role === "user"
+                    ? "bg-slate-900 text-white border-slate-800"
+                    : "bg-white text-slate-800 border-slate-200"
+                }`}>
+                  {msg.role === "assistant" && (
+                    <div className="flex items-center gap-1 mb-2 text-[10px] uppercase tracking-wider text-orange-600 font-bold font-mono">
+                      <Flame className="w-3 h-3" />
+                      <span>+</span> Thermo AI
+                    </div>
+                  )}
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                  {msg.events && msg.events.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {msg.events.map((ev: any) => (
+                        <button
+                          key={`${msg.id}-${ev.event_id}`}
+                          type="button"
+                          onClick={() => handleSelectEvent(ev.event_id)}
+                          className="w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-orange-50 hover:border-orange-300 transition space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-bold font-mono text-slate-800 uppercase">{ev.event_id}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tierBadge(ev.anomaly_tier || "NORMAL")}`}>{ev.anomaly_tier || "NORMAL"}</span>
+                          </div>
+                          <div className="text-xs text-slate-800 font-semibold truncate">{ev.facility_name || "Regional Facility"}</div>
+                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1 border-t border-slate-200/60">
+                            <span className="text-orange-600 font-bold">{Number(ev.peak_frp_mw || 0).toFixed(1)} MW</span>
+                            <span>{Number(ev.latitude || 0).toFixed(4)}°N, {Number(ev.longitude || 0).toFixed(4)}°E</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[88%] rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-1 mb-2 text-[10px] uppercase tracking-wider text-orange-600 font-bold font-mono">
+                    <LoaderCircle className="w-3 h-3 animate-spin" /> Thermo AI
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="h-2 w-2 rounded-full bg-orange-500 animate-ping" />
+                    Querying PostGIS thermal dataset...
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-3 border-t border-slate-200 bg-white shrink-0">
+            <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 focus-within:border-orange-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/20 transition">
+              <textarea
+                value={chatDraft}
+                onChange={(e) => setChatDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleChatSubmit();
+                  }
+                }}
+                rows={1}
+                placeholder="Ask about thermal activity in a state or facility..."
+                className="flex-1 resize-none bg-transparent text-xs text-slate-800 placeholder-slate-400 outline-none min-h-[36px] max-h-[120px]"
+              />
+              <button
+                type="button"
+                onClick={() => void handleChatSubmit()}
+                disabled={chatLoading || !chatDraft.trim()}
+                className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-orange-600 text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition hover:bg-orange-500 mb-0.5"
+                aria-label="Send query"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* THERMO NEWS OVERLAY (Strictly Time-Ordered, Past 24h) */}
+      {overlay === "news" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+          {loading ? (
+            <div className="space-y-3 animate-pulse">
+              {[1, 2, 3].map((i) => <div key={i} className="h-28 bg-white border border-slate-200 rounded-xl" />)}
+            </div>
+          ) : filteredNews.length === 0 ? (
+            <div className="text-center text-slate-500 py-16 text-xs">
+              <div className="p-3 bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                <Filter className="w-5 h-5 text-slate-400" />
+              </div>
+              <p className="font-semibold text-slate-700 mb-1">No matching bulletins</p>
+              <p className="text-slate-400">Try adjusting filters or search.</p>
             </div>
           ) : (
-            filteredNews.map((item) => (
-              <div 
-                key={item.id}
-                onClick={() => handleSelectEvent(item.event_id)}
-                className="p-4 bg-white hover:bg-slate-50/90 border border-slate-200 hover:border-orange-500/40 rounded-xl cursor-pointer transition shadow-sm hover:shadow-md space-y-2.5 group relative"
-              >
-                {/* Top Badge & Time */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-semibold tracking-wider ${
-                      item.anomaly_tier === "CRITICAL" ? "bg-red-100 text-red-700 border border-red-200" :
-                      item.anomaly_tier === "ABNORMAL" ? "bg-orange-100 text-orange-700 border border-orange-200" :
-                      item.anomaly_tier === "ELEVATED" ? "bg-amber-100 text-amber-700 border border-amber-200" :
-                      "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                    }`}>
-                      {item.anomaly_tier}
-                    </span>
-                    <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-mono font-medium">
-                      {item.classification}
+            filteredNews.map((item) => {
+              const isInd = item.is_industrial || (item.classification && item.classification.startsWith("IND_"));
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => handleSelectEvent(item)}
+                  className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-orange-400/60 rounded-xl cursor-pointer transition shadow-sm hover:shadow-md space-y-2 group relative"
+                >
+                  {/* Top Row: Location & Relative Time */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1 text-slate-900 font-bold text-xs truncate">
+                      <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                      <span className="truncate">{item.location_name || "Indian Monitored Zone"}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      {formatRelativeTime(item.published_at)}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    {new Date(item.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                  {/* Middle Row: Industry Status & Event ID */}
+                  <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      {isInd ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-semibold text-[10px]">
+                          <Factory className="w-3 h-3" /> Industrial
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-[10px]">
+                          <Sprout className="w-3 h-3" /> Non-Industrial
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-500 font-mono">{item.classification}</span>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${tierBadge(item.anomaly_tier)}`}>
+                      {item.anomaly_tier}
+                    </span>
+                  </div>
+
+                  {/* Summary / Headline snippet */}
+                  <p className="text-xs text-slate-600 leading-snug line-clamp-2">
+                    {item.headline || item.summary}
+                  </p>
+
+                  {/* Bottom Row: Radiance MW, Temperature K, and Focus Prompt */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-mono">
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <span className="text-orange-600 font-bold">{item.peak_frp_mw?.toFixed(1)} MW</span>
+                      {item.brightness_temp_k ? (
+                        <>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-slate-600">{item.brightness_temp_k?.toFixed(1)} K</span>
+                        </>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectEvent(item);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[10px] font-bold transition shadow-sm hover:shadow"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-orange-600" />
+                      Show on Map
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* OPERATIONAL ALERTS OVERLAY (Critical, Abnormal, Industrial - Max 100) */}
+      {overlay === "alerts" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+          {loading ? (
+            <div className="space-y-3 animate-pulse">
+              {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white border border-slate-200 rounded-xl" />)}
+            </div>
+          ) : filteredAlerts.length === 0 ? (
+            <div className="text-center text-slate-500 py-16 text-xs">
+              <div className="p-3 bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+              <p className="font-semibold text-slate-700 mb-1">All alerts acknowledged</p>
+              <p className="text-slate-400">No active unacknowledged operational alarms matching filters.</p>
+            </div>
+          ) : (
+            filteredAlerts.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => handleSelectEvent(item)}
+                className={`p-4 rounded-xl border transition shadow-sm cursor-pointer relative space-y-2 ${
+                  item.is_read 
+                    ? "bg-white hover:bg-slate-50 border-slate-200" 
+                    : "bg-orange-50/40 hover:bg-orange-50/80 border-orange-200 ring-1 ring-orange-500/20"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {!item.is_read && (
+                      <span className="w-2 h-2 rounded-full bg-orange-600 animate-pulse" title="Unread Alarm" />
+                    )}
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${tierBadge(item.severity)}`}>
+                      {item.severity}
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-slate-800">{item.event_id}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {formatRelativeTime(item.created_at)}
                   </span>
                 </div>
 
-                {/* Headline */}
-                <h4 className="text-xs font-bold text-slate-900 group-hover:text-orange-600 transition leading-snug">
-                  {item.headline}
-                </h4>
-
-                {/* Summary */}
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {item.summary}
-                </p>
-
-                {/* Location & Metrics Bar */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
-                  <div className="flex items-center gap-1 text-slate-700 font-medium truncate max-w-[240px]">
-                    <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                    <span className="truncate">{item.location_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-mono">
-                    <span className="font-semibold text-slate-900">{item.peak_frp_mw?.toFixed(1)} MW</span>
-                    <span className="text-slate-400">·</span>
-                    <span className="text-orange-600 font-medium">{item.confidence_pct}% Conf</span>
-                  </div>
+                <div className="text-xs font-bold text-slate-900 leading-snug">
+                  {item.title}
                 </div>
 
-                {/* Hover CTA Indicator */}
-                <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition text-orange-600">
-                  <ArrowUpRight className="w-4 h-4" />
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {item.message}
+                </p>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                  <div className="flex items-center gap-2 font-mono text-slate-500">
+                    <span className="text-orange-600 font-bold">{Number(item.peak_frp_mw || 0).toFixed(1)} MW</span>
+                    <span>·</span>
+                    <span>{Number(item.latitude || 0).toFixed(3)}°N, {Number(item.longitude || 0).toFixed(3)}°E</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectEvent(item);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[10px] font-bold transition shadow-sm"
+                    >
+                      <MapPin className="w-3 h-3 text-orange-600" />
+                      Show on Map
+                    </button>
+                    {!item.is_read ? (
+                      <button
+                        onClick={(e) => handleMarkRead(item.id, e)}
+                        className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-semibold text-slate-700 transition"
+                      >
+                        Acknowledge
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Read
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
-          )
-        ) : overlay === "settings" ? (
-          <div className="space-y-4 text-xs">
-            {/* Visual Appearance & Theme Selector */}
-            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
-              <div className="font-bold text-slate-900 text-sm">Visual Appearance</div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button 
-                  onClick={() => handleThemeChange("light")}
-                  className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition ${
-                    theme === "light" 
-                      ? "border-orange-500 bg-orange-50/40 text-orange-700 font-bold" 
-                      : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  <Sun className="w-5 h-5 text-orange-500" />
-                  <span className="text-xs">Clean Light (Default)</span>
-                </button>
-                <button 
-                  onClick={() => handleThemeChange("dark")}
-                  className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition ${
-                    theme === "dark" 
-                      ? "border-orange-500 bg-orange-50/40 text-orange-700 font-bold" 
-                      : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  <Moon className="w-5 h-5 text-slate-700" />
-                  <span className="text-xs">Dark Aerospace</span>
-                </button>
+          )}
+        </div>
+      )}
+
+      {/* SYSTEM INFO & GUIDE OVERLAY */}
+      {overlay === "info" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs bg-slate-50/50">
+          {/* Mission Card */}
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
+                <Flame className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">ThermoTrace AI (Thermo Intelligence)</h3>
+                <span className="text-[10px] font-mono text-slate-500">National Sovereign Early Warning System</span>
+              </div>
+            </div>
+            <p className="text-slate-600 leading-relaxed text-[11px] pt-1 border-t border-slate-100">
+              National early warning and persistent thermal anomaly intelligence platform. Detects industrial runaway incidents, excessive refinery gas flaring, and agricultural biomass burns using NASA satellite radiometry, PostGIS spatial reasoning, and calibrated ML.
+            </p>
+          </div>
+
+          {/* 9-Icon Tactical Symbology Reference */}
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-orange-600" /> Tactical Symbology (9-Icon Matrix)
+              </span>
+              <span className="text-[10px] font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded">Type × Severity</span>
+            </div>
+
+            {/* Base Shapes */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">1. Base Icon Shapes (Classification)</span>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                  <Factory className="w-4 h-4 text-orange-600" />
+                  <span className="font-bold text-slate-800 text-[11px]">Industrial</span>
+                  <span className="text-[9px] text-slate-500">Flares, Routine, Fires</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                  <Sprout className="w-4 h-4 text-emerald-600" />
+                  <span className="font-bold text-slate-800 text-[11px]">Vegetation</span>
+                  <span className="text-[9px] text-slate-500">Stubble, Forest Fire</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                  <HelpCircle className="w-4 h-4 text-slate-500" />
+                  <span className="font-bold text-slate-800 text-[11px]">Uncertain</span>
+                  <span className="text-[9px] text-slate-500">Unclassified / Sparse</span>
+                </div>
               </div>
             </div>
 
-            {/* NASA FIRMS Telemetry Status */}
-            {firmsStatus ? (
-              <>
-                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
-                  <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
-                    <span>NASA FIRMS Ingestion</span>
-                    <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold text-xs border border-emerald-200">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {firmsStatus.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Freshness Status:</span>
-                    <span className="text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded font-mono font-semibold border border-cyan-200">
-                      {firmsStatus.data_freshness_status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Autonomous Polling:</span>
-                    <span className="text-slate-900 font-semibold font-mono">Every 5 Minutes</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-slate-500">Geographic Extent:</span>
-                    <span className="text-slate-800 font-mono font-medium">India [68°E–97°E, 6°N–37°N]</span>
+            {/* Semantic Colors */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">2. Semantic Colors (Anomaly Severity)</span>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-center gap-2 p-2 bg-emerald-50/60 rounded-lg border border-emerald-100">
+                  <span className="w-3 h-3 rounded-full bg-emerald-600 border border-emerald-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-emerald-950">Green: Nominal & Elevated</span>
+                    <p className="text-[10px] text-emerald-800 leading-tight">Within baseline bounds (&lt;2.5σ) or routine operations.</p>
                   </div>
                 </div>
-
-                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2">
-                  <div className="text-slate-900 font-semibold mb-1">Active Satellites & NRT Feeds</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {firmsStatus.active_sensors.map((s: string) => (
-                      <span key={s} className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md text-[11px] font-mono text-slate-700">
-                        {s}
-                      </span>
-                    ))}
+                <div className="flex items-center gap-2 p-2 bg-orange-50/60 rounded-lg border border-orange-100">
+                  <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-orange-950">Amber: Abnormal Anomaly</span>
+                    <p className="text-[10px] text-orange-800 leading-tight">Statistically elevated thermal deviation (+2.5σ to +4.5σ).</p>
                   </div>
                 </div>
-
-                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2 font-mono text-[11px]">
-                  <div className="text-slate-900 font-sans font-semibold mb-1">Telemetry Metrics</div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Last Fetch UTC:</span>
-                    <span className="text-slate-900 font-medium">{firmsStatus.last_successful_firms_fetch_utc ? new Date(firmsStatus.last_successful_firms_fetch_utc).toUTCString() : "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Latest Satellite Obs:</span>
-                    <span className="text-slate-900 font-medium">{firmsStatus.latest_observation_timestamp_utc ? new Date(firmsStatus.latest_observation_timestamp_utc).toUTCString() : "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-slate-500">Observations Ingested:</span>
-                    <span className="text-emerald-600 font-bold">{firmsStatus.records_inserted} new / {firmsStatus.records_received} total</span>
+                <div className="flex items-center gap-2 p-2 bg-red-50/60 rounded-lg border border-red-100">
+                  <span className="w-3 h-3 rounded-full bg-red-600 border border-red-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-red-950">Red: Critical Anomaly</span>
+                    <p className="text-[10px] text-red-800 leading-tight">High-severity flaring or runaway incident (&gt;4.5σ above mean).</p>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="text-center text-slate-500 py-12 text-xs">FIRMS status unavailable.</div>
-            )}
+                <div className="flex items-center gap-2 p-2 bg-slate-100 rounded-lg border border-slate-200">
+                  <span className="w-3 h-3 rounded-full bg-slate-500 border border-slate-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-slate-900">Neutral Slate: Baseline Insufficient</span>
+                    <p className="text-[10px] text-slate-600 leading-tight">Facility history &lt; 10 observations. Anomaly status withheld.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-center py-16 bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <MessageSquare className="w-10 h-10 text-indigo-500 mb-3" />
-            <p className="font-bold text-slate-900 text-sm mb-1">Thermal Intelligence Assistant</p>
-            <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-              PostGIS-grounded local AI is active. Click any thermal event on the map or select a bulletin from the News Feed to review its detailed tactical brief.
-            </p>
+
+          {/* Two-Tier Compute Architecture */}
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+            <span className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <Cpu className="w-3.5 h-3.5 text-blue-600" /> Two-Tier Compute Architecture
+            </span>
+            <div className="space-y-2 text-[11px]">
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                <div className="font-bold text-slate-900 flex items-center justify-between">
+                  <span>Tier 1: Eager Processing</span>
+                  <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-bold">&lt;1ms</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[10px]">
+                  Runs immediately post-clustering for all events. Calculates Calibrated XGBoost probabilities and arithmetic Z-scores to color map markers and news cards.
+                </p>
+              </div>
+
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                <div className="font-bold text-slate-900 flex items-center justify-between">
+                  <span>Tier 2: On-Demand & Cached</span>
+                  <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded font-bold">&lt;2ms Cached</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[10px]">
+                  Runs only when an operator opens the investigation drawer. Calculates TreeSHAP explainability drivers, ESA WorldCover 10m windowing, Sentinel-2 optical metadata, and LLM narrative brief.
+                </p>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Grounding & Sovereign Border Standards */}
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+            <span className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Zero-Hallucination & Sovereign Borders
+            </span>
+            <div className="space-y-1.5 text-[10px] text-slate-600">
+              <div className="flex items-start gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                <span><strong>Grounded Brief:</strong> Partitioned into OBSERVED, DERIVED, MODELLED, and UNKNOWN layers.</span>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                <span><strong>Survey of India Compliant:</strong> High-precision Point-in-Polygon gate rejecting transboundary detections.</span>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                <span><strong>Rule 8 Optical Honesty:</strong> Optical scenes display exact acquisition timestamps and non-simultaneous disclaimers.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Technology Stack Grid */}
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+            <span className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-purple-600" /> Platform Technology Stack
+            </span>
+            <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
+              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-slate-500 font-sans">Frontend</div>
+                <div className="font-bold text-slate-800">Next.js 16 + TS</div>
+              </div>
+              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-slate-500 font-sans">Backend</div>
+                <div className="font-bold text-slate-800">FastAPI (Python 3.11)</div>
+              </div>
+              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-slate-500 font-sans">Spatial DB</div>
+                <div className="font-bold text-slate-800">PostGIS 3.4 + PG 16</div>
+              </div>
+              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-slate-500 font-sans">Calibrated ML</div>
+                <div className="font-bold text-slate-800">XGBoost + TreeSHAP</div>
+              </div>
+              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-slate-500 font-sans">Telemetry</div>
+                <div className="font-bold text-slate-800">NASA FIRMS API</div>
+              </div>
+              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-slate-500 font-sans">Optical Context</div>
+                <div className="font-bold text-slate-800">Copernicus Sentinel-2</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS OVERLAY */}
+      {overlay === "settings" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs bg-slate-50/40">
+          <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
+            <div className="font-bold text-slate-900 text-sm">Visual Appearance</div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => handleThemeChange("light")}
+                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition ${theme === "light" ? "border-orange-500 bg-orange-50 text-orange-700 font-bold" : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+              >
+                <Sun className="w-5 h-5 text-orange-500" />
+                <span>Clean Light</span>
+              </button>
+              <button
+                onClick={() => handleThemeChange("dark")}
+                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition ${theme === "dark" ? "border-orange-500 bg-orange-50 text-orange-700 font-bold" : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+              >
+                <Moon className="w-5 h-5 text-slate-600" />
+                <span>Dark Aerospace</span>
+              </button>
+            </div>
+          </div>
+          {firmsStatus ? (
+            <>
+              <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
+                  <span>NASA FIRMS Ingestion</span>
+                  <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold text-xs border border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> {firmsStatus.status}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Freshness:</span>
+                  <span className="text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded font-mono font-semibold border border-cyan-200">{firmsStatus.data_freshness_status}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Polling Interval:</span>
+                  <span className="text-slate-900 font-semibold font-mono">Every 5 min</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Coverage:</span>
+                  <span className="text-slate-800 font-mono font-medium">India [68°E–97°E, 6°N–37°N]</span>
+                </div>
+              </div>
+              <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2">
+                <div className="text-slate-900 font-semibold">Active Satellites</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {firmsStatus.active_sensors?.map((s: string) => (
+                    <span key={s} className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md text-[11px] font-mono text-slate-700">{s}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2 font-mono text-[11px]">
+                <div className="text-slate-900 font-sans font-semibold mb-1">Telemetry Metrics</div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Last Fetch UTC:</span>
+                  <span className="text-slate-900">{firmsStatus.last_successful_firms_fetch_utc ? new Date(firmsStatus.last_successful_firms_fetch_utc).toUTCString() : "N/A"}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Observations:</span>
+                  <span className="text-emerald-600 font-bold">{firmsStatus.records_inserted} new / {firmsStatus.records_received} total</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-slate-500 py-12">FIRMS status unavailable.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

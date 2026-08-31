@@ -1,11 +1,12 @@
-﻿"use client";
+"use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import MapComponent from "@/components/MapComponent";
 import { EventInvestigationDrawer } from "@/features/events/EventInvestigationDrawer";
 import { useState } from "react";
 
-export default function MonitorPage() {
+function MonitorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -48,5 +49,13 @@ export default function MonitorPage() {
         />
       )}
     </>
+  );
+}
+
+export default function MonitorPage() {
+  return (
+    <Suspense fallback={<div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-400 font-mono text-xs">Loading Tactical Map...</div>}>
+      <MonitorContent />
+    </Suspense>
   );
 }

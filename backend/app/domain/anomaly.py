@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import joblib
 import pandas as pd
@@ -10,9 +10,11 @@ from sqlalchemy import text
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
+from app.domain.ml_models import Float64XGBClassifier
+from app.domain.satellite_context import extract_satellite_context
 from app.db.models import (
     ThermalEvent, IndustrialFacility, EventAnomaly, 
-    EventClassification, MlModel, ThermoNews
+    EventClassification, MlModel, ThermoNews, Notification
 )
 from app.domain.features import (
     build_feature_vector, get_thermal_trend, 
@@ -139,25 +141,8 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             if confidence < 0.40:
                 predicted_class = "OTHER_UNCERTAIN"
                 
-            # 3. SHAP TreeExplainer
-            if shap is not None:
-                try:
-                    explainer = shap.TreeExplainer(model)
-                    shap_values = explainer.shap_values(x_df)
-                    
-                    if isinstance(shap_values, list): 
-                        shap_vals_for_class = shap_values[pred_idx][0]
-                    elif len(shap_values.shape) == 3: 
-                        shap_vals_for_class = shap_values[0, :, pred_idx]
-                    else:
-                        shap_vals_for_class = shap_values[0]
-                        
-                    top_indices = np.argsort(np.abs(shap_vals_for_class))[-3:]
-                    for idx in reversed(top_indices):
-                        feat_name = feature_cols[idx]
-                        feature_importances[feat_name] = round(float(shap_vals_for_class[idx]), 4)
-                except Exception:
-                    pass
+            # Tier 1 Eager: SHAP TreeExplainer is deferred to Tier 2 On-Demand drawer open
+            feature_importances = {}
         except Exception:
             predicted_class = "OTHER_UNCERTAIN"
             confidence = 0.0
@@ -205,32 +190,31 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         
     anomaly_record.observed_frp_mw = current_frp
     
-    z_score = 0.0
-    if not facility or facility.historical_event_count < 3 or facility.baseline_frp_std == 0:
-        if current_frp >= 200.0:
-            z_score = 5.2
-            tier = "CRITICAL"
-        elif current_frp >= 50.0:
-            z_score = 2.6
-            tier = "ABNORMAL"
-        elif current_frp >= 20.0:
-            z_score = 1.6
-            tier = "ELEVATED"
-        else:
-            z_score = 0.0
-            tier = "NORMAL"
-            
-        event.anomaly_z_score = z_score
-        event.anomaly_tier = tier
-        anomaly_record.baseline_mean_frp_mw = 0.0
-        anomaly_record.baseline_std_frp_mw = 0.0
-        anomaly_record.z_score = z_score
+    # Statistical Baseline Sufficiency Check (Minimum 10 Historical Observations Required)
+    BASELINE_SUFFICIENCY_THRESHOLD = 10
+    sample_count = int(facility.historical_event_count) if facility and facility.historical_event_count is not None else 0
+    std_frp = float(facility.baseline_frp_std) if facility and facility.baseline_frp_std is not None else 0.0
+    mean_frp = float(facility.baseline_frp_mean) if facility and facility.baseline_frp_mean is not None else 0.0
+
+    if not facility or sample_count < BASELINE_SUFFICIENCY_THRESHOLD or std_frp <= 0.0:
+        # Zero Statistical Fabrication: If baseline is insufficient, mark explicitly as BASELINE_INSUFFICIENT
+        tier = "BASELINE_INSUFFICIENT"
+        z_score = 0.0
+        
+        event.anomaly_z_score = 0.0
+        event.anomaly_tier = "BASELINE_INSUFFICIENT"
+        anomaly_record.baseline_mean_frp_mw = float(mean_frp)
+        anomaly_record.baseline_std_frp_mw = float(std_frp)
+        anomaly_record.z_score = 0.0
         anomaly_record.percentile_rank = 0.0
-        anomaly_record.anomaly_severity = tier
-        anomaly_record.contributing_factors = {"status": "unassociated_baseline"}
+        anomaly_record.anomaly_severity = "BASELINE_INSUFFICIENT"
+        anomaly_record.contributing_factors = {
+            "status": "BASELINE_INSUFFICIENT",
+            "sample_count": sample_count,
+            "threshold_required": BASELINE_SUFFICIENCY_THRESHOLD,
+            "reason": f"Baseline observation count (N={sample_count}) is below sufficiency threshold (N={BASELINE_SUFFICIENCY_THRESHOLD}). Statistical Z-score is withheld."
+        }
     else:
-        mean_frp = float(facility.baseline_frp_mean)
-        std_frp = float(facility.baseline_frp_std)
         z_score = (current_frp - mean_frp) / std_frp
         tier = evaluate_anomaly_tier(z_score)
         
@@ -243,6 +227,8 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         anomaly_record.percentile_rank = 0.0
         anomaly_record.anomaly_severity = tier
         anomaly_record.contributing_factors = {
+            "status": "STATISTICALLY_SUFFICIENT",
+            "sample_count": sample_count,
             "deviation_mw": round(current_frp - mean_frp, 2),
             "percentage_above_mean": round(((current_frp - mean_frp) / mean_frp) * 100, 2) if mean_frp > 0 else 0.0
         }
@@ -262,6 +248,28 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
     news_record.summary = summary
     news_record.severity_tag = severity
     news_record.published_at_utc = event.latest_detected_utc or datetime.now(timezone.utc)
+
+    # 7. Create/Update Operational Alert Notification for Critical, Abnormal, or Industrial events
+    is_alert_worthy = (
+        event.anomaly_tier in ["CRITICAL", "ABNORMAL"] 
+        or (event.classification and event.classification.startswith("IND_"))
+    )
+    if is_alert_worthy:
+        notif = session.query(Notification).filter(Notification.event_id == event.id).first()
+        if not notif:
+            notif = Notification(
+                event_id=event.id,
+                title=f"{'Critical Incident' if event.anomaly_tier == 'CRITICAL' else ('Abnormal Flaring' if event.anomaly_tier == 'ABNORMAL' else 'Industrial Hotspot')}: [{event.event_id}]",
+                message=f"Peak radiance {event.peak_frp_mw:.1f} MW detected in {geo['location_formatted']}. Classification: {event.classification}.",
+                severity=event.anomaly_tier if event.anomaly_tier in ["CRITICAL", "ABNORMAL"] else "ABNORMAL",
+                is_read=False,
+                created_at=event.latest_detected_utc or datetime.now(timezone.utc)
+            )
+            session.add(notif)
+        else:
+            notif.severity = event.anomaly_tier if event.anomaly_tier in ["CRITICAL", "ABNORMAL"] else notif.severity
+            notif.message = f"Peak radiance {event.peak_frp_mw:.1f} MW detected in {geo['location_formatted']}. Classification: {event.classification}."
+            notif.created_at = event.latest_detected_utc or notif.created_at
     
     session.commit()
 
@@ -277,3 +285,128 @@ def process_all_intelligence():
 
 if __name__ == "__main__":
     process_all_intelligence()
+
+def compute_tier2_shap_explainability(session: Session, event: ThermalEvent, model, classes) -> Dict[str, float]:
+    """
+    Tier 2 On-Demand Compute: Calculates TreeSHAP feature importances only when requested by user.
+    Unwraps CalibratedClassifierCV to access underlying XGBoost TreeExplainer.
+    """
+    if shap is None or model is None or classes is None:
+        return {}
+        
+    try:
+        features = build_feature_vector(session, str(event.id))
+        feature_cols = [
+            "dist_to_facility", "facility_category_encoded", "peak_frp_mw", "mean_frp_mw",
+            "frp_variance", "max_brightness_k", "duration_hours", "day_night_ratio",
+            "historical_active_days_90d", "historical_peak_frp", "pct_cropland",
+            "pct_forest", "pct_urban", "is_industrial_zone"
+        ]
+        x_df = pd.DataFrame([features])[feature_cols].astype(np.float64)
+        
+        probs = model.predict_proba(x_df)[0]
+        pred_idx = int(np.argmax(probs))
+        
+        # Unwrap CalibratedClassifierCV if needed
+        base_est = model
+        if hasattr(model, 'calibrated_classifiers_') and len(model.calibrated_classifiers_) > 0:
+            base_est = model.calibrated_classifiers_[0].estimator
+        elif hasattr(model, 'estimator'):
+            base_est = model.estimator
+            
+        xgb_model = getattr(base_est, 'model_', base_est)
+        
+        explainer = shap.TreeExplainer(xgb_model)
+        shap_values = explainer.shap_values(x_df)
+        
+        if isinstance(shap_values, list): 
+            shap_vals_for_class = shap_values[pred_idx][0]
+        elif len(shap_values.shape) == 3: 
+            # Shape is (n_classes, n_samples, n_features) or (n_samples, n_features, n_classes)
+            if shap_values.shape[0] == len(classes):
+                shap_vals_for_class = shap_values[pred_idx, 0, :]
+            else:
+                shap_vals_for_class = shap_values[0, :, pred_idx]
+        else:
+            shap_vals_for_class = shap_values[0]
+            
+        top_indices = np.argsort(np.abs(shap_vals_for_class))[-3:]
+        feature_importances = {}
+        for idx in reversed(top_indices):
+            feat_name = feature_cols[idx]
+            feature_importances[feat_name] = round(float(shap_vals_for_class[idx]), 4)
+        return feature_importances
+    except Exception as e:
+        print(f"Tier 2 TreeSHAP computation exception: {e}")
+        return {}
+
+def get_or_compute_tier2_intelligence(session: Session, event_id: str) -> Dict[str, Any]:
+    """
+    Tier 2 On-Demand Entrypoint:
+    Strict Cost-Tiering Guarantee:
+    - Checks if TreeSHAP explainability is already cached.
+    - If cached and fresh, serves instantly (<2ms) without re-querying feature vectors or SHAP.
+    - Only queries database features and recomputes TreeSHAP if cache is missing or stale.
+    """
+    event = session.query(ThermalEvent).filter(ThermalEvent.event_id == event_id).first()
+    if not event:
+        return {"shap_top_contributors": {}, "satellite_context": {}, "tier2_computed_at": None, "is_tier2_cached": False, "cached": False}
+        
+    cls_record = session.query(EventClassification).filter(EventClassification.event_id == event.id).first()
+    if not cls_record:
+        process_event_intelligence(session, event_id)
+        cls_record = session.query(EventClassification).filter(EventClassification.event_id == event.id).first()
+        
+    # Strict Cache Check First: Instant return on cache hit (<2ms)
+    is_fresh = (
+        cls_record is not None 
+        and cls_record.tier2_computed_at is not None 
+        and (event.latest_detected_utc is None or cls_record.tier2_computed_at >= event.latest_detected_utc)
+        and cls_record.feature_importances
+    )
+    
+    if is_fresh:
+        cached_features = cls_record.input_feature_vector if cls_record and hasattr(cls_record, "input_feature_vector") else {}
+        satellite_context = extract_satellite_context(
+            lat=float(event.latitude or 22.0),
+            lon=float(event.longitude or 77.0),
+            peak_frp_mw=float(event.peak_frp_mw or 0.0),
+            first_detected_utc=event.first_detected_utc,
+            associated_facility_id=event.associated_facility_id,
+            features=cached_features
+        )
+        return {
+            "shap_top_contributors": cls_record.feature_importances,
+            "satellite_context": satellite_context,
+            "tier2_computed_at": cls_record.tier2_computed_at,
+            "is_tier2_cached": True,
+            "cached": True
+        }
+        
+    # Lazy Compute Tier 2 On-Demand (First Open)
+    features = build_feature_vector(session, str(event.id))
+    satellite_context = extract_satellite_context(
+        lat=float(event.latitude or 22.0),
+        lon=float(event.longitude or 77.0),
+        peak_frp_mw=float(event.peak_frp_mw or 0.0),
+        first_detected_utc=event.first_detected_utc,
+        associated_facility_id=event.associated_facility_id,
+        features=features
+    )
+
+    model, classes = get_model()
+    shap_contributors = compute_tier2_shap_explainability(session, event, model, classes)
+    computed_time = datetime.now(timezone.utc)
+    
+    if cls_record:
+        cls_record.feature_importances = shap_contributors
+        cls_record.tier2_computed_at = computed_time
+        session.commit()
+        
+    return {
+        "shap_top_contributors": shap_contributors,
+        "satellite_context": satellite_context,
+        "tier2_computed_at": computed_time,
+        "is_tier2_cached": False,
+        "cached": False
+    }

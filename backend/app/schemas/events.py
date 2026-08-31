@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import UUID
@@ -22,6 +22,7 @@ class CanonicalAnomalyTier(str, Enum):
     ELEVATED = "ELEVATED"
     ABNORMAL = "ABNORMAL"
     CRITICAL = "CRITICAL"
+    BASELINE_INSUFFICIENT = "BASELINE_INSUFFICIENT"
 
 class CanonicalLifecycleStatus(str, Enum):
     ACTIVE = "ACTIVE"
@@ -46,6 +47,8 @@ class UncertaintyTier(str, Enum):
 
 class EventResponse(BaseModel):
     event_id: str
+    latitude: float
+    longitude: float
     centroid: Dict[str, Any]
     boundary: Dict[str, Any]
     bounding_area_ha: float = 0.0
@@ -65,13 +68,22 @@ class EventResponse(BaseModel):
     classification_confidence: float = 0.0
     persistence_tier: str = "TRANSIENT"
     anomaly_tier: str = "NORMAL"
-    anomaly_z_score: float = 0.0
+    anomaly_z_score: Optional[float] = None
     lifecycle_status: str = "ACTIVE"
     thermal_trend: str = "INSUFFICIENT_DATA"
     evidence_completeness: str = "LIMITED"
+    evidence_strength: str = "LIMITED"
+    evidence_rationale: str = ""
     uncertainty: str = "HIGH"
     class_probabilities: Dict[str, float] = Field(default_factory=dict)
     shap_top_contributors: Dict[str, float] = Field(default_factory=dict)
+    tier2_computed_at: Optional[datetime] = None
+    is_tier2_cached: bool = False
+    satellite_context: Optional[Dict[str, Any]] = None
+    is_within_india_sovereign_bounds: bool = True
+    is_statistically_sufficient: bool = False
+    baseline_sample_size: int = 0
+    baseline_sufficiency_threshold: int = 10
     baseline_mean_frp_mw: Optional[float] = None
     baseline_std_frp_mw: Optional[float] = None
     contributing_factors: Dict[str, Any] = Field(default_factory=dict)
@@ -98,6 +110,10 @@ class NewsItemResponse(BaseModel):
     anomaly_tier: str
     confidence_pct: float
     peak_frp_mw: float
+    brightness_temp_k: Optional[float] = None
+    is_industrial: bool = False
+    evidence_strength: Optional[str] = "LIMITED"
+    evidence_rationale: Optional[str] = ""
     location_name: str
     coordinates: List[float]
     published_at: datetime

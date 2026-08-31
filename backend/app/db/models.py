@@ -1,5 +1,5 @@
-﻿import uuid
-from sqlalchemy import Column, String, Float, Integer, DateTime, Date, Time, SmallInteger, JSON, Boolean, Numeric, ForeignKey, Text
+import uuid
+from sqlalchemy import Column, String, Float, Integer, DateTime, Date, Time, SmallInteger, JSON, Boolean, Numeric, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from geoalchemy2 import Geometry
 from sqlalchemy.sql import func
@@ -28,6 +28,7 @@ class ThermalObservation(Base):
     confidence_level = Column(String(16))
     confidence_pct = Column(SmallInteger)
     day_night = Column(String(1), nullable=False)
+    is_within_india_sovereign_bounds = Column(Boolean, default=True, nullable=False)
     source_product = Column(String(32), default='FIRMS_NRT', nullable=False)
     scan_angle = Column(Float)
     track_pixel_size = Column(Float)
@@ -124,6 +125,7 @@ class EventClassification(Base):
     input_feature_vector = Column(JSONB, nullable=False)
     is_current = Column(Boolean, default=True, nullable=False)
     classified_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    tier2_computed_at = Column(DateTime(timezone=True), nullable=True)
 
 class FacilityBaseline(Base):
     __tablename__ = "facility_baselines"

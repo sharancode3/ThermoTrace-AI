@@ -1,8 +1,13 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Flame, Building2, FileText, Settings, LayoutDashboard, Bell, Newspaper, MessageSquare } from "lucide-react";
+import { 
+  Flame, Building2, FileText, LayoutDashboard, Bell, 
+  Newspaper, BookOpen, Radio, Sparkles
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { fetchNotifications } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -11,11 +16,33 @@ const NAV_ITEMS = [
   { icon: FileText, label: "Reports", href: "/reports" },
 ];
 
+function FlamePlusIcon({ active = false }: { active?: boolean }) {
+  return (
+    <span className="relative inline-flex items-center justify-center w-5 h-5">
+      <Flame className={cn("w-5 h-5", active ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+      <span className="absolute -top-1 -right-1 flex items-center justify-center w-3 h-3 rounded-full bg-orange-600 text-white font-black text-[8px] leading-none shadow-sm ring-1 ring-white">
+        +
+      </span>
+    </span>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentOverlay = searchParams.get("overlay");
+  const [unreadAlerts, setUnreadAlerts] = useState<number>(0);
+
+  useEffect(() => {
+    fetchNotifications()
+      .then((notifs) => {
+        if (Array.isArray(notifs)) {
+          setUnreadAlerts(notifs.filter((n: any) => !n.is_read).length);
+        }
+      })
+      .catch(() => {});
+  }, [currentOverlay]);
 
   const toggleOverlay = (overlayName: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -58,28 +85,65 @@ export function Sidebar() {
 
         <div className="text-xs font-semibold text-slate-400 mt-6 mb-2 uppercase tracking-wider hidden lg:block px-3">Intelligence</div>
         
+        {/* Thermo News with NRT Live Reminder Indicator */}
         <button 
           onClick={() => toggleOverlay("news")}
-          className={cn("flex items-center p-3 rounded-lg transition-colors group w-full text-left", currentOverlay === "news" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}
+          className={cn(
+            "flex items-center justify-between p-3 rounded-lg transition-colors group w-full text-left relative", 
+            currentOverlay === "news" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          )}
+          title="Live 24h NASA FIRMS Thermal News Feed"
         >
-          <Newspaper className={cn("w-5 h-5", currentOverlay === "news" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
-          <span className="hidden lg:block ml-3">Thermo News</span>
+          <div className="flex items-center">
+            <Newspaper className={cn("w-5 h-5", currentOverlay === "news" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+            <span className="hidden lg:block ml-3">Thermo News</span>
+          </div>
+          <span className="hidden lg:flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-600 animate-ping" />
+            LIVE NRT
+          </span>
         </button>
+
+        {/* Operational Alerts with Unread Badge */}
         <button 
           onClick={() => toggleOverlay("alerts")}
-          className={cn("flex items-center p-3 rounded-lg transition-colors group w-full text-left", currentOverlay === "alerts" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}
+          className={cn(
+            "flex items-center justify-between p-3 rounded-lg transition-colors group w-full text-left relative", 
+            currentOverlay === "alerts" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          )}
+          title="Critical, Abnormal & Industrial Operational Alerts"
         >
-          <Bell className={cn("w-5 h-5", currentOverlay === "alerts" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
-          <span className="hidden lg:block ml-3">Alerts</span>
+          <div className="flex items-center">
+            <Bell className={cn("w-5 h-5", currentOverlay === "alerts" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+            <span className="hidden lg:block ml-3">Alerts</span>
+          </div>
+          {unreadAlerts > 0 && (
+            <span className="hidden lg:flex items-center justify-center px-1.5 py-0.2 bg-red-600 text-white rounded-full text-[10px] font-bold">
+              {unreadAlerts}
+            </span>
+          )}
         </button>
+
+        {/* Chat Interface */}
         <button 
           onClick={() => toggleOverlay("chat")}
           className={cn("flex items-center p-3 rounded-lg transition-colors group w-full text-left", currentOverlay === "chat" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}
         >
-          <MessageSquare className={cn("w-5 h-5", currentOverlay === "chat" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+          <FlamePlusIcon active={currentOverlay === "chat"} />
           <span className="hidden lg:block ml-3">Chat Interface</span>
         </button>
-        
+
+        <div className="text-xs font-semibold text-slate-400 mt-6 mb-2 uppercase tracking-wider hidden lg:block px-3">System & Guide</div>
+
+        {/* System Guide & Symbology Handbook */}
+        <button 
+          onClick={() => toggleOverlay("info")}
+          className={cn("flex items-center p-3 rounded-lg transition-colors group w-full text-left", currentOverlay === "info" ? "bg-orange-50 text-orange-700 font-bold border border-orange-200 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}
+          title="System Architecture, 9-Icon Symbology & Guide"
+        >
+          <BookOpen className={cn("w-5 h-5", currentOverlay === "info" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+          <span className="hidden lg:block ml-3">System Guide & Info</span>
+        </button>
       </nav>
       
       <div className="p-4 border-t border-slate-200 text-center lg:text-left shrink-0">
