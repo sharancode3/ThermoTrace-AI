@@ -374,15 +374,22 @@ export default function MapComponent({
               latitude={lat}
               anchor="center"
               onClick={(e) => {
-                e.originalEvent.stopPropagation();
+                e.originalEvent?.stopPropagation();
                 onEventClick(event_id);
               }}
             >
-              <div className="relative group cursor-pointer">
+              <div 
+                className="relative group cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEventClick(event_id);
+                }}
+              >
                 <ThermalMapMarker
                   classification={classification}
                   anomalyTier={anomaly_tier}
                   isSelected={isSelected}
+                  onClick={() => onEventClick(event_id)}
                 />
                 <div className="absolute left-1/2 -translate-x-1/2 -top-8 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-xl border border-slate-700 z-50 flex items-center gap-1.5 backdrop-blur-md">
                   <span className="font-bold text-orange-400">{classification}</span>

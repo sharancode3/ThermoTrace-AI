@@ -12,6 +12,18 @@ import {
 } from "lucide-react";
 import { fetchEventIntelligence } from "@/lib/apiClient";
 
+function formatRelativeTime(dateStr?: string | null) {
+  if (!dateStr) return "Just now";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diffSec < 60) return "Just now";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return `${Math.floor(diffSec / 86400)}d ago`;
+}
+
+
 export function EventDetailPanel({ 
   eventId, 
   onClose 
@@ -624,6 +636,49 @@ export function EventDetailPanel({
                       <p className="text-xs leading-relaxed font-medium">
                         {anomalyDesc}
                       </p>
+                    </div>
+
+                    {/* Dedicated Satellite Cadence & Progression Card */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white shadow-lg border border-slate-700/80 space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-orange-400 flex items-center gap-1.5 font-mono">
+                          <Clock className="w-3.5 h-3.5" /> Satellite Cadence & Progression
+                        </span>
+                        <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          {data.observation_count || 1} Passes Logged
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="space-y-0.5">
+                          <div className="text-[10px] text-slate-400 font-medium">Initial Detection</div>
+                          <div className="font-mono font-bold text-slate-100 text-xs">
+                            {data.first_detected_utc ? new Date(data.first_detected_utc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }) : "Initial Pass"}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {data.first_detected_utc ? new Date(data.first_detected_utc).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : "Today"}
+                          </div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <div className="text-[10px] text-slate-400 font-medium">Latest Pass</div>
+                          <div className="font-mono font-bold text-orange-400 text-xs flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                            {data.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Just now"}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {data.latest_detected_utc ? new Date(data.latest_detected_utc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }) : "Active"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-mono">
+                        <span className="text-slate-400 text-[11px]">Telemetry Trend:</span>
+                        <span className="font-bold text-emerald-400 flex items-center gap-1">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          {data.thermal_trend || "STABLE"} (Peak {data.peak_frp_mw?.toFixed(1)} MW)
+                        </span>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5">

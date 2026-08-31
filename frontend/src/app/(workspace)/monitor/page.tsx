@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import MapComponent from "@/components/MapComponent";
+import { EventDetailPanel } from "@/components/EventDetailPanel";
 
 function MonitorContent() {
   const searchParams = useSearchParams();
@@ -27,6 +28,12 @@ function MonitorContent() {
         onEventClick={setSelectedEventId}
         selectedEventId={selectedEventId}
       />
+      {selectedEventId && (
+        <EventDetailPanel
+          eventId={selectedEventId}
+          onClose={() => setSelectedEventId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -19,6 +19,7 @@ from app.db.models import (
     IndustrialFacility, ThermoNews, EventObservation
 )
 from app.domain.geocoding import resolve_indian_location
+from app.domain.sovereign_geofencing import is_within_sovereign_india
 from app.domain.anomaly import process_all_intelligence
 
 INDIA_BBOX = "68,6,97,37"
@@ -64,8 +65,8 @@ def ingest_all_active_sensors(session: Session) -> Tuple[int, int, int, datetime
                 lat = float(row['latitude'])
                 lon = float(row['longitude'])
                 
-                # Enforce India sovereign landmass filter (exclude Sri Lanka & oceanic noise)
-                if (5.5 <= lat <= 10.0 and 79.4 <= lon <= 82.0) or not (8.0 <= lat <= 37.5 and 68.0 <= lon <= 97.5):
+                # Enforce Official Survey of India Sovereign Geofencing Gate
+                if not is_within_sovereign_india(lat, lon):
                     continue
                 frp = float(row.get('frp', 1.0))
                 bright = float(row.get('bright_ti4', row.get('brightness', 300.0)))
