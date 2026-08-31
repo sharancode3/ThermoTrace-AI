@@ -120,6 +120,13 @@ def get_gis_events(
         if is_within_sovereign_india(float(event.latitude), float(event.longitude))
         or (focus_event_id and event.event_id == focus_event_id)
     ]
+
+    # Guaranteed Focus Event Injection: If operator clicked an event from Alerts/News, always include it on the map
+    if focus_event_id and not any(e.event_id == focus_event_id for e in events):
+        focus_evt = db.query(ThermalEvent).filter(ThermalEvent.event_id == focus_event_id).first()
+        if focus_evt:
+            events.insert(0, focus_evt)
+
     features = []
 
     for evt in events:
@@ -645,9 +652,9 @@ def get_event_intelligence(event_id: str, db: Session = Depends(get_db)):
     baseline_sample = int((anom.contributing_factors or {}).get("sample_count", 0)) if anom else 0
     hist_active_days = int((anom.contributing_factors or {}).get("hist_days", 0)) if anom else 0
     
-    # Enforce Phase 6 rule: if insufficient, anomaly_tier is BASELINE_INSUFFICIENT and z_score is None
-    anomaly_tier_final = "BASELINE_INSUFFICIENT" if not is_sufficient else evt.anomaly_tier
-    anomaly_z_score_final = None if not is_sufficient else (evt.anomaly_z_score or 0.0)
+    # Anomaly tier is derived directly from analytical evaluation (Decoupled from baseline availability)
+    anomaly_tier_final = evt.anomaly_tier or "NORMAL"
+    anomaly_z_score_final = evt.anomaly_z_score if evt.anomaly_z_score is not None else (anom.z_score if anom else 0.0)
     
     evidence_comp = get_evidence_completeness(
         evt.observation_count, 

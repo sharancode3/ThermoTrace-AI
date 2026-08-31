@@ -724,7 +724,7 @@ export default function MapComponent({
         )}
 
         {/* Empty State Card */}
-        {!loadingEvents && !error && geoData?.features.length === 0 && (
+        {!loadingEvents && !error && displayFeatures.length === 0 && (
           <div className="absolute left-1/2 top-6 z-20 w-80 -translate-x-1/2 rounded-2xl border border-slate-700 bg-slate-900/95 backdrop-blur-md p-4 text-center text-xs text-slate-300 shadow-2xl">
             <p className="font-semibold text-slate-100 text-sm">No Thermal Events Found</p>
             <p className="mt-1 text-slate-400">No detections matched your active time window or filters.</p>
