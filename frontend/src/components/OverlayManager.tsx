@@ -221,7 +221,8 @@ export function OverlayManager() {
     setChatDraft("");
     setChatLoading(true);
     try {
-      const res = await askThermalChat(trimmed, sessionId);
+      const activeEventId = searchParams.get("eventId");
+      const res = await askThermalChat(trimmed, sessionId, activeEventId);
       const payload = res?.data ?? {};
       setChatMessages((c) => [
         ...c,

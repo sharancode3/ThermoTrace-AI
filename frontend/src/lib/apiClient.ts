@@ -208,7 +208,8 @@ export async function generateReport(
 
 export async function askThermalChat(
   queryText: string,
-  sessionId?: string
+  sessionId?: string,
+  selectedEventId?: string | null
 ) {
   const response = await fetch(
     `${API_BASE_URL}/chat/query`,
@@ -220,6 +221,7 @@ export async function askThermalChat(
       body: JSON.stringify({
         query: queryText,
         session_id: sessionId,
+        selected_event_id: selectedEventId || undefined,
       }),
     }
   );

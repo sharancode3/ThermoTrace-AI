@@ -212,9 +212,30 @@ class ChatService:
         self.repository = repository or EventRepository(session)
         self.provider = provider or create_llm_provider()
 
-    def ask(self, query: str, session_id: Optional[str] = None) -> Dict[str, Any]:
+    def ask(self, query: str, session_id: Optional[str] = None, selected_event_id: Optional[str] = None) -> Dict[str, Any]:
         filters = extract_intent(query)
         events = self.repository.list_events(filters)
+
+        active_event_context = ""
+        if selected_event_id:
+            active_event = self.session.query(ThermalEvent).filter(
+                ThermalEvent.event_id == str(selected_event_id)
+            ).first()
+            if active_event:
+                if active_event not in events:
+                    events.insert(0, active_event)
+                fac_name = "Regional Industrial Belt"
+                if getattr(active_event, "associated_facility_id", None):
+                    fac = self.session.query(IndustrialFacility).filter(IndustrialFacility.id == active_event.associated_facility_id).first()
+                    if fac:
+                        fac_name = fac.name
+                active_event_context = (
+                    f"\n<ACTIVE_SELECTED_EVENT>\n"
+                    f"[Targeted Event ID: {active_event.event_id} | Class: {active_event.classification} | "
+                    f"Anomaly Tier: {active_event.anomaly_tier} | Peak FRP: {float(active_event.peak_frp_mw or 0.0):.2f} MW | "
+                    f"Facility: {fac_name} | Lat: {float(active_event.latitude):.5f} | Lon: {float(active_event.longitude):.5f}]\n"
+                    f"</ACTIVE_SELECTED_EVENT>\n"
+                )
 
         if not events:
             return {
@@ -231,10 +252,13 @@ class ChatService:
 
         verified_data = _build_verified_data(events)
         system_prompt = (
-            "You are Thermo Intelligence. Use ONLY the verified data below to answer. "
+            "You are Thermo Intelligence (NTRO Sovereign Thermal Assistant). "
+            "Use ONLY the verified data below to answer. "
             "Do not guess, do not invent event IDs, and do not write SQL. "
             "Answer as a concise tactical summary grounded strictly in the DATA block. "
+            "If an active targeted event is provided, prioritize it in your answer. "
             "If a question is about an event, cite only event IDs shown in the DATA block.\n\n"
+            f"{active_event_context}"
             "<VERIFIED_DATA>\n"
             f"{verified_data}\n"
             "</VERIFIED_DATA>"

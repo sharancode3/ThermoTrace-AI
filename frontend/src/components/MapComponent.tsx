@@ -270,8 +270,13 @@ export default function MapComponent({
             targetPitch = 15;
           }
 
+          // Offset camera to place marker in the visible map area (left of right sliding panels)
+          const isWideScreen = typeof window !== "undefined" && window.innerWidth >= 1024;
+          const cameraOffset: [number, number] = isWideScreen ? [-180, 0] : [0, -80];
+
           mapRef.current?.flyTo({
             center: [numericLon, numericLat],
+            offset: cameraOffset,
             zoom: targetZoom,
             pitch: targetPitch,
             duration: 1500,

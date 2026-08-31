@@ -15,6 +15,7 @@ router = APIRouter()
 class ChatQueryRequest(BaseModel):
     session_id: Optional[str] = None
     query: str = Field(..., min_length=1)
+    selected_event_id: Optional[str] = None
 
 
 def _build_provenance(filters: Dict[str, Any]) -> str:
@@ -62,8 +63,8 @@ def _serialize_grounded_events(events: Iterable[ThermalEvent], db: Session) -> L
     return [_serialize_grounded_event(event, db) for event in events]
 
 
-async def _run_chat_with_timeout(service: ChatService, query: str, session_id: Optional[str]) -> Dict[str, Any]:
-    return await asyncio.wait_for(asyncio.to_thread(service.ask, query, session_id), timeout=10)
+async def _run_chat_with_timeout(service: ChatService, query: str, session_id: Optional[str], selected_event_id: Optional[str] = None) -> Dict[str, Any]:
+    return await asyncio.wait_for(asyncio.to_thread(service.ask, query, session_id, selected_event_id), timeout=10)
 
 
 @router.post("/chat/query", tags=["Chat"])
@@ -89,7 +90,7 @@ async def chat_query(payload: ChatQueryRequest, db: Session = Depends(get_db)) -
     service = ChatService(db, repository=repository)
 
     try:
-        result = await _run_chat_with_timeout(service, payload.query, payload.session_id)
+        result = await _run_chat_with_timeout(service, payload.query, payload.session_id, payload.selected_event_id)
     except asyncio.TimeoutError:
         return {
             "data": {

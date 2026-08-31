@@ -241,21 +241,6 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             "sample_count": sample_count,
             "reason": f"Graded via physical radiance threshold (Peak FRP: {current_frp:.1f} MW)."
         }
-        
-        event.anomaly_z_score = round(float(z_score), 2)
-        event.anomaly_tier = tier
-        
-        anomaly_record.baseline_mean_frp_mw = mean_frp
-        anomaly_record.baseline_std_frp_mw = std_frp
-        anomaly_record.z_score = round(float(z_score), 2)
-        anomaly_record.percentile_rank = 0.0
-        anomaly_record.anomaly_severity = tier
-        anomaly_record.contributing_factors = {
-            "status": "STATISTICALLY_SUFFICIENT",
-            "sample_count": sample_count,
-            "deviation_mw": round(current_frp - mean_frp, 2),
-            "percentage_above_mean": round(((current_frp - mean_frp) / mean_frp) * 100, 2) if mean_frp > 0 else 0.0
-        }
 
     # 6. Publish / Update Thermo News Bulletins
     lat, lon = float(event.latitude), float(event.longitude)
