@@ -13,13 +13,19 @@ from shapely.prepared import prep
 # Arunachal Pradesh (Kibithu 97.4E), Rann of Kutch (68.18E), Kanyakumari (8.08N),
 # Radcliffe & McMahon international boundary lines, Andaman & Nicobar, and Lakshadweep.
 _MAINLAND_COORDS = [
-    (68.18, 23.70), # Kutch Westernmost Point
-    (69.00, 22.80),
-    (70.00, 22.50), # Jamnagar Coast
-    (70.80, 20.80), # Diu Coast
-    (72.10, 21.70), # Bhavnagar / Gulf of Khambhat
-    (72.60, 22.20),
-    (72.85, 21.17), # Surat / Hazira Industrial Belt
+    (68.18, 23.70), # Kutch Westernmost Point (Sir Creek / Kori Creek)
+    (68.50, 23.00), # Gulf of Kutch North
+    (68.90, 22.45), # Okha / Dwarka Western Tip
+    (69.30, 22.10), # Jamnagar South
+    (69.58, 21.64), # Porbandar Coast
+    (70.36, 20.90), # Veraval / Somnath Coast
+    (71.00, 20.70), # Diu / Una Southern Tip
+    (72.00, 21.10), # Mahuva / Gopnath Point
+    (72.15, 21.70), # Bhavnagar Coast
+    (72.50, 22.30), # Gulf of Khambhat Head
+    (72.55, 21.65), # Dahej / Bharuch Coast
+    (72.65, 21.10), # Surat / Hazira Industrial Belt
+    (72.75, 20.40), # Daman / Valsad Coast
     (72.85, 19.00), # Mumbai Coastal Line
     (73.30, 17.00), # Konkan Coast
     (73.80, 15.50), # Goa Coast

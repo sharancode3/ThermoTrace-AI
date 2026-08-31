@@ -27,6 +27,8 @@ def facility(db: Session):
         operator_name="Test Operator",
         state="West Bengal",
         district="Kolkata",
+        facility_geom="SRID=4326;MULTIPOLYGON(((88.35 22.56, 88.37 22.56, 88.37 22.58, 88.35 22.58, 88.35 22.56)))",
+        centroid="SRID=4326;POINT(88.3639 22.5726)",
         latitude=22.5726,
         longitude=88.3639,
         baseline_frp_mean=150.0,
@@ -65,7 +67,7 @@ def thermal_event(db: Session, facility: IndustrialFacility):
     """Create a test thermal event."""
     event = ThermalEvent(
         event_id="TEST-EVT-0001",
-        centroid="POINT(88.3639 22.5726)",
+        centroid="SRID=4326;POINT(88.3639 22.5726)",
         boundary_geom="POLYGON((88.35 22.56, 88.37 22.56, 88.37 22.59, 88.35 22.59, 88.35 22.56))",
         latitude=22.5726,
         longitude=88.3639,
@@ -239,7 +241,7 @@ def test_get_report_view_model_no_facility(db: Session):
     """Test report view model when event has no associated facility."""
     event = ThermalEvent(
         event_id="TEST-EVT-NO-FAC",
-        centroid="POINT(88.3639 22.5726)",
+        centroid="SRID=4326;POINT(88.3639 22.5726)",
         boundary_geom="POLYGON((88.35 22.56, 88.37 22.56, 88.37 22.59, 88.35 22.59, 88.35 22.56))",
         latitude=22.5726,
         longitude=88.3639,

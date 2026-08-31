@@ -11,9 +11,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white)](frontend/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](backend/)
 [![Stage](https://img.shields.io/badge/Stage-3_Intelligence_Hardening-orange?style=flat-square)](docs/execution_stages/)
-[![Tests](https://img.shields.io/badge/Tests-27%2F27_Passing-brightgreen?style=flat-square)](backend/tests/)
+[![Tests](https://img.shields.io/badge/Tests-41%2F41_Passing-brightgreen?style=flat-square)](backend/tests/)
 
-> **Branch:** staged-main - Stage 3 Intelligence Hardening complete. Stages 4 and 5 developed in parallel on their respective branches.
+> **Branch:** staged-main - Integrated Stages 1 through 5: Full 15-Phase Intelligence Hardening, Viewport-Aware GIS Pipeline, Celery Worker & PDF Generation, Nationwide FIRMS Telemetry, and Unified Dark Tactical Radar UX.
 
 ---
 

@@ -20,10 +20,15 @@ import {
   Factory,
   Sprout,
   HelpCircle,
+  Flame,
+  Radio,
+  Filter,
+  RotateCcw,
+  Compass,
 } from "lucide-react";
 import { ThermalMapMarker } from "./ThermalMapMarker";
 
-// Google Maps Roadmap style (zero API key required for the raster tiles).
+// Google Maps Roadmap raster style
 const GOOGLE_ROADMAP: any = {
   version: 8,
   sources: {
@@ -80,103 +85,95 @@ const GOOGLE_HYBRID: any = {
 
 type MapComponentProps = {
   onEventClick: (id: string) => void;
-  onClearFilters: () => void;
   selectedEventId?: string | null;
-  startTime?: string;
-  endTime?: string;
-  classification?: string;
-  anomalyTier?: string;
-  showFacilities?: boolean;
-  showObservations?: boolean;
 };
 
 export default function MapComponent({
   onEventClick,
-  onClearFilters,
   selectedEventId,
-  startTime,
-  endTime,
-  classification,
-  anomalyTier,
-  showFacilities = false,
-  showObservations = false,
 }: MapComponentProps) {
   const mapRef = useRef<MapRef>(null);
 
-  // Stage 4: viewport-aware GIS data.
-  const [geoData, setGeoData] = useState<GeoCollection | null>(null);
-  const [facilityData, setFacilityData] = useState<GeoCollection | null>(null);
-  const [observationData, setObservationData] =
-    useState<GeoCollection | null>(null);
+  // Viewport
   const [viewport, setViewport] = useState<Viewport>({
-    west: 68,
-    south: 8.3,
-    east: 96.98,
-    north: 36.74,
+    west: 68.0,
+    south: 8.0,
+    east: 97.4,
+    north: 37.0,
     zoom: 4.8,
   });
 
-  // Stage 5: event detail, decluttering and tactical legend.
-  const [selectedEventData, setSelectedEventData] = useState<any>(null);
-  const [showAllDetections, setShowAllDetections] = useState(false);
+  // Unified Filter States
+  const [windowHours, setWindowHours] = useState<number | null>(24);
+  const [showAllDetections, setShowAllDetections] = useState(true);
+  const [severityFilter, setSeverityFilter] = useState<string>("");
+  const [classFilter, setClassFilter] = useState<string>("");
+  const [showFacilities, setShowFacilities] = useState(true);
+  const [showObservations, setShowObservations] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
 
-  const [userLocation, setUserLocation] = useState<{
-    lat: number;
-    lon: number;
-  } | null>(null);
+  // Data States
+  const [geoData, setGeoData] = useState<GeoCollection | null>(null);
+  const [facilityData, setFacilityData] = useState<GeoCollection | null>(null);
+  const [observationData, setObservationData] = useState<GeoCollection | null>(null);
+  const [selectedEventData, setSelectedEventData] = useState<any>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
   const [error, setError] = useState<string | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
-  const handleMyLocation = () => {
-    if (!navigator.geolocation) {
-      return;
-    }
+  const startTime = useMemo(() => {
+    return windowHours ? new Date(Date.now() - windowHours * 3600000).toISOString() : undefined;
+  }, [windowHours]);
 
+  const handleClearFilters = () => {
+    setWindowHours(null);
+    setShowAllDetections(true);
+    setSeverityFilter("");
+    setClassFilter("");
+    setShowFacilities(true);
+    setShowObservations(false);
+  };
+
+  const handleCenterIndia = () => {
+    mapRef.current?.flyTo({
+      center: [78.9629, 22.5937],
+      zoom: 4.8,
+      duration: 1200,
+    });
+  };
+
+  const handleMyLocation = () => {
+    if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserLocation({
           lat: position.coords.latitude,
           lon: position.coords.longitude,
         });
-
         mapRef.current?.flyTo({
           center: [position.coords.longitude, position.coords.latitude],
           zoom: 12,
           duration: 2000,
         });
       },
-      (err) => {
-        console.error("Geolocation failed:", err);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      }
+      (err) => console.error("Geolocation failed:", err),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 
-  // Stage 5: support external "fly to event" requests from News, Alerts or Chat.
+  // External fly-to listener from News / Alerts
   useEffect(() => {
     const handleFlyToEvent = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { coordinates, peakFrp, anomalyTier } = customEvent.detail || {};
-
-      if (!Array.isArray(coordinates) || coordinates.length < 2) {
-        return;
-      }
+      if (!Array.isArray(coordinates) || coordinates.length < 2) return;
 
       const [lon, lat] = coordinates.map(Number);
-
-      if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
-        return;
-      }
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
 
       let targetZoom = 12.0;
       let targetPitch = 0;
-
       if (peakFrp >= 50 || anomalyTier === "CRITICAL") {
         targetZoom = 13.5;
         targetPitch = 25;
@@ -195,14 +192,10 @@ export default function MapComponent({
     };
 
     window.addEventListener("thermo-fly-to-event", handleFlyToEvent);
-
-    return () => {
-      window.removeEventListener("thermo-fly-to-event", handleFlyToEvent);
-    };
+    return () => window.removeEventListener("thermo-fly-to-event", handleFlyToEvent);
   }, []);
 
-  // Stage 4 + Stage 5: fetch events, facilities and observations for the
-  // current viewport and filter state.
+  // Fetch GIS Events on viewport or filter changes
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setError(null);
@@ -210,24 +203,16 @@ export default function MapComponent({
 
       const eventFilters = {
         start_time: startTime,
-        end_time: endTime,
-        classification,
-        anomaly_tier: anomalyTier,
+        classification: classFilter || undefined,
+        anomaly_tier: severityFilter || undefined,
         show_all: showAllDetections,
         focus_event_id: selectedEventId || undefined,
       };
 
       Promise.all([
         fetchGisEvents(viewport, eventFilters),
-        showFacilities
-          ? fetchGisFacilities(viewport)
-          : Promise.resolve<GeoCollection | null>(null),
-        showObservations
-          ? fetchGisObservations(viewport, {
-              start_time: startTime,
-              end_time: endTime,
-            })
-          : Promise.resolve<GeoCollection | null>(null),
+        showFacilities ? fetchGisFacilities(viewport) : Promise.resolve<GeoCollection | null>(null),
+        showObservations ? fetchGisObservations(viewport, { start_time: startTime }) : Promise.resolve<GeoCollection | null>(null),
       ])
         .then(([events, facilities, observations]) => {
           setGeoData(events);
@@ -238,26 +223,22 @@ export default function MapComponent({
           console.error("Failed to fetch GIS data:", err);
           setError(err instanceof Error ? err.message : "Unknown map error");
         })
-        .finally(() => {
-          setLoadingEvents(false);
-        });
-    }, 350);
+        .finally(() => setLoadingEvents(false));
+    }, 300);
 
     return () => window.clearTimeout(timer);
   }, [
     viewport,
     startTime,
-    endTime,
-    classification,
-    anomalyTier,
+    classFilter,
+    severityFilter,
     showFacilities,
     showObservations,
     showAllDetections,
     selectedEventId,
   ]);
 
-  // Stage 5: fetch the selected event's full intelligence/details and
-  // automatically fly to it.
+  // Selected event deep details + auto fly-to
   useEffect(() => {
     if (!selectedEventId) {
       setSelectedEventData(null);
@@ -265,33 +246,22 @@ export default function MapComponent({
     }
 
     let cancelled = false;
-
     fetchEventDetail(selectedEventId)
       .then((res) => {
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setSelectedEventData(res);
 
-        const lon =
-          res?.longitude ?? res?.centroid?.coordinates?.[0] ?? undefined;
-        const lat =
-          res?.latitude ?? res?.centroid?.coordinates?.[1] ?? undefined;
-
+        const lon = res?.longitude ?? res?.centroid?.coordinates?.[0];
+        const lat = res?.latitude ?? res?.centroid?.coordinates?.[1];
         const numericLon = Number(lon);
         const numericLat = Number(lat);
 
-        if (
-          Number.isFinite(numericLon) &&
-          Number.isFinite(numericLat)
-        ) {
+        if (Number.isFinite(numericLon) && Number.isFinite(numericLat)) {
           const peakFrp = Number(res?.peak_frp_mw ?? 0);
           const tier = res?.anomaly_tier;
 
           let targetZoom = 12.0;
           let targetPitch = 0;
-
           if (peakFrp >= 50 || tier === "CRITICAL") {
             targetZoom = 13.5;
             targetPitch = 25;
@@ -310,471 +280,289 @@ export default function MapComponent({
         }
       })
       .catch((err) => {
-        if (!cancelled) {
-          console.error("Failed to load selected event detail:", err);
-        }
+        if (!cancelled) console.error("Failed to load selected event detail:", err);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [selectedEventId]);
 
-  // Compute the selected event feature from current GIS data, falling back
-  // to the detailed event response when it is not in the current viewport.
+  const eventCount = geoData?.features.length || 0;
+  const isFilterActive = windowHours !== 24 || !showAllDetections || severityFilter !== "" || classFilter !== "";
+
+  // Selected marker feature
   const selectedFeature = useMemo(() => {
-    if (!selectedEventId) {
-      return null;
-    }
-
-    const found = geoData?.features?.find(
-      (feature: any) =>
-        feature.properties?.event_id === selectedEventId
-    );
-
-    if (found) {
-      return found;
-    }
-
-    const lon =
-      selectedEventData?.longitude ??
-      selectedEventData?.centroid?.coordinates?.[0];
-
-    const lat =
-      selectedEventData?.latitude ??
-      selectedEventData?.centroid?.coordinates?.[1];
-
-    const numericLon = Number(lon);
-    const numericLat = Number(lat);
-
-    if (!Number.isFinite(numericLon) || !Number.isFinite(numericLat)) {
-      return null;
-    }
-
-    return {
-      type: "Feature" as const,
-      geometry: {
-        type: "Point" as const,
-        coordinates: [numericLon, numericLat] as [number, number],
-      },
-      properties: {
-        event_id:
-          selectedEventData?.event_id || selectedEventId,
-        classification:
-          selectedEventData?.classification || "OTHER_UNCERTAIN",
-        anomaly_tier:
-          selectedEventData?.anomaly_tier || "NORMAL",
-        peak_frp_mw:
-          selectedEventData?.peak_frp_mw || 0,
-        confidence_pct: roundPct(
-          selectedEventData?.classification_confidence || 0
-        ),
-        evidence_strength:
-          selectedEventData?.evidence_strength || "LIMITED",
-      },
-    };
-  }, [selectedEventId, geoData, selectedEventData]);
-
-  // GeoJSON source used for the adaptive selected-event glow.
-  const selectedGeoJson = useMemo(() => {
-    if (!selectedFeature) {
-      return null;
-    }
-
-    return {
-      type: "FeatureCollection" as const,
-      features: [selectedFeature],
-    };
-  }, [selectedFeature]);
-
-  const isSelectedInGeoData = useMemo(() => {
-    if (!selectedEventId || !geoData?.features) {
-      return false;
-    }
-
-    return geoData.features.some(
-      (feature: any) =>
-        feature.properties?.event_id === selectedEventId
-    );
-  }, [selectedEventId, geoData]);
-
-  const eventCount = geoData?.features?.length || 0;
+    if (!selectedEventId) return null;
+    return geoData?.features.find((f) => f.properties.event_id === selectedEventId) || null;
+  }, [geoData, selectedEventId]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-slate-900">
+    <div className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
       <Map
         ref={mapRef}
         initialViewState={{
           longitude: 78.9629,
           latitude: 22.5937,
           zoom: 4.8,
-          pitch: 0,
-          bearing: 0,
         }}
+        mapStyle={mapType === "hybrid" ? GOOGLE_HYBRID : GOOGLE_ROADMAP}
         style={{ width: "100%", height: "100%" }}
-        mapStyle={
-          mapType === "roadmap"
-            ? GOOGLE_ROADMAP
-            : GOOGLE_HYBRID
-        }
-        minZoom={3}
-        maxZoom={20}
-        role="region"
-        aria-label="Interactive thermal map"
-        interactiveLayerIds={["events-circle-layer"]}
-        onClick={(event) => {
-          if (event.features && event.features.length > 0) {
-            const eventId =
-              event.features[0].properties?.event_id;
-
-            if (eventId) {
-              onEventClick(String(eventId));
-            }
-          }
-        }}
-        onMoveEnd={(event) => {
-          const bounds = event.target.getBounds();
-
+        onMoveEnd={(e) => {
+          const bounds = e.target.getBounds();
           setViewport({
             west: bounds.getWest(),
             south: bounds.getSouth(),
             east: bounds.getEast(),
             north: bounds.getNorth(),
-            zoom: Number(event.viewState.zoom.toFixed(2)),
+            zoom: e.target.getZoom(),
           });
         }}
       >
-        {userLocation && (
-          <Marker
-            longitude={userLocation.lon}
-            latitude={userLocation.lat}
-            anchor="center"
-          >
-            <div className="w-5 h-5 bg-blue-500 border-2 border-white rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
-          </Marker>
-        )}
-
-        {/* Stage 4: raw GIS event circle layer. */}
-        {geoData && (
-          <Source
-            id="thermal-events-source"
-            type="geojson"
-            data={geoData}
-          >
+        {/* Facilities Layer */}
+        {showFacilities && facilityData && (
+          <Source id="facilities-source" type="geojson" data={facilityData as any}>
             <Layer
-              id="events-circle-layer"
+              id="facilities-circles"
               type="circle"
               paint={{
-                "circle-radius": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  3,
-                  5,
-                  8,
-                  9,
-                  14,
-                  15,
-                ],
-                "circle-color": [
-                  "match",
-                  ["get", "anomaly_tier"],
-                  "CRITICAL",
-                  "#DC2626",
-                  "ABNORMAL",
-                  "#EA580C",
-                  "ELEVATED",
-                  "#D97706",
-                  "#16A34A",
-                ],
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 10, 6, 14, 10],
+                "circle-color": "#3b82f6",
+                "circle-opacity": 0.35,
                 "circle-stroke-width": 1.5,
-                "circle-stroke-color": "#ffffff",
-                "circle-opacity": 0.85,
+                "circle-stroke-color": "#60a5fa",
               }}
             />
           </Source>
         )}
 
-        {/* Stage 4: industrial facilities overlay. */}
-        {facilityData && (
-          <Source
-            id="facilities-source"
-            type="geojson"
-            data={facilityData}
-          >
+        {/* Raw FIRMS Passes Layer */}
+        {showObservations && observationData && (
+          <Source id="observations-source" type="geojson" data={observationData as any}>
             <Layer
-              id="facilities-circle-layer"
-              type="circle"
+              id="observations-heat"
+              type="heatmap"
               paint={{
-                "circle-radius": 4,
-                "circle-color": "#0369A1",
-                "circle-stroke-width": 1,
-                "circle-stroke-color": "#ffffff",
-              }}
-            />
-          </Source>
-        )}
-
-        {/* Stage 4: FIRMS/thermal observations overlay. */}
-        {observationData && (
-          <Source
-            id="firms-source"
-            type="geojson"
-            data={observationData}
-          >
-            <Layer
-              id="firms-circle-layer"
-              type="circle"
-              paint={{
-                "circle-radius": 2.5,
-                "circle-color": "#EA580C",
-                "circle-opacity": 0.75,
-              }}
-            />
-          </Source>
-        )}
-
-        {/* Stage 5: selected event radiance / heat-diffusion glow. */}
-        {selectedGeoJson && (
-          <Source
-            id="selected-thermal-source"
-            type="geojson"
-            data={selectedGeoJson}
-          >
-            <Layer
-              id="selected-radiant-heat-haze"
-              type="circle"
-              paint={{
-                "circle-radius": [
+                "heatmap-weight": ["interpolate", ["linear"], ["get", "frp_mw"], 0, 0, 200, 1],
+                "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 9, 3],
+                "heatmap-color": [
                   "interpolate",
                   ["linear"],
-                  ["zoom"],
-                  6,
-                  35,
-                  10,
-                  75,
-                  14,
-                  150,
+                  ["heatmap-density"],
+                  0, "rgba(0, 0, 255, 0)",
+                  0.2, "rgb(0, 255, 255)",
+                  0.4, "rgb(0, 255, 0)",
+                  0.6, "rgb(255, 255, 0)",
+                  0.8, "rgb(255, 140, 0)",
+                  1, "rgb(255, 0, 0)",
                 ],
-                "circle-color": [
-                  "match",
-                  ["get", "anomaly_tier"],
-                  "CRITICAL",
-                  "#DC2626",
-                  "ABNORMAL",
-                  "#EA580C",
-                  "ELEVATED",
-                  "#D97706",
-                  "#16A34A",
-                ],
-                "circle-blur": 0.85,
-                "circle-opacity": 0.55,
-              }}
-            />
-
-            <Layer
-              id="selected-thermal-dispersion"
-              type="circle"
-              paint={{
-                "circle-radius": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  6,
-                  18,
-                  10,
-                  36,
-                  14,
-                  72,
-                ],
-                "circle-color": [
-                  "match",
-                  ["get", "anomaly_tier"],
-                  "CRITICAL",
-                  "#EF4444",
-                  "ABNORMAL",
-                  "#F97316",
-                  "ELEVATED",
-                  "#F59E0B",
-                  "#22C55E",
-                ],
-                "circle-blur": 0.45,
-                "circle-opacity": 0.75,
-              }}
-            />
-
-            <Layer
-              id="selected-white-hot-center"
-              type="circle"
-              paint={{
-                "circle-radius": 8,
-                "circle-color": "#FFFFFF",
-                "circle-stroke-width": 3,
-                "circle-stroke-color": "#EA580C",
-                "circle-opacity": 1.0,
+                "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 4, 9, 20],
+                "heatmap-opacity": 0.75,
               }}
             />
           </Source>
         )}
 
-        {/* Stage 5: 9-icon tactical event markers. */}
-        {geoData?.features?.map((feature: any) => {
+        {/* Thermal Event Markers */}
+        {geoData?.features.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
-          const isSelected =
-            feature.properties?.event_id === selectedEventId;
+          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k } = feature.properties;
+          const isSelected = selectedEventId === event_id;
 
           return (
             <Marker
-              key={feature.properties?.event_id}
-              longitude={Number(lon)}
-              latitude={Number(lat)}
+              key={event_id}
+              longitude={lon}
+              latitude={lat}
               anchor="center"
-              onClick={(event) => {
-                event.originalEvent.stopPropagation();
-                onEventClick(
-                  String(feature.properties?.event_id)
-                );
+              onClick={(e) => {
+                e.originalEvent.stopPropagation();
+                onEventClick(event_id);
               }}
             >
-              <div className="relative group cursor-pointer p-1">
+              <div className="relative group cursor-pointer">
                 <ThermalMapMarker
-                  classification={
-                    feature.properties?.classification
-                  }
-                  anomalyTier={
-                    feature.properties?.anomaly_tier
-                  }
+                  classification={classification}
+                  anomalyTier={anomaly_tier}
                   isSelected={isSelected}
-                  size={isSelected ? 34 : 24}
                 />
-
-                <div className="absolute left-1/2 -translate-x-1/2 -top-9 opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap bg-slate-900 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-2xl border border-slate-700 z-50 flex items-center gap-1.5">
-                  <span className="font-bold text-orange-400">
-                    {feature.properties?.classification}
-                  </span>
-                  <span className="text-slate-400">·</span>
-                  <span>
-                    {feature.properties?.confidence_pct ?? 0}%
-                  </span>
-                  <span className="text-slate-400">·</span>
-                  <span className="text-[10px] text-slate-300 font-sans font-semibold bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
-                    Evidence:{" "}
-                    {feature.properties?.evidence_strength ||
-                      "LIMITED"}
-                  </span>
+                <div className="absolute left-1/2 -translate-x-1/2 -top-8 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-xl border border-slate-700 z-50 flex items-center gap-1.5 backdrop-blur-md">
+                  <span className="font-bold text-orange-400">{classification}</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-emerald-400 font-semibold">{Number(peak_frp_mw || 0).toFixed(1)} MW</span>
+                  {max_brightness_k && (
+                    <>
+                      <span className="text-slate-500">·</span>
+                      <span className="text-slate-300">{Number(max_brightness_k).toFixed(1)} K</span>
+                    </>
+                  )}
                 </div>
               </div>
             </Marker>
           );
         })}
 
-        {/* Stage 5: selected marker shown even when it isn't in the
-            current decluttered viewport result. */}
-        {!isSelectedInGeoData && selectedFeature && (
+        {/* Selected Highlight Marker */}
+        {selectedFeature && (
           <Marker
-            longitude={
-              selectedFeature.geometry.coordinates[0]
-            }
-            latitude={
-              selectedFeature.geometry.coordinates[1]
-            }
+            longitude={selectedFeature.geometry.coordinates[0]}
+            latitude={selectedFeature.geometry.coordinates[1]}
             anchor="center"
-            onClick={(event) => {
-              event.originalEvent.stopPropagation();
-              onEventClick(
-                String(selectedFeature.properties.event_id)
-              );
-            }}
           >
-            <div className="relative group cursor-pointer p-1">
-              <ThermalMapMarker
-                classification={
-                  selectedFeature.properties.classification
-                }
-                anomalyTier={
-                  selectedFeature.properties.anomaly_tier
-                }
-                isSelected={true}
-                size={34}
-              />
-
-              <div className="absolute left-1/2 -translate-x-1/2 -top-9 opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap bg-slate-900 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-2xl border border-slate-700 z-50 flex items-center gap-1.5">
-                <span className="font-bold text-orange-400">
-                  {selectedFeature.properties.classification}
-                </span>
-                <span className="text-slate-400">·</span>
-                <span className="text-emerald-400 font-bold">
-                  {Number(
-                    selectedFeature.properties.peak_frp_mw || 0
-                  ).toFixed(1)}{" "}
-                  MW
-                </span>
-              </div>
+            <div className="pointer-events-none">
+              <div className="w-12 h-12 rounded-full border-2 border-orange-500 animate-ping absolute -top-3 -left-3 opacity-60" />
             </div>
           </Marker>
         )}
 
-        {/* Stage 5: decluttering feed control bar. */}
-        <div className="absolute top-5 left-5 z-20 flex items-center gap-2">
-          <button
-            onClick={() =>
-              setShowAllDetections((current) => !current)
-            }
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xl border transition backdrop-blur-md ${
-              showAllDetections
-                ? "bg-amber-500 text-slate-950 border-amber-400"
-                : "bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-100"
-            }`}
-            title="Toggle between priority events and all matching detections"
-            type="button"
-          >
-            {showAllDetections ? (
-              <Eye className="w-4 h-4 text-slate-950" />
-            ) : (
-              <EyeOff className="w-4 h-4 text-slate-500" />
-            )}
+        {/* UNIFIED TACTICAL RADAR TOOLBAR (TOP-LEFT) */}
+        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[92vw] sm:max-w-none">
+          {/* Main Control Card */}
+          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl text-white flex flex-col gap-2.5">
+            {/* Header + Time Window */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span className="text-xs font-bold font-mono tracking-wider text-slate-200">
+                  THERMAL RADAR // INDIA NRT
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                  {eventCount} Hotspots
+                </span>
+              </div>
 
-            <span>
-              {showAllDetections
-                ? "Showing All Detections"
-                : "Priority Decluttered View"}
-            </span>
+              {/* Time Window Buttons */}
+              <div className="flex items-center gap-1 bg-slate-800/90 p-0.5 rounded-xl border border-slate-700">
+                {([
+                  [6, "6h"],
+                  [24, "24h"],
+                  [168, "7d"],
+                  [720, "30d"],
+                  [null, "All"],
+                ] as const).map(([hours, label]) => (
+                  <button
+                    key={label}
+                    onClick={() => setWindowHours(hours)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      windowHours === hours
+                        ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                    }`}
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            <span
-              className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
-                showAllDetections
-                  ? "bg-amber-600 text-white"
-                  : "bg-slate-200 text-slate-700"
-              }`}
-            >
-              {eventCount}
-            </span>
-          </button>
+            {/* View Mode + Filters + Layer Checkboxes */}
+            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-800 text-xs">
+              {/* Priority vs All Hotspots Toggle */}
+              <button
+                onClick={() => setShowAllDetections((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${
+                  showAllDetections
+                    ? "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
+                    : "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
+                }`}
+                title="Toggle between all detected thermal events and high-priority anomalies"
+                type="button"
+              >
+                {showAllDetections ? <Eye className="w-3.5 h-3.5 text-slate-400" /> : <EyeOff className="w-3.5 h-3.5 text-amber-400" />}
+                <span>{showAllDetections ? "All Hotspots" : "Priority Only"}</span>
+              </button>
 
-          <button
-            onClick={() =>
-              setShowLegend((current) => !current)
-            }
-            className={`p-2 rounded-xl text-xs font-semibold shadow-xl border transition backdrop-blur-md ${
-              showLegend
-                ? "bg-slate-800 text-white border-slate-700"
-                : "bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-100"
-            }`}
-            title="Toggle tactical symbology legend"
-            type="button"
-          >
-            <Info className="w-4 h-4" />
-          </button>
+              {/* Severity Dropdown */}
+              <select
+                aria-label="Severity Filter"
+                value={severityFilter}
+                onChange={(e) => setSeverityFilter(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="">All Severities</option>
+                <option value="CRITICAL">🔴 Critical Only</option>
+                <option value="ABNORMAL">🟠 Abnormal</option>
+                <option value="ELEVATED">🟢 Elevated</option>
+                <option value="NORMAL">⚪ Nominal</option>
+              </select>
+
+              {/* Classification Dropdown */}
+              <select
+                aria-label="Classification Filter"
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="">All Categories</option>
+                <option value="IND_FLARE">🏭 Industrial Flare</option>
+                <option value="IND_FIRE">🔥 Industrial Fire</option>
+                <option value="IND_ROUTINE">⚙️ Routine Process</option>
+                <option value="AGRI_BURN">🌾 Agri Crop Residue</option>
+                <option value="WILDFIRE">🌲 Forest Wildfire</option>
+                <option value="OTHER_UNCERTAIN">❓ Other / Uncertain</option>
+              </select>
+
+              {/* Facility Overlay Checkbox */}
+              <label className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-300 cursor-pointer select-none hover:bg-slate-700/60 transition">
+                <input
+                  type="checkbox"
+                  checked={showFacilities}
+                  onChange={(e) => setShowFacilities(e.target.checked)}
+                  className="rounded border-slate-600 text-orange-600 focus:ring-0 focus:ring-offset-0 bg-slate-900 cursor-pointer"
+                />
+                <span>Facilities</span>
+              </label>
+
+              {/* Raw FIRMS Passes Overlay Checkbox */}
+              <label className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-300 cursor-pointer select-none hover:bg-slate-700/60 transition">
+                <input
+                  type="checkbox"
+                  checked={showObservations}
+                  onChange={(e) => setShowObservations(e.target.checked)}
+                  className="rounded border-slate-600 text-orange-600 focus:ring-0 focus:ring-offset-0 bg-slate-900 cursor-pointer"
+                />
+                <span>FIRMS Heat</span>
+              </label>
+
+              {/* Symbology Legend Button */}
+              <button
+                onClick={() => setShowLegend((prev) => !prev)}
+                className={`p-1.5 rounded-xl border transition ${
+                  showLegend
+                    ? "bg-orange-600 text-white border-orange-500"
+                    : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white hover:bg-slate-700"
+                }`}
+                title="Tactical Symbology Matrix (9-Icon)"
+                type="button"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+
+              {/* Clear Filters (if modified) */}
+              {isFilterActive && (
+                <button
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 font-medium px-2 py-1 bg-orange-500/10 rounded-lg transition"
+                  type="button"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Stage 5: tactical symbology legend. */}
+        {/* TACTICAL SYMBOLOGY LEGEND CARD */}
         {showLegend && (
-          <div className="absolute top-16 left-5 z-30 bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700 w-72 space-y-3">
+          <div className="absolute top-36 left-4 z-30 bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700 w-80 space-y-3 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
                 Tactical Symbology (9-Icon)
               </span>
-              <span className="text-[10px] text-slate-500 font-mono">
+              <span className="text-[10px] text-slate-400 font-mono">
                 Type × Severity
               </span>
             </div>
@@ -783,104 +571,71 @@ export default function MapComponent({
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 1. Base Shape (Classification)
               </div>
-
               <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
                 <div className="p-2 bg-slate-800/80 rounded-lg border border-slate-700 flex flex-col items-center gap-1">
                   <Factory className="w-4 h-4 text-orange-400" />
-                  <span className="text-slate-300 font-medium">
-                    Industrial
-                  </span>
+                  <span className="text-slate-300 font-medium">Industrial</span>
                 </div>
-
                 <div className="p-2 bg-slate-800/80 rounded-lg border border-slate-700 flex flex-col items-center gap-1">
                   <Sprout className="w-4 h-4 text-emerald-400" />
-                  <span className="text-slate-300 font-medium">
-                    Vegetation
-                  </span>
+                  <span className="text-slate-300 font-medium">Vegetation</span>
                 </div>
-
                 <div className="p-2 bg-slate-800/80 rounded-lg border border-slate-700 flex flex-col items-center gap-1">
                   <HelpCircle className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-300 font-medium">
-                    Uncertain
-                  </span>
+                  <span className="text-slate-300 font-medium">Uncertain</span>
                 </div>
               </div>
 
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pt-1">
                 2. Semantic Color (Severity)
               </div>
-
-              <div className="space-y-1 text-[11px]">
+              <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-600 border border-emerald-400" />
-                  <span className="text-slate-300">
-                    Green:{" "}
-                    <span className="text-slate-400">
-                      Nominal & Elevated
-                    </span>
-                  </span>
+                  <span className="w-3 h-3 rounded-full bg-red-600 border border-red-400 shrink-0" />
+                  <span className="text-slate-300 font-medium">Red: <span className="text-slate-400 font-normal">Critical Anomaly (Z &ge; 4.0σ)</span></span>
                 </div>
-
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-400" />
-                  <span className="text-slate-300">
-                    Amber:{" "}
-                    <span className="text-slate-400">
-                      Abnormal Anomaly
-                    </span>
-                  </span>
+                  <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-400 shrink-0" />
+                  <span className="text-slate-300 font-medium">Amber: <span className="text-slate-400 font-normal">Abnormal Anomaly (2.5 &le; Z &lt; 4.0σ)</span></span>
                 </div>
-
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-red-600 border border-red-400" />
-                  <span className="text-slate-300">
-                    Red:{" "}
-                    <span className="text-slate-400">
-                      Critical Anomaly
-                    </span>
-                  </span>
+                  <span className="w-3 h-3 rounded-full bg-emerald-600 border border-emerald-400 shrink-0" />
+                  <span className="text-slate-300 font-medium">Green: <span className="text-slate-400 font-normal">Nominal & Elevated</span></span>
                 </div>
-
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-slate-500 border border-slate-400" />
-                  <span className="text-slate-300">
-                    Neutral:{" "}
-                    <span className="text-slate-400">
-                      Baseline Insufficient (N&lt;10)
-                    </span>
-                  </span>
+                  <span className="w-3 h-3 rounded-full bg-slate-500 border border-slate-400 shrink-0" />
+                  <span className="text-slate-300 font-medium">Neutral: <span className="text-slate-400 font-normal">Baseline Insufficient (N &lt; 10)</span></span>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Google map type + location controls. */}
+        {/* BOTTOM-RIGHT MAP CONTROLS */}
         <div className="absolute bottom-6 right-6 z-20 flex flex-col gap-2">
-          <div className="bg-white/95 backdrop-blur-md rounded-xl p-1 shadow-lg border border-slate-200 flex flex-col gap-1">
+          {/* Map Type Switcher */}
+          <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-1 shadow-2xl border border-slate-700/80 flex flex-col gap-1">
             <button
               onClick={() => setMapType("roadmap")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
                 mapType === "roadmap"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
+                  : "text-slate-300 hover:bg-slate-800"
               }`}
-              title="Google Roadmap"
+              title="Google Vector Roadmap"
               type="button"
             >
               <Navigation className="w-3.5 h-3.5" />
-              Google Map
+              Roadmap
             </button>
-
             <button
               onClick={() => setMapType("hybrid")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
                 mapType === "hybrid"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
+                  : "text-slate-300 hover:bg-slate-800"
               }`}
-              title="Google satellite / hybrid map"
+              title="Google Satellite Hybrid"
               type="button"
             >
               <Layers className="w-3.5 h-3.5" />
@@ -888,16 +643,27 @@ export default function MapComponent({
             </button>
           </div>
 
+          {/* Center India Button */}
+          <button
+            onClick={handleCenterIndia}
+            className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 p-3 rounded-2xl shadow-2xl border border-slate-700/80 transition flex items-center justify-center backdrop-blur-md"
+            title="Reset View to Sovereign India"
+            type="button"
+          >
+            <Compass className="w-4 h-4 text-orange-400" />
+          </button>
+
+          {/* My Location GPS Button */}
           <button
             onClick={handleMyLocation}
-            className="bg-white hover:bg-slate-50 text-slate-700 p-3 rounded-xl shadow-lg border border-slate-200 transition flex items-center justify-center"
+            className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 p-3 rounded-2xl shadow-2xl border border-slate-700/80 transition flex items-center justify-center backdrop-blur-md"
             title="My Location"
             type="button"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -911,45 +677,29 @@ export default function MapComponent({
           </button>
         </div>
 
-        {error && (
-          <div
-            role="alert"
-            className="absolute top-4 left-4 z-20 rounded-md border border-red-200 bg-white px-3 py-2 text-xs text-red-700 shadow-sm"
-          >
-            Map data unavailable: {error}
-          </div>
-        )}
-
+        {/* Map Loading Indicator */}
         {loadingEvents && !geoData && (
-          <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
-            Loading thermal events…
+          <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-900/90 backdrop-blur-md px-4 py-2 text-xs font-mono text-slate-300 shadow-xl flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            Scanning sovereign thermal spectrum...
           </div>
         )}
 
-        {!loadingEvents &&
-          !error &&
-          geoData?.features.length === 0 && (
-            <div className="absolute left-1/2 top-4 z-20 w-72 -translate-x-1/2 rounded-md border border-slate-200 bg-white p-3 text-center text-xs text-slate-600 shadow-sm">
-              <p className="font-medium text-slate-800">
-                No thermal events match these filters.
-              </p>
-              <p className="mt-1">
-                Try a broader time window or clear Severity and Class.
-              </p>
-              <button
-                onClick={onClearFilters}
-                className="mt-2 rounded bg-slate-100 px-2 py-1 font-medium text-slate-700 hover:bg-slate-200"
-                type="button"
-              >
-                Clear filters
-              </button>
-            </div>
-          )}
+        {/* Empty State Card */}
+        {!loadingEvents && !error && geoData?.features.length === 0 && (
+          <div className="absolute left-1/2 top-6 z-20 w-80 -translate-x-1/2 rounded-2xl border border-slate-700 bg-slate-900/95 backdrop-blur-md p-4 text-center text-xs text-slate-300 shadow-2xl">
+            <p className="font-semibold text-slate-100 text-sm">No Thermal Events Found</p>
+            <p className="mt-1 text-slate-400">No detections matched your active time window or filters.</p>
+            <button
+              onClick={handleClearFilters}
+              className="mt-3 rounded-xl bg-orange-600 px-3 py-1.5 font-semibold text-white hover:bg-orange-500 transition shadow-md shadow-orange-900/40"
+              type="button"
+            >
+              Reset All Filters
+            </button>
+          </div>
+        )}
       </Map>
     </div>
   );
-}
-
-function roundPct(value: number) {
-  return Math.round((value || 0) * 100);
 }

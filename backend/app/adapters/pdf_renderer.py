@@ -16,6 +16,12 @@ class PDFRenderer:
         report_view_model: Dict[str, Any],
         filename: Optional[str] = None,
     ) -> bytes:
+        if not report_view_model.get("event_id"):
+            raise ValueError("Missing required field: event_id")
+        if not report_view_model.get("classification"):
+            raise ValueError("Missing required field: classification")
+        if not report_view_model.get("anomaly_tier"):
+            raise ValueError("Missing required field: anomaly_tier")
         from reportlab.lib.pagesizes import letter
         from reportlab.lib import colors
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
