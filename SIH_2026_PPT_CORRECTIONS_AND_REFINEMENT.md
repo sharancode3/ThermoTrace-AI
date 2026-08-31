@@ -60,50 +60,39 @@
 
 ---
 
-#### C. Right Column: System Architecture Diagram
+#### C. Right Column: Compact 6-Block Architecture Diagram (Fits Right Half of Slide)
 
 ```mermaid
 flowchart TD
-    subgraph SATELLITE_SOURCES["1. SATELLITE & GEOSPATIAL DATA SOURCES"]
-        FIRMS["NASA FIRMS NRT Feed<br/>(VIIRS NOAA-20/21/SNPP 375m & MODIS 1km)"]
-        LAND["ESA WorldCover 10m Land Use<br/>& Sentinel-2 MSI Optical Context"]
-        FAC["27 Strategic Industrial Complexes<br/>(Refineries, Power, Steel Works)"]
+    subgraph S1["1. MULTI-SENSOR DATA SOURCES"]
+        D1["NASA FIRMS (VIIRS 375m & MODIS 1km)<br/>ESA WorldCover 10m + 27 Facilities"]
     end
 
-    subgraph INGESTION["2. INGESTION & SOVEREIGN GEOFENCING"]
-        DAEMON["Autonomous 5-Min Polling Daemon"] --> GEOFENCE{"Survey of India<br/>Sovereign Geofence"}
-        GEOFENCE -->|Transboundary| DISCARD["Discard Non-Sovereign Point"]
-        GEOFENCE -->|Sovereign Territory| CLUSTER["ST-DBSCAN Clustering Engine<br/>(eps=1500m, time_window=24h)"]
+    subgraph S2["2. INGESTION & SOVEREIGN GEOFENCING"]
+        D2["5-Min Continuous Poller Daemon<br/>Survey of India Sovereign Filter"]
     end
 
-    FIRMS --> DAEMON
-    LAND --> CLUSTER
-    FAC --> CLUSTER
-
-    subgraph ANALYTICS["3. ANALYTICAL ML & BASELINE ENGINE"]
-        CLUSTER --> FEAT["14-D Feature Extraction & Context Fusion"]
-        FEAT --> XGB["Calibrated XGBoost v1.1<br/>(Platt-Scaled, ECE < 3.2%)"]
-        FEAT --> BASE["90-Day Empirical Baselines<br/>(Z = [Peak FRP - μ] / σ, N >= 10)"]
-        XGB --> TIER2["Tier 2 On-Demand Compute Engine<br/>(TreeSHAP Decision Drivers & XAI)"]
-        BASE --> TIER2
+    subgraph S3["3. EVENT CLUSTERING & 14-D FUSION"]
+        D3["ST-DBSCAN (eps=1500m, Δt=24h)<br/>14-D Spatial & Land-Cover Matrix"]
     end
 
-    subgraph APPS["4. DEFENSE-GRADE APPLICATION LAYER"]
-        TIER2 --> RADAR["MapLibre GL Tactical Radar<br/>(Dynamic Camera Offset [-180, 0] & 9-Icon Symbology)"]
-        TIER2 --> NEWS["Real-Time Thermo News & SSE Alert Queue"]
-        TIER2 --> RAG["Grounded Zero-Hallucination AI Chat"]
-        TIER2 --> PDF["Forensic PDF Dossiers (SHA-256 Checksummed)"]
+    subgraph S4["4. CALIBRATED ML & 90-DAY BASELINES"]
+        D4["Calibrated XGBoost (ECE < 3.2% | 6 Classes)<br/>Rolling 90-Day Gaussian Baselines (Z-Scores)"]
     end
 
-    subgraph STORAGE["5. SPATIAL DATABASE LAYER"]
-        RADAR --> POSTGIS[("PostgreSQL 16 + PostGIS 3.4 Spatial Database")]
-        NEWS --> POSTGIS
-        PDF --> POSTGIS
+    subgraph S5["5. TIER 2 XAI & RAG GROUNDING"]
+        D5["On-Demand TreeSHAP Decision Drivers<br/>Zero-Hallucination Epistemic Tagging"]
     end
+
+    subgraph S6["6. DEFENSE APPLICATION LAYER"]
+        D6["Tactical Map ([-180, 0]) | News & Alerts<br/>Grounded RAG Chat | SHA-256 PDF Dossiers<br/>PostgreSQL 16 + PostGIS 3.4 Spatial Database"]
+    end
+
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6
 ```
 
-> **Vector Diagram Ready for PowerPoint:**  
-> A high-resolution vector diagram is saved at `docs/images/architecture_slide2.svg` which can be inserted directly into PowerPoint as a vector graphic picture.
+> **Vector Asset Ready for PowerPoint:**  
+> A compact, half-slide vector image is generated at [`docs/images/architecture_slide2.svg`](docs/images/architecture_slide2.svg) perfectly sized for the right 50% column of Slide 2.
 
 
 #### D. Bottom Highlight Banner: 3 Core Uniqueness & Innovation Pillars
