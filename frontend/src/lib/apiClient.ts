@@ -1,104 +1,235 @@
-const API_BASE_URL = typeof window !== "undefined" 
-  ? "/api/v1" 
-  : (process.env.INTERNAL_BACKEND_URL ? `${process.env.INTERNAL_BACKEND_URL}/api/v1` : "http://backend:8000/api/v1");
+const API_BASE_URL =
+  typeof window !== "undefined"
+    ? "/api/v1"
+    : process.env.INTERNAL_BACKEND_URL
+      ? `${process.env.INTERNAL_BACKEND_URL}/api/v1`
+      : "http://backend:8000/api/v1";
+
+export type Viewport = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  zoom: number;
+};
+
+const DEFAULT_VIEWPORT: Viewport = {
+  west: 68,
+  south: 8.3,
+  east: 96.98,
+  north: 36.74,
+  zoom: 4.8,
+};
+
+export type GeoFeature = {
+  type: "Feature";
+  geometry: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  properties: Record<string, any>;
+};
+
+export type GeoCollection = {
+  type: "FeatureCollection";
+  features: GeoFeature[];
+};
+
+export type EventFilters = {
+  start_time?: string;
+  end_time?: string;
+  classification?: string;
+  anomaly_tier?: string;
+  show_all?: boolean;
+  focus_event_id?: string;
+};
+
+function query(
+  params: Record<string, string | number | boolean | undefined>
+) {
+  const values = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      values.set(key, String(value));
+    }
+  });
+
+  return values.toString();
+}
+
+async function get<T>(
+  path: string,
+  params: Record<string, string | number | boolean | undefined> = {}
+): Promise<T> {
+  const suffix = query(params);
+
+  const response = await fetch(
+    `${API_BASE_URL}${path}${suffix ? `?${suffix}` : ""}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status})`);
+  }
+
+  return response.json();
+}
 
 export async function fetchHealth() {
-  const res = await fetch(`${API_BASE_URL}/health`);
-  if (!res.ok) throw new Error("Failed to fetch health status");
-  return res.json();
+  return get<any>("/health");
 }
 
-export async function fetchGisEvents(showAll: boolean = false, focusEventId?: string | null) {
-  const params = new URLSearchParams();
-  if (showAll) params.set("show_all", "true");
-  if (focusEventId) params.set("focus_event_id", focusEventId);
-  const queryStr = params.toString();
-  const res = await fetch(`${API_BASE_URL}/gis/events${queryStr ? `?${queryStr}` : ""}`);
-  if (!res.ok) throw new Error("Failed to fetch GIS events");
-  return res.json();
+export function fetchGisEvents(
+  viewport: Viewport = DEFAULT_VIEWPORT,
+  filters: EventFilters = {}
+) {
+  return get<GeoCollection>("/gis/events", {
+    ...viewport,
+    ...filters,
+  });
 }
 
-export async function fetchGisFacilities() {
-  const res = await fetch(`${API_BASE_URL}/gis/facilities`);
-  if (!res.ok) throw new Error("Failed to fetch GIS facilities");
-  return res.json();
+export function fetchGisFacilities(viewport: Viewport = DEFAULT_VIEWPORT) {
+  return get<GeoCollection>("/gis/facilities", viewport);
 }
 
-export async function fetchEventDetail(eventId: string) {
-  const res = await fetch(`${API_BASE_URL}/events/${eventId}`);
-  if (!res.ok) throw new Error("Failed to fetch event detail");
-  return res.json();
+export function fetchGisObservations(
+  viewport: Viewport = DEFAULT_VIEWPORT,
+  filters: {
+    start_time?: string;
+    end_time?: string;
+    satellite?: string;
+  } = {}
+) {
+  return get<GeoCollection>("/gis/observations", {
+    ...viewport,
+    ...filters,
+  });
+}
+
+export function fetchEventDetail(eventId: string) {
+  return get<any>(`/events/${encodeURIComponent(eventId)}`);
 }
 
 export const fetchEventIntelligence = fetchEventDetail;
 
+export function fetchEventHistory(eventId: string) {
+  return get<any>(
+    `/events/${encodeURIComponent(eventId)}/history`
+  );
+}
+
+export function fetchEventComparison(eventId: string) {
+  return get<any>(
+    `/events/${encodeURIComponent(eventId)}/compare`
+  );
+}
+
 export async function fetchNews() {
-  const res = await fetch(`${API_BASE_URL}/news`);
-  if (!res.ok) throw new Error("Failed to fetch news feed");
-  return res.json();
-}
-
-export async function fetchNotifications() {
-  const res = await fetch(`${API_BASE_URL}/notifications`);
-  if (!res.ok) throw new Error("Failed to fetch notifications");
-  return res.json();
-}
-
-export async function markNotificationRead(id: string) {
-  const res = await fetch(`${API_BASE_URL}/notifications/${id}/read`, { method: "POST" });
-  if (!res.ok) throw new Error("Failed to mark notification as read");
-  return res.json();
-}
-
-export async function markAllNotificationsRead() {
-  const res = await fetch(`${API_BASE_URL}/notifications/read-all`, { method: "POST" });
-  if (!res.ok) throw new Error("Failed to mark all notifications as read");
-  return res.json();
-}
-
-export async function fetchReports() {
-  const res = await fetch(`${API_BASE_URL}/reports`);
-  if (!res.ok) throw new Error("Failed to fetch reports");
-  return res.json();
-}
-
-export async function generateReport(eventId: string, title?: string, includedSections?: string[]) {
-  const res = await fetch(`${API_BASE_URL}/reports/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      event_id: eventId,
-      title: title || undefined,
-      included_sections: includedSections || ["executive_summary", "sensor_telemetry", "baseline_audit"],
-    }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || "Failed to generate report");
-  }
-  return res.json();
+  return get<any[]>("/news");
 }
 
 export async function fetchFirmsStatus() {
-  const res = await fetch(`${API_BASE_URL}/firms/status`);
-  if (!res.ok) throw new Error("Failed to fetch FIRMS status");
-  return res.json();
+  return get<any>("/firms/status");
 }
 
-export async function askThermalChat(query: string, sessionId?: string) {
-  const res = await fetch(`${API_BASE_URL}/chat/query`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query,
-      session_id: sessionId,
-    }),
-  });
+export async function fetchNotifications() {
+  return get<any[]>("/notifications");
+}
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || "Failed to query Thermal AI");
+export async function markNotificationRead(id: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/notifications/${encodeURIComponent(id)}/read`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to mark notification as read");
   }
 
-  return res.json();
+  return response.json();
+}
+
+export async function markAllNotificationsRead() {
+  const response = await fetch(
+    `${API_BASE_URL}/notifications/read-all`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to mark notifications as read");
+  }
+
+  return response.json();
+}
+
+export async function fetchReports() {
+  return get<any[]>("/reports");
+}
+
+export async function generateReport(
+  eventId: string,
+  title?: string,
+  includedSections?: string[]
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/reports/generate`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        event_id: eventId,
+        title: title || undefined,
+        included_sections:
+          includedSections || [
+            "executive_summary",
+            "sensor_telemetry",
+            "baseline_audit",
+          ],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      text || "Failed to generate report"
+    );
+  }
+
+  return response.json();
+}
+
+export async function askThermalChat(
+  queryText: string,
+  sessionId?: string
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/chat/query`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: queryText,
+        session_id: sessionId,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      text || "Failed to query Thermal AI"
+    );
+  }
+
+  return response.json();
 }

@@ -17,3 +17,11 @@ test('map container loads', async ({ page }) => {
   const mapContainer = page.locator('.maplibregl-map');
   await expect(mapContainer).toBeAttached();
 });
+
+test('monitor exposes Stage 4 investigation controls', async ({ page }) => {
+  await page.goto('http://localhost:3000/monitor');
+  await expect(page.getByTestId('monitor-map')).toBeVisible();
+  await expect(page.getByText('Monitor window')).toBeVisible();
+  await expect(page.getByLabel('Facilities')).toBeVisible();
+  await expect(page.getByLabel('FIRMS observations')).toBeVisible();
+});
