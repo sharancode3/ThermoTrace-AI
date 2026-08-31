@@ -30,7 +30,7 @@ export default function MonitorPage() {
 
   return (
     <>
-      <MapComponent onEventClick={setSelectedEventId} selectedEventId={selectedEventId} startTime={startTime} classification={classification || undefined} anomalyTier={anomalyTier || undefined} showFacilities={showFacilities} showObservations={showObservations} />
+      <MapComponent onEventClick={setSelectedEventId} onClearFilters={() => { setWindowHours(null); setClassification(""); setAnomalyTier(""); }} selectedEventId={selectedEventId} startTime={startTime} classification={classification || undefined} anomalyTier={anomalyTier || undefined} showFacilities={showFacilities} showObservations={showObservations} />
       <section aria-label="Map layers and filters" className="absolute left-4 top-4 z-20 w-60 rounded-md border border-slate-200 bg-white p-3 shadow-sm">
         <div className="mb-2 text-xs font-semibold text-slate-700">Monitor window</div>
         <div className="flex gap-1">{[[6, "6h"], [24, "24h"], [168, "7d"], [720, "30d"], [null, "All"]].map(([hours, label]) => <button key={label as string} onClick={() => setWindowHours(hours as number | null)} className={`rounded px-2 py-1 text-xs ${windowHours === hours ? "bg-orange-600 text-white" : "bg-slate-100 text-slate-700"}`}>{label}</button>)}</div>

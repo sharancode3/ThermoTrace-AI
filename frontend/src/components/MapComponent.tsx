@@ -63,6 +63,7 @@ const GOOGLE_HYBRID: any = {
 
 export default function MapComponent({ 
   onEventClick, 
+  onClearFilters,
   selectedEventId,
   startTime,
   endTime,
@@ -72,6 +73,7 @@ export default function MapComponent({
   showObservations = false,
 }: { 
   onEventClick: (id: string) => void;
+  onClearFilters: () => void;
   selectedEventId?: string | null;
   startTime?: string;
   endTime?: string;
@@ -88,6 +90,7 @@ export default function MapComponent({
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
   const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
   const [error, setError] = useState<string | null>(null);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   const handleMyLocation = () => {
     if (navigator.geolocation) {
@@ -107,13 +110,15 @@ export default function MapComponent({
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setError(null);
+      setLoadingEvents(true);
       Promise.all([
         fetchGisEvents(viewport, { start_time: startTime, end_time: endTime, classification, anomaly_tier: anomalyTier }),
         showFacilities ? fetchGisFacilities(viewport) : Promise.resolve(null),
         showObservations ? fetchGisObservations(viewport, { start_time: startTime, end_time: endTime }) : Promise.resolve(null),
       ])
         .then(([events, facilities, observations]) => { setGeoData(events); setFacilityData(facilities); setObservationData(observations); })
-        .catch((err) => { console.error("Failed to fetch GIS events:", err); setError(err.message); });
+        .catch((err) => { console.error("Failed to fetch GIS events:", err); setError(err.message); })
+        .finally(() => setLoadingEvents(false));
     }, 350);
     return () => window.clearTimeout(timer);
   }, [viewport, startTime, endTime, classification, anomalyTier, showFacilities, showObservations]);
@@ -384,6 +389,8 @@ export default function MapComponent({
           </button>
         </div>
         {error && <div role="alert" className="absolute top-4 left-4 z-20 rounded-md border border-red-200 bg-white px-3 py-2 text-xs text-red-700 shadow-sm">Map data unavailable: {error}</div>}
+        {loadingEvents && !geoData && <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">Loading thermal events…</div>}
+        {!loadingEvents && !error && geoData?.features.length === 0 && <div className="absolute left-1/2 top-4 z-20 w-72 -translate-x-1/2 rounded-md border border-slate-200 bg-white p-3 text-center text-xs text-slate-600 shadow-sm"><p className="font-medium text-slate-800">No thermal events match these filters.</p><p className="mt-1">Try a broader time window or clear Severity and Class.</p><button onClick={onClearFilters} className="mt-2 rounded bg-slate-100 px-2 py-1 font-medium text-slate-700 hover:bg-slate-200">Clear filters</button></div>}
       </Map>
     </div>
   );
