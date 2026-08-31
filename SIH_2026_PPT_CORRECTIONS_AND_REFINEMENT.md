@@ -147,16 +147,48 @@ Update the text inside your flowchart boxes:
 6. **Step 6:** `AI Classification & Baseline Check: Identify Fire Type & Check for Abnormal Heat Spike`
 7. **Step 7:** `Output Intelligence: Assign Severity (Critical / Abnormal / Normal)`
 8. **Step 8 (Action Dispatch):**
-   - `[Live Map Radar]` $ightarrow$ View exact location and heat footprint
-   - `[Thermo News]` $ightarrow$ Real-time public intelligence bulletin
-   - `[Risk Alerts]` $ightarrow$ Priority notification to authorities
-   - `[PDF Report]` $ightarrow$ Download forensic brief for enforcement
+   - `[Live Map Radar]` $
+ightarrow$ View exact location and heat footprint
+   - `[Thermo News]` $
+ightarrow$ Real-time public intelligence bulletin
+   - `[Risk Alerts]` $
+ightarrow$ Priority notification to authorities
+   - `[PDF Report]` $
+ightarrow$ Download forensic brief for enforcement
 9. **End:** `Continuous 24/7 Monitoring Cycle`
 
 ---
 
-## Slide 4: Feasibility, Viability & Potential Impact
-*(Ready for next slide upload)*
+## Slide 4: Feasibility and Viability (1-to-1 Text Replacements)
+
+Your existing Slide 4 layout (**5 Feasibility Cards on Top, Challenges vs Solutions Table on Bottom**) is structured cleanly. Below are the **exact, polished text replacements** to plug straight into your existing shapes.
+
+---
+
+### Part 1: Top 5 Feasibility Cards (Keep Your 5 Columns)
+
+| Pillar | Icon & Header | Polished Text (Simple & Punchy) |
+|:---|:---|:---|
+| **1. Technical** | 💻 **Technical Feasibility** | **Built on proven, production-grade open-source stack (FastAPI, PostGIS, Next.js) with sub-50ms query response time.** |
+| **2. Data** | 🗄️ **Data Feasibility** | **Continuous automated access to free NASA FIRMS satellite streams (VIIRS 375m & MODIS 1km) polled every 5 minutes.** |
+| **3. Economical** | 🇮🇳 **Economical Feasibility** | **Zero proprietary software licensing or data costs; deployable on low-cost government cloud infrastructure (NIC / MeitY).** |
+| **4. Legal & Sovereign** | ⚖️ **Legal & Compliance** | **100% sovereign-hosted within Indian borders; strictly complies with Survey of India spatial data policies.** |
+| **5. Operational** | ⚙️ **Operational Feasibility** | **Turnkey tactical dashboard; field operators receive live bulletins and 1-click PDF briefs with zero specialized training.** |
+
+---
+
+### Part 2: Bottom Table (3 Challenges & Strategies for Overcoming)
+
+| Potential Challenges & Risks (Column 1) | Strategies for Overcoming (Column 2) |
+|:---|:---|
+| **1. Satellite Revisit Gaps & Cloud Cover**<br>Satellite passes occur at intervals, and clouds or heavy smoke can occasionally obscure optical visibility. | **Multi-Constellation Fusion:** Combines 5 satellite sensors (NOAA-20, NOAA-21, Suomi-NPP, Terra, Aqua) across day and night passes to minimize revisit lag; uses 10m ESA land-cover context to maintain site intelligence. |
+| **2. Incomplete or Unmapped Facility Boundaries**<br>Public maps may have outdated or missing boundary polygons for smaller industrial units. | **Adaptive Proximity Buffering:** Uses automated 5km spatial radius analysis and 10m satellite urban/industrial zoning tags to detect facility heat even when exact property boundaries are unmapped. |
+| **3. High Risk of False Alarms from Normal Flaring**<br>Refineries and steel plants flare gases routinely, which standard tools mistake for uncontained fires. | **Empirical 90-Day Facility Baselines:** Automatically learns each plant's normal operating heat envelope and only triggers alarms when radiation spikes into abnormal ($+2.5\sigma$) or critical ($+4.0\sigma$) emergency levels. |
+
+---
+
+### Part 3: 30-Second Speaker Pitch Cue for Slide 4
+> *"On feasibility and risk management: ThermoTrace AI is 100% economically and operationally viable because it uses free, high-cadence NASA satellite feeds and an open-source spatial stack, with zero recurring license costs. To overcome cloud cover and revisit gaps, we fuse 5 multi-satellite constellations. To prevent false alarms from routine refinery flaring, our system learns 90-day facility baselines, ensuring authorities only get alerted when a true anomaly occurs. Finally, all data is sovereign-hosted within India for complete security compliance."*
 
 ---
 
