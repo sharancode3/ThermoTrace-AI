@@ -1,170 +1,169 @@
-# Smart India Hackathon 2026 (SIH 2026) — Presentation Slide Polish & Master Refinement Guide
+# Smart India Hackathon 2026 (SIH 2026) — Master PPT Winning Guide
 
 ## Project: ThermoTrace AI
 - **Team Name:** Deadlock
-- **Problem Statement ID:** PS 26162 (SIH162)
+- **Problem Statement ID:** 26162
 - **Evaluating Agency:** National Technical Research Organisation (NTRO) / Central Pollution Control Board (CPCB)
-- **Design Philosophy:** Keep your exact PowerPoint layout (Boxes, Chevrons, Flowcharts), but polish the wording inside every existing shape to make it 10/10 evaluator-ready.
+- **Goal:** Transform your slides into a crystal-clear, high-impact winning presentation that any judge can understand in 15 seconds.
 
 ---
 
-## Slide 1: Title Page (1-to-1 Text Replacements)
-
-### 1. Evaluator Focus & First Impression
-- Evaluators look at Slide 1 to verify problem alignment and notice project branding.
-- **Current Rating:** `8.0 / 10`
-- **Key Polish Points:**
-  1. Add prominent **Project Title & Tagline** (`ThermoTrace AI`).
-  2. Clean up uneven spacing around hyphens and colons.
-  3. Include the **Evaluating Agency** (`NTRO / CPCB`) to immediately establish domain alignment.
+## Strategy: What SIH Judges Actually Look For
+1. **Clarity Over Jargon:** Judges read 50+ decks a day. Simple, powerful explanations score higher than dense academic jargon.
+2. **Clear Problem vs Solution:** Why do existing government tools fail, and how does your solution fix it?
+3. **Working Practical Flow:** A logical step-by-step pipeline from satellite image to official alert.
+4. **Real-World Impact:** How does this help India save lives, stop pollution, and detect industrial disasters early?
 
 ---
 
-### 2. Exact 10/10 Slide 1 Text Replacements (Keep Your Layout)
-
-#### A. Main Project Header (Top / Center):
-- **Project Name:** `ThermoTrace AI`
-- **Tagline:** `Autonomous Sovereign Satellite Thermal Intelligence & Industrial Anomaly Monitoring Platform`
+# Slide-by-Slide Exact Corrections
 
 ---
 
-#### B. Bulleted Information Block (Left Side):
+## Slide 1: Title Page
 
-- **Problem Statement ID:** `26162`
-- **Problem Statement Title:** `AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources Using NASA FIRMS, OSM & Satellite Data`
-- **Theme:** `Disaster Management`
-- **PS Category:** `Software (Deep-Tech Geospatial AI)`
-- **Evaluating Agency:** `National Technical Research Organisation (NTRO) / CPCB`
-- **Team ID:** `[Insert Your Team ID]`
-- **Team Name:** `Deadlock`
+### What Judges Look For:
+- Clear Problem Statement ID, Title, and a strong, memorable Project Name with a 1-line summary.
+
+### Your Current Slide vs Recommended Polish:
+
+#### Keep Your Exact Layout:
+- **Left Side:** Clean bullet points.
+- **Right Side:** SIH Logo.
+
+#### What to Update in Your Text:
+1. **Add Project Branding at the top:**
+   - **Project Name:** `ThermoTrace AI`
+   - **Tagline:** `AI-Powered Satellite Thermal Intelligence & Industrial Fire Monitoring System`
+
+2. **Clean up the bullet points (Fix spacing and formatting):**
+   - **Problem Statement ID:** `26162`
+   - **Problem Statement Title:** `AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources Using NASA FIRMS, OSM & Satellite Data`
+   - **Theme:** `Disaster Management`
+   - **Category:** `Software`
+   - **Team Name:** `Deadlock`
+   - **Team ID:** `[Your Team ID]`
 
 ---
 
-#### C. 15-Second Speaker Pitch Cue for Slide 1
-> *"Respected Evaluators, we are Team Deadlock presenting ThermoTrace AI for Problem Statement 26162: AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources. ThermoTrace AI is an automated, sovereign-compliant geospatial intelligence platform designed to eliminate false alarms, classify multi-source combustion, and detect critical industrial anomalies in near-real-time across India."*
+## Slide 2: Proposed Solution (Idea / Prototype)
+
+### What Judges Look For:
+- A simple comparison showing why existing satellite tools fail and why your system is 10x better.
+- A clean, easy-to-follow architecture diagram on the right.
 
 ---
 
-## Slide 2: Proposed Solution (1-to-1 Text Replacements)
+### Part 1: Left Table Corrections (6 Rows)
 
-### Part 1: Left Table Text Replacements (Keep Your 6 Rows)
-
-| Step | Existing Systems (Column 2) | ThermoTrace AI (Column 3) |
+| Step | Existing Systems (What Judges see today) | ThermoTrace AI (How our system solves it) |
 |:---|:---|:---|
-| **Data Ingestion** | Displays raw, unverified FIRMS points; high noise and transboundary clutter. | **Automates 5-min multi-satellite ingestion (VIIRS & MODIS) with sovereign geofencing.** |
-| **Event Clustering** | No spatio-temporal grouping; creates severe visual clutter and alert fatigue. | **ST-DBSCAN clusters multi-pass detections (1500m / 24h) into unified physical events.** |
-| **Context Fusion** | Manual cross-referencing with facility registries and land-use maps. | **Automated PostGIS joins fuse 10m ESA WorldCover, zoning & Sentinel-2 optical data.** |
-| **ML Classification** | Cannot distinguish routine industrial flares from blazes or stubble fires. | **Calibrated XGBoost (ECE < 3.2%) classifies 6 combustion types with TreeSHAP XAI.** |
-| **Baseline Analytics** | Relies on static, uncalibrated temperature / FRP thresholds. | **Rolling 90-day facility Gaussian baselines detect true anomalies using Z-scores.** |
-| **Actionable Intelligence** | Generates isolated point alerts without forensic legal validity. | **Delivers real-time Thermo News, alert queue, grounded AI chat & SHA-256 PDF dossiers.** |
+| **1. Data Ingestion** | Shows raw, scattered satellite heat dots; includes unwanted noise and foreign cross-border data. | **Automatically fetches NASA satellite heat data every 5 minutes and filters only sovereign Indian territory.** |
+| **2. Event Clustering** | Individual heat dots are not grouped, creating clutter and confusing the operator. | **Smart clustering (ST-DBSCAN) combines nearby heat points from multiple satellite passes into one single real-world fire event.** |
+| **3. Context Fusion** | Officials must manually look up maps to see what factory or land is at that location. | **Automatically overlays satellite land-use data (farms, forests, cities) and 27+ major industrial plant boundaries.** |
+| **4. AI Classification** | Cannot tell if heat is a routine factory chimney, a flare, crop burning, or a wildfire. | **Trained AI model accurately classifies the heat source into 6 clear categories (e.g. Industrial Fire, Farm Fire, Flare).** |
+| **5. Baseline Analytics** | Uses one rigid temperature cutoff for all factories, causing frequent false alarms. | **Learns each factory's normal 90-day heat baseline so it only triggers alarms during real abnormal spikes or emergencies.** |
+| **6. Actionable Output** | Sends raw coordinates that are hard for field officers to interpret. | **Generates live news bulletins, instant risk alerts, interactive AI chat, and 1-click legal PDF incident reports.** |
 
 ---
 
-### Part 2: Right Architecture Diagram (Keep Your Existing Shapes)
-1. **Top 3 Input Boxes:** `NASA FIRMS Telemetry (VIIRS 375m / MODIS 1km)` | `Industrial Data (27 Strategic Facilities)` | `Land Cover Data (ESA WorldCover 10m)`
-2. **Box 1 (Below Inputs):** `Data Ingestion & Sovereign Geofencing Filter`
-3. **Box 2:** `Event Formation (ST-DBSCAN Clustering: 1500m / 24h)`
-4. **Box 3:** `Context Fusion (14-D Spatial, Temporal & Land-Cover Matrix)`
-5. **Split Parallel Boxes:**
-   - **Left Box:** `ML Classifier (Calibrated XGBoost v1.1) Source Classification (6 Classes)`
-   - **Right Box:** `Baseline & Anomaly Engine (90-Day Gaussian Baselines) Z-Score Anomaly Detection`
-6. **Merge Box:** `Thermal Intelligence Output (Class + Confidence + Z-Score + TreeSHAP Attribution)`
-7. **Application Layer (5 Pills):** `[Tactical Map]` `[Thermo News]` `[Alerts Queue]` `[Grounded AI Chat]` `[SHA-256 PDF Dossiers]`
-8. **Bottom Box:** `Data Storage (PostgreSQL 16 / PostGIS 3.4 Spatial DB)`
+### Part 2: Right Flowchart Corrections (Keep Your Existing Shapes)
+
+Keep all your existing shapes and arrows. Update the text inside the boxes so it is simple, clean, and easy to read:
+
+1. **Top 3 Input Boxes:**
+   - `NASA Satellite Data (VIIRS & MODIS)`
+   - `Industrial Map Data (Refineries & Power Plants)`
+   - `Land Cover Data (ESA WorldCover 10m)`
+2. **Box 1 (Below Inputs):** `Data Ingestion & India Sovereign Boundary Filter`
+3. **Box 2:** `Event Formation (Smart Spatio-Temporal Clustering)`
+4. **Box 3:** `Context Fusion (Combines Land Cover + Plant Location + Heat Intensity)`
+5. **Split Boxes (Parallel):**
+   - **Left Box:** `AI Classifier (Identifies exact fire type: Factory, Farm, Forest)`
+   - **Right Box:** `Baseline Engine (Compares against plant history to spot abnormal spikes)`
+6. **Merge Box:** `Thermal Intelligence Output (Fire Type + Confidence % + Severity Tier)`
+7. **Application Layer (5 Feature Buttons):**
+   - `[Live Map Radar]` `[Thermo News]` `[Alerts Queue]` `[AI Assistant]` `[PDF Reports]`
+8. **Bottom Box:** `Secure Spatial Database (PostgreSQL / PostGIS)`
 
 ---
 
-## Slide 3: Technical Approach (1-to-1 Text Replacements)
-
-Your existing Slide 3 layout (**Tech Stack top-left, 4 Chevrons bottom-left, Flowchart right**) is already laid out. Below are the **exact text enhancements** for your shapes.
+### Part 3: The 3 Core Innovations (Uniqueness Highlight):
+1. **Zero False Alarms:** Distinguishes routine factory flaring from real accidental fires using plant-specific historical baselines.
+2. **Multi-Source AI Classification:** Instantly separates crop burning, forest fires, and industrial blazes.
+3. **Instant Incident Briefs:** Converts raw satellite heat pixels into 1-click tamper-proof PDF reports for rapid disaster response.
 
 ---
 
-### Part 1: Top-Left Tech Stack (Categorized Pillars)
+## Slide 3: Technical Approach & Workflow
 
-Instead of a scattered logo dump, group your tech logos or labels into 4 clean horizontal pillars:
+### What Judges Look For:
+- Clear technology choices (languages, frameworks, libraries).
+- A logical, step-by-step implementation process and workflow.
 
-| Category | Core Technologies |
-|:---|:---|
-| **Satellite & Spatial Data** | NASA FIRMS (VIIRS / MODIS), ESA WorldCover 10m, Sentinel-2 MSI, PostGIS 3.4, GeoPandas, Rasterio |
-| **Calibrated AI & Analytics** | Python 3.11, Calibrated XGBoost v1.1 (Platt Scaling), TreeSHAP XAI, Scikit-learn, ST-DBSCAN |
-| **Backend & Ingestion** | FastAPI, Celery, Redis 7, SQLAlchemy PostGIS, ReportLab (Vector PDF), Docker Compose |
-| **Tactical Radar UI** | Next.js 16 (App Router), TypeScript, MapLibre GL JS, Tailwind CSS, Server-Sent Events (SSE) |
+---
+
+### Part 1: Top-Left Tech Stack (Cleanly Grouped)
+
+Organize your technology icons into 4 simple buckets so judges can read it instantly:
+
+- **Satellite & Spatial:** NASA FIRMS API, ESA WorldCover, PostGIS Spatial DB, GeoPandas
+- **AI & Analytics:** Python 3.11, XGBoost Machine Learning, Scikit-learn, ST-DBSCAN
+- **Backend & Pipeline:** FastAPI, Redis, Docker, ReportLab (PDF Engine)
+- **Frontend Dashboard:** Next.js 16, TypeScript, MapLibre GL, Tailwind CSS
 
 ---
 
 ### Part 2: Bottom-Left 4-Step Methodology Chevrons
 
-Replace the text inside your 4 chevron boxes with these punchy, technical engineering steps:
+Replace the text inside your 4 chevron boxes with clear, action-oriented engineering steps:
 
 - **Chevron 01:**
-  - **Header:** `01. Ingestion & Sovereign Geofencing`
-  - **Body Text:** Autonomous 5-min polling daemon across VIIRS (375m) & MODIS (1km); filters points via Survey of India sovereign territorial polygon.
-
+  - **Title:** `01. Ingest & Geofence`
+  - **Text:** Automatically pull NASA satellite feeds every 5 mins and filter within Indian sovereign borders.
 - **Chevron 02:**
-  - **Header:** `02. ST-DBSCAN & 14-D Feature Fusion`
-  - **Body Text:** Groups multi-pass points ($arepsilon=1500	ext{m}, \Delta t=24	ext{h}$); extracts 14-D matrix (Peak/Mean FRP, Land Cover %, Facility Distance, Diurnal Ratio).
-
+  - **Title:** `02. Cluster & Context`
+  - **Text:** Group multi-pass heat points into single events and enrich with 10m land-cover and plant boundary data.
 - **Chevron 03:**
-  - **Header:** `03. Calibrated ML & 90-Day Baselines`
-  - **Body Text:** Platt-scaled XGBoost ($ECE < 3.2\%$) classifies 6 combustion types; computes 90-day Gaussian facility baselines ($Z = rac{	ext{FRP}-\mu}{\sigma}, N \ge 10$).
-
+  - **Title:** `03. Classify & Baseline`
+  - **Text:** Classify combustion source using AI and compare against 90-day plant baselines to catch abnormal anomalies.
 - **Chevron 04:**
-  - **Header:** `04. Tactical UI, XAI & Forensic PDF`
-  - **Body Text:** Renders MapLibre radar (camera offset $[-180, 0]$), TreeSHAP decision drivers, grounded RAG AI chat, and SHA-256 checksummed vector PDF briefs.
+  - **Title:** `04. Alert & Report`
+  - **Text:** Display on live tactical map, dispatch real-time alerts, and generate automated PDF incident dossiers.
 
 ---
 
-### Part 3: Right-Side Flowchart (1-to-1 Box Text Replacements)
+### Part 3: Right-Side Workflow Flowchart (Step-by-Step Execution)
 
-Keep all your existing flowchart shapes and connectors exactly as they are. Just update the text inside each step:
+Update the text inside your flowchart boxes:
 
-```text
-[ START ]
-   │
-   ▼
-[ Step 1: Ingest NASA FIRMS Telemetry (VIIRS & MODIS NRT Data) ]
-   │
-   ▼
-[ Step 2: Apply Survey of India Sovereign Territorial Geofence ]
-   │
-   ▼
-[ Step 3: ST-DBSCAN Spatio-Temporal Clustering (1500m / 24h Window) ]
-   │
-   ▼
-[ Step 4: Context Extraction (14-D Features: Land Cover, Zoning, Facility Proximity) ]
-   │
-   ▼
-< Decision Diamond: Thermal Cluster Formed? >
-   ├───> [ No ] ───> [ Log Routine Background / Await Next Polling Cycle ]
-   │
-   └───> [ Yes ]
-           │
-           ▼
-[ Step 5: Execute Platt-Calibrated XGBoost (6 Classes) & 90-Day Baseline Engine (Z-Scores) ]
-           │
-           ▼
-[ Step 6: Generate Thermal Intelligence Package (Class + Probability + Anomaly Tier + TreeSHAP) ]
-           │
-           ▼
-[ Step 7: Render Tactical Radar Map & Dispatch Alerts ]
-           │
-     ┌─────┴──────────────────┬─────────────────────┬──────────────────┐
-     ▼                        ▼                     ▼                  ▼
-[ Thermo News ]        [ Alert Queue ]       [ Grounded Chat ]   [ SHA-256 PDF ]
-(24h Bulletins)        (Critical/Abnormal)   (Active Context)    (Forensic Brief)
-     └─────┬──────────────────┴─────────────────────┴──────────────────┘
-           │
-           ▼
-        [ END ]
-```
-
----
-
-### Part 4: 30-Second Speaker Pitch Cue for Slide 3
-> *"Moving to our technical approach: our system is built on a resilient geospatial stack powered by PostGIS, FastAPI, and Next.js 16. The pipeline begins with autonomous 5-minute multi-sensor polling and sovereign boundary filtering. Observations are clustered using ST-DBSCAN and enriched into a 14-dimensional feature vector. From there, our Platt-calibrated XGBoost classifier predicts the exact combustion source while our empirical 90-day baseline engine computes statistical Z-score anomalies. Finally, operators receive real-time tactical radar visualization, TreeSHAP decision drivers, and SHA-256 signed forensic PDF briefs for enforcement."*
+1. **Step 1:** `Start: Satellite Pass Detects Thermal Hotspots Across India`
+2. **Step 2:** `Filter Data: Remove Non-Sovereign Passes Outside Indian Territory`
+3. **Step 3:** `Cluster Observations: Group Nearby Detections into a Single Fire Event`
+4. **Step 4:** `Context Fusion: Add Land Cover (Farm / Forest / Urban) and Plant Distance`
+5. **Decision Diamond:** `Is Fire Detected?`
+   - *No:* `Log Normal Background & Await Next Satellite Pass`
+   - *Yes:* Continue to Step 6
+6. **Step 6:** `AI Classification & Baseline Check: Identify Fire Type & Check for Abnormal Heat Spike`
+7. **Step 7:** `Output Intelligence: Assign Severity (Critical / Abnormal / Normal)`
+8. **Step 8 (Action Dispatch):**
+   - `[Live Map Radar]` $ightarrow$ View exact location and heat footprint
+   - `[Thermo News]` $ightarrow$ Real-time public intelligence bulletin
+   - `[Risk Alerts]` $ightarrow$ Priority notification to authorities
+   - `[PDF Report]` $ightarrow$ Download forensic brief for enforcement
+9. **End:** `Continuous 24/7 Monitoring Cycle`
 
 ---
 
 ## Slide 4: Feasibility, Viability & Potential Impact
-*(Awaiting your Slide 4 screenshot or text for the same 1-to-1 polish)*
+*(Ready for next slide upload)*
+
+---
+
+## Slide 5: Technology Stack & Novelty
+*(Ready for next slide upload)*
+
+---
+
+## Slide 6: Conclusion & Deliverables
+*(Ready for next slide upload)*
