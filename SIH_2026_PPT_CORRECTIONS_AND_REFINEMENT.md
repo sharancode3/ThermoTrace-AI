@@ -192,10 +192,50 @@ Your existing Slide 4 layout (**5 Feasibility Cards on Top, Challenges vs Soluti
 
 ---
 
-## Slide 5: Technology Stack & Novelty
-*(Ready for next slide upload)*
+## Slide 5: Impact and Benefits (1-to-1 Text Replacements)
+
+Your existing Slide 5 layout (**Text on the Left, 4-Tier Pyramid on the Right**) is visually strong. Below are the **exact text enhancements** to make each of your 4 impact pillars punchy, concrete, and high-scoring.
 
 ---
 
-## Slide 6: Conclusion & Deliverables
+### Part 1: Left-Side Text Replacements (Keep Your 4 Pillars)
+
+#### 04. ENVIRONMENTAL CARE (Top Tier)
+- **Target Audience:** Central & State Pollution Control Boards (CPCB / SPCBs) & Forest Dept.
+- **Key Impact:** 24/7 automated monitoring of seasonal crop stubble burning, forest wildfires, and illegal greenhouse emissions with audit-ready forensic PDF evidence for environmental law enforcement.
+
+---
+
+#### 03. ECONOMIC SAVINGS (Third Tier)
+- **Target Audience:** Industrial Plant Operators & Government Regulatory Bodies.
+- **Key Impact:** Eliminates expensive physical inspection patrols and helicopter surveys; early fire containment prevents multi-crore asset destruction and minimizes business downtime.
+
+---
+
+#### 02. PUBLIC SAFETY (Second Tier)
+- **Target Audience:** State Disaster Management Authorities (SDMA), Fire Services & NDRF.
+- **Key Impact:** Instantly pinpoints exact GPS coordinates, fire radiative power (MW), and perimeter spread, enabling emergency teams to mobilize fire tenders up to 3x faster.
+
+---
+
+#### 01. INDUSTRIAL SECURITY (Base Tier)
+- **Target Audience:** Petroleum Refineries, Petrochemical Complexes & Power Plants.
+- **Key Impact:** Detects hazardous pipeline ruptures, uncontained flare surges, and thermal anomalies early, preventing catastrophic industrial explosions and protecting workforce lives.
+
+---
+
+### Part 2: Right-Side Pyramid (Keep Your Exact Graphic Shapes)
+- **Top Tier (Dark Blue):** `04. ENVIRONMENTAL CARE`
+- **Third Tier (Light Blue):** `03. ECONOMIC SAVINGS`
+- **Second Tier (Green):** `02. PUBLIC SAFETY`
+- **Base Tier (Yellow):** `01. INDUSTRIAL SECURITY`
+
+---
+
+### Part 3: 30-Second Speaker Pitch Cue for Slide 5
+> *"On impact and benefits: ThermoTrace AI delivers value across four critical national pillars. For Industrial Security, it catches hazardous flare surges and leaks before they become fatal explosions. For Public Safety, it gives disaster teams instant GPS coordinates and fire spread data for rapid response. Economically, it saves crores by replacing manual aerial patrols with automated 24/7 satellite watch. And for the Environment, it provides CPCB with tamper-proof evidence to monitor stubble burning and illegal industrial emissions."*
+
+---
+
+## Slide 6: Conclusion, Team Matrix & Deliverables
 *(Ready for next slide upload)*
