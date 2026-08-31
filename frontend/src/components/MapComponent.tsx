@@ -66,6 +66,8 @@ export default function MapComponent({
   selectedEventId,
   startTime,
   endTime,
+  classification,
+  anomalyTier,
   showFacilities = false,
   showObservations = false,
 }: { 
@@ -73,6 +75,8 @@ export default function MapComponent({
   selectedEventId?: string | null;
   startTime?: string;
   endTime?: string;
+  classification?: string;
+  anomalyTier?: string;
   showFacilities?: boolean;
   showObservations?: boolean;
 }) {
@@ -104,7 +108,7 @@ export default function MapComponent({
     const timer = window.setTimeout(() => {
       setError(null);
       Promise.all([
-        fetchGisEvents(viewport, { start_time: startTime, end_time: endTime }),
+        fetchGisEvents(viewport, { start_time: startTime, end_time: endTime, classification, anomaly_tier: anomalyTier }),
         showFacilities ? fetchGisFacilities(viewport) : Promise.resolve(null),
         showObservations ? fetchGisObservations(viewport, { start_time: startTime, end_time: endTime }) : Promise.resolve(null),
       ])
@@ -112,7 +116,7 @@ export default function MapComponent({
         .catch((err) => { console.error("Failed to fetch GIS events:", err); setError(err.message); });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [viewport, startTime, endTime, showFacilities, showObservations]);
+  }, [viewport, startTime, endTime, classification, anomalyTier, showFacilities, showObservations]);
 
   // Compute selected event feature
   const selectedFeature = useMemo(() => {
@@ -174,6 +178,8 @@ export default function MapComponent({
         mapStyle={mapType === "roadmap" ? GOOGLE_ROADMAP : GOOGLE_HYBRID}
         minZoom={3}
         maxZoom={20}
+        role="region"
+        aria-label="Interactive thermal map"
         interactiveLayerIds={["events-circle-layer"]}
         onClick={(e) => {
           if (e.features && e.features.length > 0) {

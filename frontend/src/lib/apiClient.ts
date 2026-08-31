@@ -2,9 +2,10 @@ const API_BASE_URL = typeof window !== "undefined" ? "/api/v1" : (process.env.IN
 export type Viewport = { west: number; south: number; east: number; north: number; zoom: number };
 export type GeoFeature = { type: "Feature"; geometry: { type: "Point"; coordinates: [number, number] }; properties: Record<string, any> };
 export type GeoCollection = { type: "FeatureCollection"; features: GeoFeature[] };
+export type EventFilters = { start_time?: string; end_time?: string; classification?: string; anomaly_tier?: string };
 function query(params: Record<string, string | number | undefined>) { const values = new URLSearchParams(); Object.entries(params).forEach(([key, value]) => value !== undefined && values.set(key, String(value))); return values.toString(); }
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> { const suffix = query(params); const response = await fetch(`${API_BASE_URL}${path}${suffix ? `?${suffix}` : ""}`); if (!response.ok) throw new Error(`Request failed (${response.status})`); return response.json(); }
-export function fetchGisEvents(viewport: Viewport, filters: { start_time?: string; end_time?: string } = {}) { return get<GeoCollection>("/gis/events", { ...viewport, ...filters }); }
+export function fetchGisEvents(viewport: Viewport, filters: EventFilters = {}) { return get<GeoCollection>("/gis/events", { ...viewport, ...filters }); }
 export function fetchGisFacilities(viewport: Viewport) { return get<GeoCollection>("/gis/facilities", viewport); }
 export function fetchGisObservations(viewport: Viewport, filters: { start_time?: string; end_time?: string } = {}) { return get<GeoCollection>("/gis/observations", { ...viewport, ...filters }); }
 export function fetchEventDetail(eventId: string) { return get<any>(`/events/${encodeURIComponent(eventId)}`); }

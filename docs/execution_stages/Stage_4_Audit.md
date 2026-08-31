@@ -1,27 +1,14 @@
-# Stage 4 Audit
+# Stage 4 audit
 
-Date: 2026-08-30
+Measured on the `stage4-apis` branch on 2026-08-31.
 
-## Measured current state
-
-- `/monitor` preserves the existing MapLibre implementation with Google Roadmap and Hybrid raster base maps.
-- The original monitor client loaded all GIS events with no viewport parameters; the staged API branch provides viewport, time, facility, observation, history, and comparison endpoints.
-- URL state already uses `eventId` and reconstructs the selected event on refresh.
-- The existing detail panel displayed Stage 1–3 intelligence but did not provide the required four-tab Stage 4 investigation workflow or real observation history.
-- `/facilities` and `/reports` are intentionally placeholder surfaces; Stage 4 does not expand them.
-- Frontend dependencies are absent in this workspace (`eslint` and `next` commands cannot be resolved), so browser build and Playwright execution cannot be measured locally.
-
-## Working
-
-- Google base-map implementation, selection URL state, backend event detail, and staged Stage 4 GIS/history/comparison endpoints.
-
-## Missing before Stage 4 integration
-
-- Debounced viewport-aware client requests.
-- Server-backed timeline filter and backed layer controls.
-- Investigation Timeline and Earlier-vs-Now UI.
-
-## Duplicated / broken
-
-- No duplicate map instance was found. The original map had both GeoJSON circles and one HTML marker for every event, which is not suitable for a large viewport response.
-- Local frontend validation is blocked by missing installed dependencies.
+| Area | Status | Measured fact |
+| --- | --- | --- |
+| Monitor route | Working | `/monitor` renders the existing MapLibre canvas with the Google raster basemap. |
+| GIS events | Working | The map requests `/api/v1/gis/events` after a 350 ms settled-viewport debounce, passing `west`, `south`, `east`, `north`, and `zoom`. |
+| GIS layers | Working | Facilities and FIRMS observations are already conditional viewport-scoped layers. FIRMS data is suppressed server-side below zoom 9. |
+| Event selection | Working | Map click updates `eventId` in the URL and opens the investigation drawer. |
+| Investigation | Working | The drawer consumes detail, observation-history, and comparison endpoints. It has Overview, Timeline, Geographic Context, and Historical Baseline tabs. |
+| Historical area comparison | Missing contract field | The current comparison endpoint returns FRP and brightness deltas, but no earlier/current area or area delta. The frontend must not fabricate it. |
+| Query caching | Missing | React Query is described by the architecture but is not installed in the existing frontend. |
+| Duplicate rendering | Broken | Event GeoJSON circles and one React marker per event are both currently rendered, creating unnecessary DOM work. |

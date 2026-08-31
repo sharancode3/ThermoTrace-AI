@@ -1,31 +1,35 @@
-# Stage 4 Implementation Report
-
-Date: 2026-08-30
-Branch: `stage4-apis`
-Implementation commit: `52571be0e8409790df9728b6878d33db55a923a0`
+# Stage 4 implementation report
 
 ## Implemented surfaces
 
-- `/monitor`: debounced viewport-aware event requests, current/past time windows, and backed layer controls.
-- Event investigation: responsive right-side desktop drawer and mobile bottom sheet with Overview, Timeline, Geographic Context, and Historical Baseline tabs.
+- `/monitor`: viewport-scoped thermal event workspace with monitor-window, severity, classification, facility, and FIRMS controls.
+- Event investigation: existing URL deep-link (`?eventId=`) and four-tab drawer retained.
 
-## GIS layers and endpoints
+## API endpoints consumed
 
-- Thermal events: `GET /api/v1/gis/events` with `west`, `south`, `east`, `north`, `zoom`, and observation-time bounds.
-- Facilities: `GET /api/v1/gis/facilities`, requested only when its layer is enabled.
-- FIRMS observations: `GET /api/v1/gis/observations`, requested only when enabled; the API returns no points below its supported zoom.
-- Investigation: `GET /api/v1/events/{id}`, `/history`, and `/compare`.
+- `GET /api/v1/gis/events` with the live backend's `west`, `south`, `east`, `north`, `zoom`, time, classification, and anomaly-tier parameters.
+- Existing event detail, history, comparison, facilities, and observations endpoints remain the only data sources.
 
-## Behaviour
+## Viewport and layers
 
-- The map retains the established Google Roadmap/Hybrid base map and MapLibre instance.
-- Map movement waits 350 ms after movement ends before fetching; spatial and temporal filtering occur server-side.
-- Event selection continues to use `?eventId=…`; refresh reconstructs the drawer.
-- Timeline renders only actual linked observations and shows `INSUFFICIENT DATA` when none are available.
-- Earlier-vs-Now renders only API-provided earlier/current satellite observations and ΔFRP/brightness; it clearly avoids causal claims. Area delta is not shown because the current comparison endpoint does not return area measurements.
+- The existing Google base map is preserved.
+- Event fetching remains debounced after map movement and backend-culls to the viewport.
+- Severity and classification filters are sent to the backend rather than applied to a national client-side dataset.
+- Facility and FIRMS layers only request data when enabled.
 
-## Verification and limitations
+## Investigation and history
 
-- Static review: passed `git diff --check`.
-- Frontend lint/build and Playwright are blocked in this checkout because frontend dependencies are not installed (`eslint` and `next` cannot be resolved). No passing test result is claimed.
-- No new APIs, facilities-management work, Stage 5 features, or simulated intelligence were added.
+- Event selection remains URL-driven and the drawer is responsive: side drawer on desktop and bottom sheet on mobile.
+- The drawer keeps API-provided event telemetry, observation ordering, geographic context, baseline values, and Earlier vs Now FRP/brightness comparison.
+- Area deltas are not displayed because the implemented comparison API does not return them.
+
+## Known limitations
+
+- React Query and Zustand are not present in the dependency set, so this incremental change preserves the existing React-state data flow.
+- Full footprint geometry and area comparison require backend payload support; current GIS events and event boundaries are points.
+- Verification has not included a running browser session or Playwright because this change was made in a restricted workspace session.
+
+## Git
+
+- Branch inspected: `stage4-apis`.
+- No commit, push, merge, reset, or other Git mutation was performed.
