@@ -40,3 +40,7 @@ data/raw/landcover/
 
 
 backend/data/reports/*.pdf
+
+backend/data/raw/
+backend/data/purged_events_backup.csv
+purged_events_backup.csv

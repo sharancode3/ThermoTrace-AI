@@ -18,7 +18,7 @@ from app.db.models import (
     ThermalObservation, IngestionJob, ThermalEvent, 
     IndustrialFacility, ThermoNews, EventObservation
 )
-from app.domain.geocoding import resolve_indian_location
+from app.domain.geocoding import resolve_indian_location, is_within_india_landmass
 from app.domain.anomaly import process_all_intelligence
 
 INDIA_BBOX = "68,6,97,37"
@@ -188,6 +188,9 @@ def cluster_observations_into_events(session: Session):
             fac_name = fac[1] if fac else None
             dist_m = float(fac[2]) if fac else None
             
+            # Skip creating events for points outside Indian sovereign landmass
+            if not is_within_india_landmass(lat, lon):
+                continue
             geo = resolve_indian_location(lat, lon, fac_name)
             
             short_id = f"EVT-IN-{geo['state'][:3].upper()}-{str(uuid.uuid4())[:8].upper()}"
