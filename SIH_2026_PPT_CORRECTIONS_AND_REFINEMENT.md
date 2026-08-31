@@ -8,6 +8,43 @@
 
 ---
 
+## Slide 1: Title Page (1-to-1 Text Replacements)
+
+### 1. Evaluator Focus & First Impression
+- Evaluators look at Slide 1 to verify problem alignment and notice project branding.
+- **Current Rating:** `8.0 / 10`
+- **Key Polish Points:**
+  1. Add prominent **Project Title & Tagline** (`ThermoTrace AI`).
+  2. Clean up uneven spacing around hyphens and colons.
+  3. Include the **Evaluating Agency** (`NTRO / CPCB`) to immediately establish domain alignment.
+
+---
+
+### 2. Exact 10/10 Slide 1 Text Replacements (Keep Your Layout)
+
+#### A. Main Project Header (Top / Center):
+- **Project Name:** `ThermoTrace AI`
+- **Tagline:** `Autonomous Sovereign Satellite Thermal Intelligence & Industrial Anomaly Monitoring Platform`
+
+---
+
+#### B. Bulleted Information Block (Left Side):
+
+- **Problem Statement ID:** `26162`
+- **Problem Statement Title:** `AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources Using NASA FIRMS, OSM & Satellite Data`
+- **Theme:** `Disaster Management`
+- **PS Category:** `Software (Deep-Tech Geospatial AI)`
+- **Evaluating Agency:** `National Technical Research Organisation (NTRO) / CPCB`
+- **Team ID:** `[Insert Your Team ID]`
+- **Team Name:** `Deadlock`
+
+---
+
+#### C. 15-Second Speaker Pitch Cue for Slide 1
+> *"Respected Evaluators, we are Team Deadlock presenting ThermoTrace AI for Problem Statement 26162: AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources. ThermoTrace AI is an automated, sovereign-compliant geospatial intelligence platform designed to eliminate false alarms, classify multi-source combustion, and detect critical industrial anomalies in near-real-time across India."*
+
+---
+
 ## Slide 2: Proposed Solution (1-to-1 Text Replacements)
 
 ### Part 1: Left Table Text Replacements (Keep Your 6 Rows)
