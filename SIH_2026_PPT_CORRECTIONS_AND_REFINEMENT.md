@@ -60,70 +60,51 @@
 
 ---
 
-#### C. Right Column: PowerPoint Architecture Flowchart Specification
+#### C. Right Column: System Architecture Diagram
 
-Use standard PowerPoint / Figma shapes following this exact vertical hierarchy:
+```mermaid
+flowchart TD
+    subgraph SATELLITE_SOURCES["1. SATELLITE & GEOSPATIAL DATA SOURCES"]
+        FIRMS["NASA FIRMS NRT Feed<br/>(VIIRS NOAA-20/21/SNPP 375m & MODIS 1km)"]
+        LAND["ESA WorldCover 10m Land Use<br/>& Sentinel-2 MSI Optical Context"]
+        FAC["27 Strategic Industrial Complexes<br/>(Refineries, Power, Steel Works)"]
+    end
 
-```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [LAYER 1: DATA SOURCES] (Light Blue Header)                                            │
-│ • NASA FIRMS Telemetry (VIIRS NOAA-20/21/SNPP 375m + MODIS Terra/Aqua 1km)             │
-│ • ESA WorldCover 10m Land Use + Sentinel-2 MSI Level-2A BOA Optical Imagery            │
-│ • 27 Strategic Indian Industrial Complex Registries (Refineries, Power, Steel)         │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [LAYER 2: INGESTION & SOVEREIGN GEOFENCING] (Navy Outline)                             │
-│ Autonomous 5-Min Poller Daemon ──> Survey of India Sovereign Boundary Filter           │
-│ (Discards Transboundary Non-Sovereign Passes; Preserves Maritime & Coastal Zones)      │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [LAYER 3: SPATIO-TEMPORAL CLUSTERING] (Orange Outline)                                 │
-│ ST-DBSCAN Clustering Engine (Spatial: ε = 1500m | Temporal Window: Δt = 24 Hours)      │
-│ (Computes Centroids, Multi-Pass Radiative FRP [MW], Duration, and Diurnal Ratios)      │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [LAYER 4: CANONICAL 14-D FEATURE EXTRACTION & CONTEXT FUSION]                          │
-│ Fuses FRP Metrics + Land Cover % + Zoning + 5km Buffer + Sentinel-2 MSI Overpass       │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                     ┌──────────────────────┴──────────────────────┐
-                     ▼                                             ▼
-┌──────────────────────────────────────────┐  ┌──────────────────────────────────────────┐
-│ [LAYER 5A: CALIBRATED ML CLASSIFIER]     │  │ [LAYER 5B: 90-DAY EMPIRICAL BASELINES]   │
-│ Platt-Scaled / Isotonic XGBoost v1.1     │  │ Rolling Gaussian Distribution (N >= 10)  │
-│ (ECE < 3.2% | 6 Combustion Categories)   │  │ (Z = [Peak FRP - μ] / σ Anomaly Tiers)   │
-└────────────────────┬─────────────────────┘  └────────────────────┬─────────────────────┘
-                     │                                             │
-                     └──────────────────────┬──────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [LAYER 6: TIER 2 ON-DEMAND COMPUTE & XAI] (Purple Outline)                             │
-│ Exact TreeSHAP Feature Decision Drivers + Epistemic AI Grounding Engine                │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [LAYER 7: OPERATIONAL APPLICATION LAYER] (Emerald Green Header)                        │
-│ • MapLibre GL Tactical Radar (Dynamic Camera Offset [-180, 0] + 9-Icon Symbology)      │
-│ • Real-Time Thermo News Feed + Server-Sent Events (SSE) Alert Queue                    │
-│ • Grounded Zero-Hallucination AI Tactical Chat + SHA-256 Provenance PDF Dossiers       │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [LAYER 8: SPATIAL STORAGE]                                                             │
-│ PostgreSQL 16 + PostGIS 3.4 Spatial Database (Spatial GIST Indexes)                    │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+    subgraph INGESTION["2. INGESTION & SOVEREIGN GEOFENCING"]
+        DAEMON["Autonomous 5-Min Polling Daemon"] --> GEOFENCE{"Survey of India<br/>Sovereign Geofence"}
+        GEOFENCE -->|Transboundary| DISCARD["Discard Non-Sovereign Point"]
+        GEOFENCE -->|Sovereign Territory| CLUSTER["ST-DBSCAN Clustering Engine<br/>(eps=1500m, time_window=24h)"]
+    end
+
+    FIRMS --> DAEMON
+    LAND --> CLUSTER
+    FAC --> CLUSTER
+
+    subgraph ANALYTICS["3. ANALYTICAL ML & BASELINE ENGINE"]
+        CLUSTER --> FEAT["14-D Feature Extraction & Context Fusion"]
+        FEAT --> XGB["Calibrated XGBoost v1.1<br/>(Platt-Scaled, ECE < 3.2%)"]
+        FEAT --> BASE["90-Day Empirical Baselines<br/>(Z = [Peak FRP - μ] / σ, N >= 10)"]
+        XGB --> TIER2["Tier 2 On-Demand Compute Engine<br/>(TreeSHAP Decision Drivers & XAI)"]
+        BASE --> TIER2
+    end
+
+    subgraph APPS["4. DEFENSE-GRADE APPLICATION LAYER"]
+        TIER2 --> RADAR["MapLibre GL Tactical Radar<br/>(Dynamic Camera Offset [-180, 0] & 9-Icon Symbology)"]
+        TIER2 --> NEWS["Real-Time Thermo News & SSE Alert Queue"]
+        TIER2 --> RAG["Grounded Zero-Hallucination AI Chat"]
+        TIER2 --> PDF["Forensic PDF Dossiers (SHA-256 Checksummed)"]
+    end
+
+    subgraph STORAGE["5. SPATIAL DATABASE LAYER"]
+        RADAR --> POSTGIS[("PostgreSQL 16 + PostGIS 3.4 Spatial Database")]
+        NEWS --> POSTGIS
+        PDF --> POSTGIS
+    end
 ```
 
----
+> **Vector Diagram Ready for PowerPoint:**  
+> A high-resolution vector diagram is saved at `docs/images/architecture_slide2.svg` which can be inserted directly into PowerPoint as a vector graphic picture.
+
 
 #### D. Bottom Highlight Banner: 3 Core Uniqueness & Innovation Pillars
 
