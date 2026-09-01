@@ -86,3 +86,16 @@ def test_facility_intelligence_nonexistent():
     random_id = str(uuid.uuid4())
     res = client.get(f"/api/v1/facilities/{random_id}/intelligence")
     assert res.status_code == 404
+
+
+def test_facility_report_download_with_dual_timestamp_and_immutability():
+    """Verify GET /api/v1/facilities/{id}/report/download generates real PDF with dual timestamp."""
+    list_res = client.get("/api/v1/facilities?page=1&page_size=5")
+    assert list_res.status_code == 200
+    fac_id = list_res.json()["items"][0]["id"]
+
+    res = client.get(f"/api/v1/facilities/{fac_id}/report/download?window_days=30")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "application/pdf"
+    assert "X-Report-SHA256" in res.headers
+    assert len(res.content) > 1000

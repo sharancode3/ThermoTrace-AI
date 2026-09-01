@@ -1,4 +1,10 @@
 import re
+import uuid
+import os
+import io
+import hashlib
+from pathlib import Path
+import re
 """Strategic Industrial Registry and On-Demand Facility Intelligence Endpoints."""
 import logging
 import time
@@ -473,7 +479,7 @@ def _generate_facility_pdf_bytes(intel_dict: Dict[str, Any]) -> bytes:
         ],
         [
             Paragraph(f"Sector: <b>{fac['sector_category']}</b> | Operator: <b>{fac.get('operator_name') or 'Independent'}</b> | Sovereign Territory: <b>{fac['state']}, India</b>", subtitle_style),
-            Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", ParagraphStyle("HdrR3", fontName="Helvetica", fontSize=7.5, textColor=subtext, alignment=2))
+            Paragraph(f"Generated: {(datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime('%d %b %Y, %H:%M IST')} | {datetime.now(timezone.utc).strftime('%d %b %Y, %H:%M UTC')}", ParagraphStyle("HdrR3", fontName="Helvetica", fontSize=7.5, textColor=subtext, alignment=2))
         ]
     ]
     hdr_table = Table(header_data, colWidths=[doc.width * 0.7, doc.width * 0.3])
@@ -655,15 +661,56 @@ def download_facility_report(
     window_days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
 ):
-    """Download dynamically rendered PDF Facility Dossier with embedded charts."""
-    intel_response = get_facility_intelligence(facility_id, window_days, db)
-    pdf_bytes = _generate_facility_pdf_bytes(intel_response.dict())
+    """Download the generated forensic PDF dossier for the selected facility."""
+    facility = db.query(IndustrialFacility).filter(IndustrialFacility.id == facility_id).first()
+    if not facility:
+        raise HTTPException(status_code=404, detail="Facility not found")
+
+    intel = get_facility_intelligence(facility_id, window_days, db)
+    pdf_bytes = _generate_facility_pdf_bytes(intel.dict())
     
-    fac_name_clean = re.sub(r"[^A-Za-z0-9_-]", "_", intel_response.facility.name)
-    filename = f"ThermoTrace_Facility_Dossier_{fac_name_clean}_{window_days}d.pdf"
+    # Save to immutable storage and register in reports table
+    sha256_val = hashlib.sha256(pdf_bytes).hexdigest()
+    output_dir = Path(os.getenv("REPORTS_DIR", "backend/data/reports"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_public_id = f"FAC-RPT-{str(facility.id)[:8].upper()}"
+    filename = f"ThermoTrace_Facility_{facility.facility_code}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M')}.pdf"
+    pdf_path = output_dir / filename
     
+    with open(pdf_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    # Check or create Report record
+    existing_event = db.query(ThermalEvent).filter(ThermalEvent.associated_facility_id == facility.id).first()
+    if existing_event:
+        event_ref_id = existing_event.id
+    else:
+        first_evt = db.query(ThermalEvent).first()
+        event_ref_id = first_evt.id if first_evt else None
+
+    if event_ref_id:
+        existing_rpt = db.query(Report).filter(Report.report_id == report_public_id).first()
+        if not existing_rpt:
+            new_rpt = Report(
+                id=uuid.uuid4(),
+                report_id=report_public_id,
+                event_id=event_ref_id,
+                title=f"Strategic Dossier: {facility.name} ({facility.facility_code})",
+                included_sections=["facility_overview", "baseline_audit", "historical_events", "epistemic_brief"],
+                storage_path=str(pdf_path),
+                download_url=f"/api/v1/facilities/{facility.id}/report/download?window_days={window_days}",
+                sha256_hash=sha256_val,
+                generation_status="COMPLETED",
+                generated_at=datetime.now(timezone.utc),
+            )
+            db.add(new_rpt)
+            db.commit()
+
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "X-Report-SHA256": sha256_val,
+        },
     )
