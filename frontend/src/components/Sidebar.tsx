@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Flame, Building2, FileText, LayoutDashboard, Bell, 
-  Newspaper, BookOpen, Radio, Sparkles
+  Newspaper, BookOpen, BarChart2, PieChart, Radio, Sparkles
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchNotifications } from "@/lib/apiClient";

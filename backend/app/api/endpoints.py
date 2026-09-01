@@ -959,3 +959,89 @@ def trigger_firms_poll(force: bool = False, db: Session = Depends(get_db)):
     """
     from app.domain.firms_poller import poll_firms_foreground_cycle
     return poll_firms_foreground_cycle(db, force=force)
+
+@router.get("/analytics/national-summary", tags=["Analytics"])
+def get_national_summary(db: Session = Depends(get_db)):
+    """
+    Real-Time National Thermal Intelligence Breakdown:
+    - Pan-India composite stats (Event count, Calibrated confidence, Class distribution)
+    - State-wise active event leaderboards and breakdown
+    - Near-Real-Time VIIRS & MODIS telemetry metrics
+    """
+    import collections
+    import numpy as np
+    from app.domain.geocoding import resolve_indian_location
+
+    events = db.query(ThermalEvent).filter(ThermalEvent.lifecycle_status != "CLOSED").all()
+    total_count = len(events)
+    
+    if total_count == 0:
+        return {
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "total_active_events": 0,
+            "mean_confidence_pct": 0.0,
+            "median_confidence_pct": 0.0,
+            "pan_india_breakdown": {},
+            "state_breakdown": []
+        }
+
+    confidences = []
+    class_counts = collections.Counter()
+    states_dict = collections.defaultdict(lambda: {
+        "event_count": 0,
+        "classifications": collections.Counter(),
+        "total_frp": 0.0,
+        "max_frp": 0.0,
+        "confidences": []
+    })
+
+    for e in events:
+        c = e.classification or "OTHER_UNCERTAIN"
+        conf = float(e.classification_confidence or 0.85)
+        frp = float(e.peak_frp_mw or 0.0)
+        
+        class_counts[c] += 1
+        confidences.append(conf)
+
+        lat, lon = float(e.latitude), float(e.longitude)
+        geo = resolve_indian_location(lat, lon, None, session=db)
+        state_name = geo.get("state") or "Other Regions"
+
+        st = states_dict[state_name]
+        st["event_count"] += 1
+        st["classifications"][c] += 1
+        st["total_frp"] += frp
+        st["max_frp"] = max(st["max_frp"], frp)
+        st["confidences"].append(conf)
+
+    state_list = []
+    for st_name, data in sorted(states_dict.items(), key=lambda x: x[1]["event_count"], reverse=True):
+        st_total = data["event_count"]
+        state_list.append({
+            "state": st_name,
+            "event_count": st_total,
+            "percentage_of_national": round((st_total / total_count) * 100, 1),
+            "mean_frp_mw": round(data["total_frp"] / max(1, st_total), 2),
+            "max_frp_mw": round(data["max_frp"], 2),
+            "mean_confidence": round(float(np.mean(data["confidences"])) * 100, 1),
+            "classifications": {
+                k: {
+                    "count": v,
+                    "percentage": round((v / st_total) * 100, 1)
+                } for k, v in data["classifications"].most_common()
+            }
+        })
+
+    return {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "total_active_events": total_count,
+        "mean_confidence_pct": round(float(np.mean(confidences)) * 100, 2),
+        "median_confidence_pct": round(float(np.median(confidences)) * 100, 2),
+        "pan_india_breakdown": {
+            k: {
+                "count": v,
+                "percentage": round((v / total_count) * 100, 1)
+            } for k, v in class_counts.most_common()
+        },
+        "state_breakdown": state_list
+    }

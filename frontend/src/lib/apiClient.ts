@@ -346,3 +346,8 @@ export async function fetchFacilityIntelligence(
     window_days: windowDays,
   });
 }
+
+
+export async function fetchNationalAnalytics(): Promise<any> {
+  return get<any>('/api/v1/analytics/national-summary');
+}
