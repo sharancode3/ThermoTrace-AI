@@ -125,6 +125,60 @@ def get_evidence_strength(obs_count: int, hist_days: int, has_facility: bool, fa
         return "LIMITED", f"{obs_text}, {fac_text}"
 
 
+def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_associated_fac: bool, state: str = "") -> Dict[str, Any]:
+    """
+    Fine-grained Land-Cover, Industrial Geofence, and Terrain Resolver for Pan-India coordinates.
+    Distinguishes Industrial Zones, Western/Eastern Ghats Forests, Agricultural Deltas, 
+    Urban Agglomerations, and Coastal Scrub/Barren lands.
+    """
+    # 1. Direct Industrial Proximity
+    if dist_to_fac <= 3500.0 or is_associated_fac:
+        return {"pct_urban": 0.80, "pct_cropland": 0.10, "pct_forest": 0.10, "is_ind": 1}
+
+    # 2. Key National Industrial Corridors & Mining Clusters (within 10km buffer)
+    ind_hubs = [
+        {"lat": 13.16, "lon": 80.32}, # Manali/Ennore (TN)
+        {"lat": 11.53, "lon": 79.48}, # Neyveli Lignite (TN)
+        {"lat": 8.76, "lon": 78.18},  # Tuticorin Port & Power (TN)
+        {"lat": 11.79, "lon": 77.80}, # Mettur Thermal Cluster (TN)
+        {"lat": 11.66, "lon": 78.14}, # Salem Steel Complex (TN)
+        {"lat": 12.73, "lon": 77.82}, # Hosur SIPCOT Cluster (TN)
+        {"lat": 22.47, "lon": 70.05}, # Jamnagar Mega-Refinery (GUJ)
+        {"lat": 21.17, "lon": 72.83}, # Hazira Petrochem Corridor (GUJ)
+        {"lat": 20.26, "lon": 86.66}, # Paradeep Petrochem Hub (ODI)
+        {"lat": 22.81, "lon": 70.83}, # Morbi Ceramic Kiln Cluster (GUJ)
+        {"lat": 23.68, "lon": 86.97}, # Asansol-Raniganj Coal & Steel (WB)
+        {"lat": 22.38, "lon": 82.72}, # Korba Smelter & Power (CHH)
+    ]
+    for hub in ind_hubs:
+        d_km = ((lat - hub["lat"])**2 + (lon - hub["lon"])**2)**0.5 * 111.0
+        if d_km <= 10.0:
+            return {"pct_urban": 0.75, "pct_cropland": 0.15, "pct_forest": 0.10, "is_ind": 1}
+
+    # 3. Dense Forest & Hill Ranges (Western Ghats, Nilgiris, Anamalai, Eastern Ghats, Himalayas, Central Forests)
+    if (11.2 <= lat <= 11.7 and 76.4 <= lon <= 77.1) or        (10.1 <= lat <= 10.6 and 76.7 <= lon <= 77.4) or        (10.1 <= lat <= 10.4 and 77.3 <= lon <= 77.8) or        (11.3 <= lat <= 12.2 and 78.1 <= lon <= 78.9) or        (8.3 <= lat <= 9.8 and 77.1 <= lon <= 77.7) or        state in ["Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Assam", "Meghalaya", "Manipur", "Mizoram", "Nagaland", "Tripura", "Sikkim", "Goa", "Andaman & Nicobar Islands"]:
+        return {"pct_urban": 0.05, "pct_cropland": 0.10, "pct_forest": 0.85, "is_ind": 0}
+
+    # 4. Coastal Scrub, Salt Pans & Barren Wastelands (Ramanathapuram, Thoothukudi coast, Kutch)
+    if (8.8 <= lat <= 9.6 and 78.4 <= lon <= 79.4) or (22.5 <= lat <= 24.5 and 68.5 <= lon <= 71.0):
+        return {"pct_urban": 0.35, "pct_cropland": 0.35, "pct_forest": 0.30, "is_ind": 0}
+
+    # 5. Major Urban Centers (Chennai, Coimbatore, Madurai, Trichy, Bangalore, Mumbai, Delhi)
+    urban_centers = [
+        {"lat": 13.08, "lon": 80.27}, {"lat": 11.01, "lon": 76.95},
+        {"lat": 9.92, "lon": 78.12},  {"lat": 10.79, "lon": 78.70},
+        {"lat": 12.97, "lon": 77.59}, {"lat": 19.07, "lon": 72.87},
+        {"lat": 28.61, "lon": 77.20}
+    ]
+    for u in urban_centers:
+        d_km = ((lat - u["lat"])**2 + (lon - u["lon"])**2)**0.5 * 111.0
+        if d_km <= 15.0:
+            return {"pct_urban": 0.85, "pct_cropland": 0.10, "pct_forest": 0.05, "is_ind": 0}
+
+    # 6. Verified Agricultural Cropland Belts
+    return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
+
+
 def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
     event = session.query(ThermalEvent).filter(ThermalEvent.id == event_uuid).first()
     if not event:
@@ -149,24 +203,11 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
         fac_cat = abs(hash(event.primary_land_use)) % 100
 
     state = geo.get("state", "")
-    
-    # Accurate land cover distribution based on sovereign Indian terrain geography
-    if dist_to_fac <= 3500.0 or event.associated_facility_id:
-        pct_urban = 0.80
-        pct_cropland = 0.10
-        pct_forest = 0.10
-        is_ind = 1
-    elif state in ["Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Assam", "Meghalaya", "Manipur", "Mizoram", "Nagaland", "Tripura", "Sikkim", "Goa", "Andaman & Nicobar Islands"]:
-        pct_forest = 0.85
-        pct_cropland = 0.10
-        pct_urban = 0.05
-        is_ind = 0
-    else:
-        # Agricultural stubble / cropland burning dominates non-industrial fires across plains & peninsular India
-        pct_cropland = 0.85
-        pct_forest = 0.10
-        pct_urban = 0.05
-        is_ind = 0
+    lc = resolve_refined_landcover(lat, lon, dist_to_fac, bool(event.associated_facility_id), state=state)
+    pct_urban = lc["pct_urban"]
+    pct_cropland = lc["pct_cropland"]
+    pct_forest = lc["pct_forest"]
+    is_ind = lc["is_ind"]
 
     features = {
         "dist_to_facility": dist_to_fac,
