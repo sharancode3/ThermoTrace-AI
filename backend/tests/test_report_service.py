@@ -1,6 +1,7 @@
 """Unit tests for ReportService."""
 import uuid
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from sqlalchemy.orm import Session
 
 import pytest
@@ -14,6 +15,55 @@ from app.db.models import (
     MlModel,
 )
 from app.services.report_service import ReportService
+
+
+def test_history_context_adds_comparative_statistics_and_patterns():
+    current = SimpleNamespace(
+        first_detected_utc=datetime(2024, 4, 1, tzinfo=timezone.utc),
+        latest_detected_utc=datetime(2024, 4, 1, 1, tzinfo=timezone.utc),
+        peak_frp_mw=30.0,
+    )
+    historical_events = [
+        SimpleNamespace(
+            event_id="TEST-HISTORY-1", first_detected_utc=datetime(2024, 3, 1, tzinfo=timezone.utc),
+            latest_detected_utc=datetime(2024, 3, 1, 1, tzinfo=timezone.utc), peak_frp_mw=10.0,
+            mean_frp_mw=8.0, classification="IND_ROUTINE", anomaly_tier="NORMAL",
+        ),
+        SimpleNamespace(
+            event_id="TEST-HISTORY-2", first_detected_utc=datetime(2024, 3, 11, tzinfo=timezone.utc),
+            latest_detected_utc=datetime(2024, 3, 11, 1, tzinfo=timezone.utc), peak_frp_mw=20.0,
+            mean_frp_mw=15.0, classification="IND_FIRE", anomaly_tier="ABNORMAL",
+        ),
+    ]
+
+    context = ReportService._build_history_context(current, historical_events)
+
+    assert context["current_vs_history_percentile"] == 100.0
+    assert context["current_vs_historical_median_ratio"] == 2.0
+    assert context["history_mean_recurrence_days"] == 10.0
+    assert context["history_classification_counts"] == {"IND_ROUTINE": 1, "IND_FIRE": 1}
+    assert context["history_anomaly_counts"] == {"NORMAL": 1, "ABNORMAL": 1}
+
+
+def test_evidence_quality_rates_coverage_not_model_accuracy():
+    high = ReportService._build_evidence_quality({
+        "observation_count": 5,
+        "history_event_count_90d": 5,
+        "associated_facility_uuid": "facility-1",
+        "baseline_is_statistically_sufficient": True,
+        "classification_confidence": 0.92,
+    })
+    limited = ReportService._build_evidence_quality({
+        "observation_count": 1,
+        "history_event_count_90d": 0,
+        "classification_confidence": 0.5,
+    })
+
+    assert high["evidence_quality_score"] == 8
+    assert high["evidence_quality_level"] == "HIGH"
+    assert limited["evidence_quality_score"] == 0
+    assert limited["evidence_quality_level"] == "LIMITED"
+    assert "Single-observation event" in limited["evidence_quality_reasons"]
 
 
 @pytest.fixture

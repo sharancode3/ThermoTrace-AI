@@ -1,8 +1,11 @@
 import os
+import re
 import uuid
 import hashlib
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -14,6 +17,37 @@ from app.services.report_service import ReportService
 from app.adapters.pdf_renderer import PDFRenderer
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
+
+
+def _report_type_filename(classification: Optional[str]) -> str:
+    return {
+        "IND_FIRE": "Industrial_Fire",
+        "IND_FLARE": "Industrial_Flare",
+        "IND_ROUTINE": "Industrial_Routine",
+        "AGRI_BURN": "Agricultural_Burn",
+        "WILDFIRE": "Wildfire",
+        "OTHER_UNCERTAIN": "Uncertain_Event",
+    }.get((classification or "").upper(), "Thermal_Event")
+
+
+def _safe_filename_part(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    normalized = re.sub(r"\s+", "_", str(value).strip())
+    return re.sub(r"[^A-Za-z0-9_-]", "", normalized)[:50]
+
+
+def _build_report_filename(
+    classification: Optional[str],
+    location_name: Optional[str] = None,
+    event_id: Optional[str] = None,
+) -> str:
+    location = _safe_filename_part(location_name) or _safe_filename_part(event_id)
+    location = location or "Unknown_Location"
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    report_date = now.strftime("%Y-%m-%d")
+    report_time = now.strftime("%H-%M")
+    return f"ThermoTrace_{_report_type_filename(classification)}_{location}_{report_date}_{report_time}.pdf"
 
 
 class GenerateReportRequest(BaseModel):
@@ -128,11 +162,19 @@ def download_report(report_id: str, db: Session = Depends(get_db)):
     if not pdf_path.exists() or not pdf_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF file could not be retrieved")
 
+    event = db.query(ThermalEvent).filter(ThermalEvent.id == report.event_id).first()
+    report_vm = (
+        ReportService.get_report_view_model(db, event.event_id)
+        if event else {}
+    )
+    download_filename = _build_report_filename(
+        classification=report_vm.get("classification") or (event.classification if event else None),
+        location_name=report_vm.get("facility_district") or report_vm.get("facility_state"),
+        event_id=report_vm.get("event_id") or (event.event_id if event else None),
+    )
+
     return FileResponse(
         path=pdf_path,
         media_type="application/pdf",
-        filename=f"{report.report_id}.pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="{report.report_id}.pdf"'
-        }
+        filename=download_filename,
     )

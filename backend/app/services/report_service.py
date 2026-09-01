@@ -1,17 +1,27 @@
 """Report service for generating ReportViewModel from pipeline-computed data."""
+import logging
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, cast, func
+from geoalchemy2 import Geography
 
 from app.db.models import (
     ThermalEvent,
+    ThermalObservation,
+    EventObservation,
     EventClassification,
     EventAnomaly,
     FacilityBaseline,
     IndustrialFacility,
     MlModel,
 )
+from app.services.report_profile import (
+    choose_report_sections,
+    determine_report_profile,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class ReportService:
@@ -94,8 +104,8 @@ class ReportService:
                 .first()
             )
         
-        # Map all data into flat ReportViewModel dictionary
-        return ReportService._map_to_report_view_model(
+        # Build a report-only view model; no pipeline data is modified.
+        report_data = ReportService._map_to_report_view_model(
             event=event,
             classification=classification,
             anomaly=anomaly,
@@ -103,6 +113,477 @@ class ReportService:
             facility=facility,
             model=model,
         )
+
+        observations = ReportService._get_event_observations(session, event)
+        try:
+            nearby_result = ReportService._find_nearby_facilities_expanding(
+                session=session,
+                event=event,
+                limit=5,
+            )
+            report_data["nearby_facilities"] = nearby_result["facilities"]
+            report_data["facility_search_radius_km"] = nearby_result["search_radius_km"]
+        except Exception:
+            logger.warning(
+                "Nearby facility intelligence unavailable for event %s",
+                event.event_id,
+                exc_info=True,
+            )
+            report_data["nearby_facilities"] = []
+            report_data["facility_search_radius_km"] = None
+        historical_events, history_basis = ReportService._get_historical_events(
+            session=session,
+            event=event,
+            days=90,
+            radius_m=2000,
+        )
+        report_data.update(
+            ReportService._build_history_context(event, historical_events)
+        )
+        report_data.update(history_basis)
+        report_data.update(ReportService._build_event_evolution(observations))
+        report_data.update(ReportService._build_evidence_quality(report_data))
+
+        # Profile selection affects report presentation only; it never changes ML data.
+        report_profile = determine_report_profile(report_data)
+        report_data["report_profile"] = report_profile
+        report_data["report_sections"] = choose_report_sections(
+            report_profile,
+            report_data,
+        )
+
+        return report_data
+
+    @staticmethod
+    def _get_event_observations(
+        session: Session,
+        event: ThermalEvent,
+    ) -> list[ThermalObservation]:
+        """Return the selected event's linked observations in time order."""
+        return (
+            session.query(ThermalObservation)
+            .join(
+                EventObservation,
+                EventObservation.observation_id == ThermalObservation.id,
+            )
+            .filter(EventObservation.event_id == event.id)
+            .order_by(ThermalObservation.observation_timestamp_utc.asc())
+            .all()
+        )
+
+    @staticmethod
+    def _get_nearby_facilities(
+        session: Session,
+        event: ThermalEvent,
+        radius_m: int = 100000,
+        limit: int = 5,
+    ) -> list[Dict[str, Any]]:
+        """Return active facilities nearest to the event centroid within a fixed radius."""
+        event_geog = cast(
+            func.ST_SetSRID(
+                func.ST_MakePoint(float(event.longitude), float(event.latitude)),
+                4326,
+            ),
+            Geography,
+        )
+        facility_geog = cast(IndustrialFacility.centroid, Geography)
+        distance_m = func.ST_Distance(facility_geog, event_geog).label("distance_m")
+        rows = (
+            session.query(IndustrialFacility, distance_m)
+            .filter(IndustrialFacility.is_active.is_(True))
+            .filter(func.ST_DWithin(facility_geog, event_geog, radius_m))
+            .order_by(distance_m.asc())
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "facility_id": str(facility.id),
+                "name": facility.name,
+                "sector": facility.sector_category,
+                "sub_type": facility.sub_type,
+                "operator": facility.operator_name,
+                "state": facility.state,
+                "district": facility.district,
+                "latitude": float(facility.latitude) if facility.latitude is not None else None,
+                "longitude": float(facility.longitude) if facility.longitude is not None else None,
+                "distance_m": round(float(distance), 1),
+                "historical_event_count": facility.historical_event_count,
+                "baseline_frp_mean": facility.baseline_frp_mean,
+            }
+            for facility, distance in rows
+        ]
+
+    @staticmethod
+    def _find_nearby_facilities_expanding(
+        session: Session,
+        event: ThermalEvent,
+        limit: int = 5,
+    ) -> Dict[str, Any]:
+        """Find the nearest useful facility context without defaulting to a huge radius."""
+        for radius_m in (25000, 50000, 100000, 200000):
+            facilities = ReportService._get_nearby_facilities(
+                session=session,
+                event=event,
+                radius_m=radius_m,
+                limit=limit,
+            )
+            if facilities:
+                return {
+                    "facilities": facilities,
+                    "search_radius_km": radius_m / 1000,
+                }
+        return {"facilities": [], "search_radius_km": 200}
+
+    @staticmethod
+    def _get_historical_events(
+        session: Session,
+        event: ThermalEvent,
+        days: int = 90,
+        radius_m: int = 2000,
+    ) -> tuple[list[ThermalEvent], Dict[str, Any]]:
+        """Find comparable prior events and describe the applied comparison basis."""
+        since = event.first_detected_utc - timedelta(days=days)
+        query = session.query(ThermalEvent).filter(
+            ThermalEvent.id != event.id,
+            ThermalEvent.first_detected_utc >= since,
+            ThermalEvent.first_detected_utc < event.first_detected_utc,
+        )
+
+        if event.associated_facility_id:
+            query = query.filter(
+                ThermalEvent.associated_facility_id == event.associated_facility_id
+            )
+            comparison_basis = {
+                "history_scope": "SAME_FACILITY",
+                "history_window_days": days,
+                "history_radius_m": None,
+            }
+        else:
+            query = query.filter(
+                func.ST_DWithin(
+                    cast(ThermalEvent.centroid, Geography),
+                    cast(
+                        func.ST_SetSRID(
+                            func.ST_MakePoint(
+                                float(event.longitude),
+                                float(event.latitude),
+                            ),
+                            4326,
+                        ),
+                        Geography,
+                    ),
+                    radius_m,
+                )
+            )
+            comparison_basis = {
+                "history_scope": "NEARBY_LOCATION",
+                "history_window_days": days,
+                "history_radius_m": radius_m,
+            }
+
+        return (
+            query.order_by(ThermalEvent.first_detected_utc.asc()).all(),
+            comparison_basis,
+        )
+
+    @staticmethod
+    def _build_history_context(
+        event: ThermalEvent,
+        historical_events: list[ThermalEvent],
+    ) -> Dict[str, Any]:
+        """Summarize previous local or same-facility events for the report."""
+        now = event.first_detected_utc
+        events_7d = [
+            item
+            for item in historical_events
+            if item.first_detected_utc >= now - timedelta(days=7)
+        ]
+        events_30d = [
+            item
+            for item in historical_events
+            if item.first_detected_utc >= now - timedelta(days=30)
+        ]
+        peak_frps = [
+            float(item.peak_frp_mw)
+            for item in historical_events
+            if item.peak_frp_mw is not None
+        ]
+        classification_counts: Dict[str, int] = {}
+        anomaly_counts: Dict[str, int] = {}
+        for item in historical_events:
+            classification = item.classification or "UNKNOWN"
+            anomaly_tier = item.anomaly_tier or "NORMAL"
+            classification_counts[classification] = (
+                classification_counts.get(classification, 0) + 1
+            )
+            anomaly_counts[anomaly_tier] = anomaly_counts.get(anomaly_tier, 0) + 1
+        durations = [
+            (item.latest_detected_utc - item.first_detected_utc).total_seconds()
+            / 3600.0
+            for item in historical_events
+            if item.first_detected_utc and item.latest_detected_utc
+        ]
+        previous_event = historical_events[-1] if historical_events else None
+        days_since_previous_event = None
+        if previous_event:
+            days_since_previous_event = round(
+                (event.first_detected_utc - previous_event.latest_detected_utc)
+                .total_seconds()
+                / 86400.0,
+                2,
+            )
+
+        ordered_peak_frps = sorted(peak_frps)
+        peak_count = len(ordered_peak_frps)
+        if peak_count % 2:
+            median_peak_frp = ordered_peak_frps[peak_count // 2]
+        elif peak_count:
+            median_peak_frp = (
+                ordered_peak_frps[peak_count // 2 - 1]
+                + ordered_peak_frps[peak_count // 2]
+            ) / 2
+        else:
+            median_peak_frp = None
+
+        current_peak = (
+            float(event.peak_frp_mw) if event.peak_frp_mw is not None else None
+        )
+        current_vs_history_percentile = None
+        if current_peak is not None and peak_frps:
+            current_vs_history_percentile = round(
+                (sum(value <= current_peak for value in peak_frps) / len(peak_frps)) * 100,
+                1,
+            )
+        current_vs_median_ratio = None
+        if current_peak is not None and median_peak_frp not in (None, 0):
+            current_vs_median_ratio = round(current_peak / median_peak_frp, 2)
+
+        recurrence_intervals = []
+        for previous, current in zip(historical_events, historical_events[1:]):
+            delta_days = (
+                current.first_detected_utc - previous.first_detected_utc
+            ).total_seconds() / 86400.0
+            if delta_days >= 0:
+                recurrence_intervals.append(delta_days)
+        mean_recurrence_days = (
+            round(sum(recurrence_intervals) / len(recurrence_intervals), 2)
+            if recurrence_intervals else None
+        )
+
+        return {
+            "history_event_count_7d": len(events_7d),
+            "history_event_count_30d": len(events_30d),
+            "history_event_count_90d": len(historical_events),
+            "history_mean_peak_frp_mw": (
+                round(sum(peak_frps) / peak_count, 2) if peak_count else None
+            ),
+            "history_median_peak_frp_mw": (
+                round(median_peak_frp, 2) if median_peak_frp is not None else None
+            ),
+            "history_max_peak_frp_mw": (
+                round(max(peak_frps), 2) if peak_count else None
+            ),
+            "history_mean_duration_hours": (
+                round(sum(durations) / len(durations), 2) if durations else None
+            ),
+            "current_vs_history_percentile": current_vs_history_percentile,
+            "current_vs_historical_median_ratio": current_vs_median_ratio,
+            "history_mean_recurrence_days": mean_recurrence_days,
+            "history_classification_counts": classification_counts,
+            "history_anomaly_counts": anomaly_counts,
+            "days_since_previous_event": days_since_previous_event,
+            "historical_events": [
+                {
+                    "event_id": item.event_id,
+                    "first_detected_utc": (
+                        item.first_detected_utc.isoformat()
+                        if item.first_detected_utc
+                        else None
+                    ),
+                    "latest_detected_utc": (
+                        item.latest_detected_utc.isoformat()
+                        if item.latest_detected_utc
+                        else None
+                    ),
+                    "peak_frp_mw": item.peak_frp_mw,
+                    "mean_frp_mw": item.mean_frp_mw,
+                    "classification": item.classification,
+                    "anomaly_tier": item.anomaly_tier,
+                }
+                for item in historical_events
+            ],
+        }
+
+    @staticmethod
+    def _build_evidence_quality(report_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Rate available evidence coverage; this is not a model-accuracy score."""
+        score = 0
+        reasons = []
+        observation_count = int(report_data.get("observation_count") or 0)
+        history_count = int(report_data.get("history_event_count_90d") or 0)
+        has_facility = bool(
+            report_data.get("associated_facility_uuid")
+            or report_data.get("facility_uuid")
+        )
+        baseline_ok = bool(report_data.get("baseline_is_statistically_sufficient"))
+        confidence = report_data.get("classification_confidence")
+        if confidence is None:
+            confidence = report_data.get("ml_confidence_pct")
+            confidence = (float(confidence) / 100) if confidence is not None else 0
+        confidence = float(confidence or 0)
+
+        if observation_count >= 5:
+            score += 2
+            reasons.append("Multiple satellite observations available")
+        elif observation_count >= 2:
+            score += 1
+            reasons.append("Limited multi-observation coverage")
+        else:
+            reasons.append("Single-observation event")
+
+        if history_count >= 5:
+            score += 2
+            reasons.append("Strong historical comparison sample")
+        elif history_count >= 1:
+            score += 1
+            reasons.append("Limited historical comparison sample")
+        else:
+            reasons.append("No comparable historical events found")
+
+        if has_facility:
+            score += 1
+            reasons.append("Verified facility association available")
+        if baseline_ok:
+            score += 1
+            reasons.append("Statistically sufficient baseline available")
+
+        if confidence >= 0.80:
+            score += 2
+            reasons.append("High model classification confidence")
+        elif confidence >= 0.60:
+            score += 1
+            reasons.append("Moderate model classification confidence")
+        else:
+            reasons.append("Low model classification confidence")
+
+        level = "HIGH" if score >= 7 else "MODERATE" if score >= 4 else "LIMITED"
+        return {
+            "evidence_quality_score": score,
+            "evidence_quality_level": level,
+            "evidence_quality_reasons": reasons,
+        }
+
+    @staticmethod
+    def _build_event_evolution(
+        observations: list[ThermalObservation],
+    ) -> Dict[str, Any]:
+        """Build observation history and grouped earlier-versus-now metrics."""
+        if not observations:
+            return {
+                "event_observation_history": [],
+                "day_observation_count": 0,
+                "night_observation_count": 0,
+                "night_ratio": None,
+                "earlier_vs_now": None,
+            }
+
+        history = []
+        day_count = 0
+        night_count = 0
+        for observation in observations:
+            if observation.day_night == "N":
+                night_count += 1
+            elif observation.day_night == "D":
+                day_count += 1
+
+            history.append(
+                {
+                    "observation_id": str(observation.id),
+                    "timestamp": (
+                        observation.observation_timestamp_utc.isoformat()
+                        if observation.observation_timestamp_utc
+                        else None
+                    ),
+                    "frp_mw": observation.frp_mw,
+                    "brightness_k": observation.brightness_temp_k,
+                    "satellite_sensor": observation.satellite_sensor,
+                    "confidence_level": observation.confidence_level,
+                    "confidence_pct": observation.confidence_pct,
+                    "day_night": observation.day_night,
+                    "latitude": float(observation.latitude),
+                    "longitude": float(observation.longitude),
+                }
+            )
+
+        earliest_time = observations[0].observation_timestamp_utc
+        latest_time = observations[-1].observation_timestamp_utc
+        earlier_observations = [
+            item
+            for item in observations
+            if item.observation_timestamp_utc == earliest_time
+        ]
+        now_observations = [
+            item for item in observations if item.observation_timestamp_utc == latest_time
+        ]
+
+        def summarize(items: list[ThermalObservation]) -> Dict[str, Any]:
+            frp_values = [float(item.frp_mw) for item in items if item.frp_mw is not None]
+            brightness_values = [
+                float(item.brightness_temp_k)
+                for item in items
+                if item.brightness_temp_k is not None
+            ]
+            return {
+                "timestamp": items[0].observation_timestamp_utc.isoformat(),
+                "observation_count": len(items),
+                "total_frp_mw": round(sum(frp_values), 2) if frp_values else None,
+                "max_frp_mw": round(max(frp_values), 2) if frp_values else None,
+                "avg_brightness_k": (
+                    round(sum(brightness_values) / len(brightness_values), 2)
+                    if brightness_values
+                    else None
+                ),
+            }
+
+        earlier = summarize(earlier_observations)
+        now = summarize(now_observations)
+        earlier_total_frp = earlier["total_frp_mw"]
+        now_total_frp = now["total_frp_mw"]
+        if earlier_total_frp and now_total_frp is not None:
+            frp_change_percent = round(
+                ((now_total_frp - earlier_total_frp) / earlier_total_frp) * 100,
+                2,
+            )
+        else:
+            frp_change_percent = None
+
+        if frp_change_percent is None:
+            trend = "UNKNOWN"
+        elif frp_change_percent > 5:
+            trend = "INCREASING"
+        elif frp_change_percent < -5:
+            trend = "DECREASING"
+        else:
+            trend = "STABLE"
+
+        total_day_night_observations = day_count + night_count
+        return {
+            "event_observation_history": history,
+            "day_observation_count": day_count,
+            "night_observation_count": night_count,
+            "night_ratio": (
+                round(night_count / total_day_night_observations, 3)
+                if total_day_night_observations
+                else None
+            ),
+            "earlier_vs_now": {
+                "earlier": earlier,
+                "now": now,
+                "frp_change_percent": frp_change_percent,
+                "trend": trend,
+            },
+        }
 
     @staticmethod
     def _map_to_report_view_model(

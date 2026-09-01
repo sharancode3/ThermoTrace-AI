@@ -60,6 +60,8 @@ class TestPDFRenderer:
             "event_id": "EVT-TEST-001",
             "classification": "IND_ROUTINE",
             "anomaly_tier": "NORMAL",
+            "latitude": 22.5726,
+            "longitude": 88.3639,
         }
 
     def test_render_with_valid_data(self, valid_report_vm):
@@ -72,25 +74,32 @@ class TestPDFRenderer:
     def test_render_missing_event_id(self, valid_report_vm):
         """Test error handling when event_id is missing."""
         del valid_report_vm["event_id"]
-        with pytest.raises(ValueError, match="Missing required field: event_id"):
+        with pytest.raises(ValueError, match="Missing required report fields: event_id"):
             PDFRenderer.render_dossier_to_pdf(valid_report_vm)
 
     def test_render_missing_classification(self, valid_report_vm):
         """Test error handling when classification is missing."""
         del valid_report_vm["classification"]
-        with pytest.raises(ValueError, match="Missing required field: classification"):
+        with pytest.raises(ValueError, match="Missing required report fields: classification"):
             PDFRenderer.render_dossier_to_pdf(valid_report_vm)
 
     def test_render_missing_anomaly_tier(self, valid_report_vm):
         """Test error handling when anomaly_tier is missing."""
         del valid_report_vm["anomaly_tier"]
-        with pytest.raises(ValueError, match="Missing required field: anomaly_tier"):
+        with pytest.raises(ValueError, match="Missing required report fields: anomaly_tier"):
             PDFRenderer.render_dossier_to_pdf(valid_report_vm)
 
     def test_render_null_required_field(self, valid_report_vm):
         """Test error handling when required field is None."""
         valid_report_vm["classification"] = None
-        with pytest.raises(ValueError, match="Missing required field: classification"):
+        with pytest.raises(ValueError, match="Missing required report fields: classification"):
+            PDFRenderer.render_dossier_to_pdf(valid_report_vm)
+
+    def test_render_missing_location_fields(self, valid_report_vm):
+        del valid_report_vm["latitude"]
+        del valid_report_vm["longitude"]
+
+        with pytest.raises(ValueError, match="latitude, longitude"):
             PDFRenderer.render_dossier_to_pdf(valid_report_vm)
 
     def test_render_with_minimal_data(self, minimal_report_vm):
@@ -98,3 +107,79 @@ class TestPDFRenderer:
         pdf_bytes = PDFRenderer.render_dossier_to_pdf(minimal_report_vm)
         assert isinstance(pdf_bytes, bytes)
         assert pdf_bytes.startswith(b"%PDF-")
+
+    def test_chart_selection_requires_evidence_and_caps_results(self):
+        assert PDFRenderer._select_report_charts({}) == []
+        assert PDFRenderer._select_report_charts({
+            "event_observation_history": [{"frp_mw": "invalid"}],
+            "history_event_count_90d": "not-a-number",
+        }) == []
+
+        report_data = {
+            "event_observation_history": [
+                {"frp_mw": 4},
+                {"frp_mw": 8},
+                {"frp_mw": 12},
+                {"frp_mw": 16},
+            ],
+            "historical_events": [
+                {"peak_frp_mw": 10},
+                {"peak_frp_mw": 12},
+                {"peak_frp_mw": 14},
+            ],
+            "history_event_count_7d": 1,
+            "history_event_count_30d": 3,
+            "history_event_count_90d": 6,
+            "day_observation_count": 2,
+            "night_observation_count": 2,
+        }
+
+        charts = PDFRenderer._select_report_charts(report_data)
+
+        assert len(charts) == 3
+        assert charts[0][0] == "FRP Evolution"
+
+    def test_safe_render_helpers_degrade_gracefully(self):
+        assert PDFRenderer._safe_get({"value": 0}, "value", 1) == 0
+        assert PDFRenderer._safe_text("   ") == "Not available"
+        assert PDFRenderer._safe_number("invalid") == "Not available"
+
+    def test_source_evidence_is_class_specific_for_wildfire(self):
+        labels = PDFRenderer._build_source_evidence({
+            "classification": "WILDFIRE",
+            "ml_confidence_pct": 95.1,
+            "primary_land_use": "Agricultural Cropland",
+        })
+
+        assert "WILDFIRE" in labels
+        assert "95.1% CONFIDENCE" in labels
+        assert "WILDFIRE SOURCE ASSESSMENT" in labels
+        assert not any("FACILITY" in label for label in labels)
+        assert not any("LAND COVER" in label for label in labels)
+
+    def test_profile_insights_emphasize_agricultural_recurrence(self):
+        insights = PDFRenderer._build_profile_insights({
+            "report_profile": "AGRICULTURAL",
+            "classification": "AG_BURN",
+            "primary_land_use": "Agricultural Cropland",
+            "history_event_count_90d": 4,
+            "night_ratio": 0.1,
+        })
+
+        assert any("burn recurrence" in insight.lower() for insight in insights)
+        assert any("4 related thermal event" in insight for insight in insights)
+        assert not any("facility operating baseline" in insight.lower() for insight in insights)
+
+    def test_unverified_industrial_insights_and_actions_preserve_uncertainty(self):
+        report_data = {
+            "report_profile": "INDUSTRIAL_UNVERIFIED",
+            "classification": "IND_FIRE",
+            "classification_confidence": 0.65,
+            "primary_land_use": "Agricultural Cropland",
+        }
+
+        insights = PDFRenderer._build_profile_insights(report_data)
+        actions = PDFRenderer._build_follow_up_actions(report_data)
+
+        assert any("unverified industrial assessment" in insight.lower() for insight in insights)
+        assert any("facility records" in action.lower() for action in actions)
