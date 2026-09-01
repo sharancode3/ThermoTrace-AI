@@ -79,15 +79,24 @@ def list_facilities(
             )
         )
 
-    # 3. Sector filter
+    # 3. Sector filter (Smart normalization for Coal Mining, Refining, Power, etc.)
     if sector and sector.strip() and sector.strip().lower() != "all":
         s_clean = sector.strip()
-        base_filter.append(
-            or_(
-                IndustrialFacility.sector_category.ilike(f"%{s_clean}%"),
-                IndustrialFacility.sector_category == s_clean,
-            )
-        )
+        s_low = s_clean.lower()
+        if 'coal' in s_low or 'mine' in s_low or 'mining' in s_low:
+            base_filter.append(or_(IndustrialFacility.sector_category.ilike('%coal%'), IndustrialFacility.sector_category.ilike('%mining%'), IndustrialFacility.sub_type.ilike('%mine%')))
+        elif 'refin' in s_low or 'petrol' in s_low:
+            base_filter.append(or_(IndustrialFacility.sector_category.ilike('%refin%'), IndustrialFacility.sector_category.ilike('%petrol%'), IndustrialFacility.sub_type.ilike('%refin%')))
+        elif 'oil' in s_low or 'gas' in s_low:
+            base_filter.append(or_(IndustrialFacility.sector_category.ilike('%oil%'), IndustrialFacility.sector_category.ilike('%gas%'), IndustrialFacility.sub_type.ilike('%oil%'), IndustrialFacility.sub_type.ilike('%gas%')))
+        elif 'steel' in s_low or 'iron' in s_low:
+            base_filter.append(or_(IndustrialFacility.sector_category.ilike('%steel%'), IndustrialFacility.sector_category.ilike('%iron%'), IndustrialFacility.sub_type.ilike('%steel%'), IndustrialFacility.sub_type.ilike('%iron%')))
+        elif 'power' in s_low or 'thermal' in s_low or 'electric' in s_low:
+            base_filter.append(or_(IndustrialFacility.sector_category.ilike('%power%'), IndustrialFacility.sector_category.ilike('%thermal%'), IndustrialFacility.sub_type.ilike('%power%'), IndustrialFacility.sub_type.ilike('%thermal%')))
+        elif 'nuclear' in s_low:
+            base_filter.append(IndustrialFacility.sector_category.ilike('%nuclear%'))
+        else:
+            base_filter.append(or_(IndustrialFacility.sector_category.ilike(f'%{s_clean}%'), IndustrialFacility.sub_type.ilike(f'%{s_clean}%')))
 
     # 4. State filter
     if state and state.strip() and state.strip().lower() != "all":
@@ -139,13 +148,11 @@ def list_facilities(
     )
 
     distinct_sectors = [
-        "Coal Mine",
-        "Iron & Steel",
-        "Nuclear",
+        "Coal Mining",
         "Oil & Gas",
-        "Petroleum Refining",
         "Power Generation",
-        "Thermal Power",
+        "Refinery",
+        "Nuclear",
     ]
 
     distinct_states = [
