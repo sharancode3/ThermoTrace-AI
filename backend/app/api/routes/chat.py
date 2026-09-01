@@ -76,6 +76,20 @@ async def chat_query(payload: ChatQueryRequest, db: Session = Depends(get_db)) -
     repository = EventRepository(db)
     events = repository.list_events(filters)
 
+    if payload.selected_event_id:
+        active_event = db.query(ThermalEvent).filter(
+            ThermalEvent.event_id == str(payload.selected_event_id)
+        ).first()
+        if not active_event:
+            try:
+                import uuid as _uuid
+                val_uuid = _uuid.UUID(str(payload.selected_event_id))
+                active_event = db.query(ThermalEvent).filter(ThermalEvent.id == val_uuid).first()
+            except (ValueError, TypeError, AttributeError):
+                pass
+        if active_event and active_event not in events:
+            events.insert(0, active_event)
+
     if not events:
         return {
             "data": {

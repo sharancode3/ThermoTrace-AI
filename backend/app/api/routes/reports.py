@@ -183,9 +183,13 @@ def download_report(report_id: str, db: Session = Depends(get_db)):
 @router.get("/events/{event_id}/download")
 def download_event_report(event_id: str, db: Session = Depends(get_db)):
     """Generate and download a PDF dossier for a specific thermal event in one step."""
-    event = db.query(ThermalEvent).filter(
-        (ThermalEvent.event_id == event_id) | (ThermalEvent.id == event_id)
-    ).first()
+    event = db.query(ThermalEvent).filter(ThermalEvent.event_id == event_id).first()
+    if not event:
+        try:
+            val_uuid = uuid.UUID(event_id)
+            event = db.query(ThermalEvent).filter(ThermalEvent.id == val_uuid).first()
+        except (ValueError, TypeError, AttributeError):
+            pass
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
 
