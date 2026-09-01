@@ -144,22 +144,57 @@ export default function MapComponent({
     });
   };
 
+  const [locationError, setLocationError] = useState<string | null>(null);
+
   const handleMyLocation = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      setTimeout(() => setLocationError(null), 4000);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
+        const coords = {
           lat: position.coords.latitude,
           lon: position.coords.longitude,
-        });
+        };
+        setUserLocation(coords);
+        setLocationError(null);
         mapRef.current?.flyTo({
-          center: [position.coords.longitude, position.coords.latitude],
-          zoom: 12,
-          duration: 2000,
+          center: [coords.lon, coords.lat],
+          zoom: 13.5,
+          duration: 1800,
         });
       },
-      (err) => console.error("Geolocation failed:", err),
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      (err) => {
+        console.warn("High accuracy geolocation failed, trying standard accuracy:", err.message);
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const coords = {
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+            };
+            setUserLocation(coords);
+            setLocationError(null);
+            mapRef.current?.flyTo({
+              center: [coords.lon, coords.lat],
+              zoom: 13.5,
+              duration: 1800,
+            });
+          },
+          (fallbackErr) => {
+            console.error("Geolocation fallback error:", fallbackErr.message);
+            let msg = "Unable to retrieve location";
+            if (fallbackErr.code === 1) msg = "Location permission denied";
+            else if (fallbackErr.code === 2) msg = "Location unavailable";
+            else if (fallbackErr.code === 3) msg = "Location request timed out";
+            setLocationError(msg);
+            setTimeout(() => setLocationError(null), 4000);
+          },
+          { enableHighAccuracy: false, timeout: 10000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
     );
   };
 
@@ -466,6 +501,25 @@ export default function MapComponent({
           </Marker>
         )}
 
+        {/* User Current Location Marker (Google Maps Style Pulsing Blue Dot) */}
+        {userLocation && (
+          <Marker
+            key="user-current-location-marker"
+            longitude={userLocation.lon}
+            latitude={userLocation.lat}
+            anchor="center"
+          >
+            <div className="relative flex items-center justify-center pointer-events-none" style={{ width: 44, height: 44 }}>
+              {/* Outer pulsing ring */}
+              <span className="absolute w-9 h-9 rounded-full bg-blue-500/30 animate-ping" />
+              {/* Soft accuracy halo */}
+              <span className="absolute w-7 h-7 rounded-full bg-blue-500/25 border border-blue-400/50 shadow-sm" />
+              {/* Core Google Maps blue dot */}
+              <span className="relative w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-lg shadow-blue-500/60" />
+            </div>
+          </Marker>
+        )}
+
         {/* UNIFIED TACTICAL RADAR TOOLBAR (TOP-LEFT) */}
         <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[92vw] sm:max-w-none">
           {/* Main Control Card */}
@@ -750,6 +804,14 @@ export default function MapComponent({
             >
               Reset All Filters
             </button>
+          </div>
+        )}
+
+        {/* Location Error Notification Toast */}
+        {locationError && (
+          <div className="absolute bottom-20 right-6 z-30 bg-slate-900/95 text-white border border-rose-500/50 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-2">
+            <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-ping" />
+            <span>{locationError}</span>
           </div>
         )}
       </Map>

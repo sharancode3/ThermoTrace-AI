@@ -94,7 +94,7 @@ def generate_report(request: GenerateReportRequest, db: Session = Depends(get_db
     sections = request.included_sections or ["executive_summary", "sensor_telemetry", "baseline_audit"]
 
     # 2. Render PDF
-    output_dir = Path("/app/data/reports")
+    output_dir = Path(os.getenv("REPORTS_DIR", "backend/data/reports"))
     output_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = output_dir / f"{report_public_id}.pdf"
 
@@ -175,6 +175,70 @@ def download_report(report_id: str, db: Session = Depends(get_db)):
 
     return FileResponse(
         path=pdf_path,
+        media_type="application/pdf",
+        filename=download_filename,
+    )
+
+
+@router.get("/events/{event_id}/download")
+def download_event_report(event_id: str, db: Session = Depends(get_db)):
+    """Generate and download a PDF dossier for a specific thermal event in one step."""
+    event = db.query(ThermalEvent).filter(
+        (ThermalEvent.event_id == event_id) | (ThermalEvent.id == event_id)
+    ).first()
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
+
+    report_vm = ReportService.get_report_view_model(db, event.event_id)
+    if not report_vm:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not build report view model")
+
+    output_dir = Path(os.getenv("REPORTS_DIR", "backend/data/reports"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    report_public_id = f"RPT-EVT-{event.event_id[:12]}"
+    pdf_path = output_dir / f"{report_public_id}.pdf"
+
+    saved_path = PDFRenderer.render_and_save(report_vm, pdf_path)
+
+    # Calculate SHA-256
+    sha256_hash = hashlib.sha256()
+    with open(saved_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    file_hash = sha256_hash.hexdigest()
+
+    # Update or create Report record
+    existing_report = db.query(Report).filter(Report.event_id == event.id).first()
+    if not existing_report:
+        report_uuid = str(uuid.uuid4())
+        new_report = Report(
+            id=report_uuid,
+            report_id=report_public_id,
+            event_id=event.id,
+            title=f"Thermal Dossier: {event.event_id} ({event.anomaly_tier})",
+            included_sections=["executive_summary", "sensor_telemetry", "baseline_audit"],
+            storage_path=str(saved_path),
+            download_url=f"/api/v1/reports/{report_public_id}/download",
+            sha256_hash=file_hash,
+            generation_status="COMPLETED"
+        )
+        db.add(new_report)
+        db.commit()
+    else:
+        existing_report.storage_path = str(saved_path)
+        existing_report.sha256_hash = file_hash
+        existing_report.generation_status = "COMPLETED"
+        db.commit()
+
+    download_filename = _build_report_filename(
+        classification=report_vm.get("classification") or event.classification,
+        location_name=report_vm.get("facility_district") or report_vm.get("facility_state"),
+        event_id=report_vm.get("event_id") or event.event_id,
+    )
+
+    return FileResponse(
+        path=saved_path,
         media_type="application/pdf",
         filename=download_filename,
     )

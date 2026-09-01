@@ -77,6 +77,21 @@ export function OverlayManager() {
     },
   ]);
 
+    useEffect(() => {
+    const handleOpenChatEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const eventId = customEvent.detail?.eventId;
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("overlay", "chat");
+      if (eventId) {
+        params.set("eventId", eventId);
+      }
+      router.push(`${pathname}?${params.toString()}`);
+    };
+    window.addEventListener("thermo-open-chat", handleOpenChatEvent);
+    return () => window.removeEventListener("thermo-open-chat", handleOpenChatEvent);
+  }, [searchParams, router, pathname]);
+
   useEffect(() => {
     setMounted(true);
     setTheme(localStorage.getItem("thermo_theme") || "light");
@@ -417,6 +432,20 @@ export function OverlayManager() {
       {overlay === "chat" && (
         <div className="flex-1 flex flex-col min-h-0 bg-white">
           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 shrink-0">
+            {/* Scoped Event Context Banner */}
+            {searchParams.get("eventId") && (
+              <div className="flex items-center justify-between px-3 py-2 bg-orange-50 border border-orange-200 rounded-xl text-xs mb-2.5 shadow-sm">
+                <div className="flex items-center gap-2 text-orange-950 font-semibold truncate">
+                  <Flame className="w-4 h-4 text-orange-600 shrink-0 animate-pulse" />
+                  <div className="flex flex-col truncate">
+                    <span className="text-[10px] text-orange-600 font-mono font-bold uppercase tracking-wider">Scoped Event Context</span>
+                    <span className="font-mono font-bold text-slate-900 truncate">{searchParams.get("eventId")}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-semibold text-orange-700 bg-white px-2 py-0.5 rounded-md border border-orange-200 font-mono shadow-xs shrink-0">Bound RAG</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                 <div className="p-1 rounded bg-orange-50 border border-orange-200 relative flex items-center justify-center">
@@ -428,7 +457,12 @@ export function OverlayManager() {
               <span className="text-[10px] font-mono font-semibold uppercase tracking-wider bg-orange-50 border border-orange-200 text-orange-700 px-2 py-0.5 rounded">Live PostGIS</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {quickPrompts.map((p) => (
+              {(searchParams.get("eventId") ? [
+                `What is abnormal about ${searchParams.get("eventId")}?`,
+                "Explain classification drivers",
+                "Is this flaring routine or anomalous?",
+                "Show spatial & baseline context"
+              ] : quickPrompts).map((p) => (
                 <button
                   key={p}
                   type="button"
