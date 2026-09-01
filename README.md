@@ -113,28 +113,28 @@ Each clustered event is structured into a 14-dimensional feature vector:
 ```mermaid
 flowchart TD
     subgraph INGESTION["1. Telemetry Ingestion Layer"]
-        FIRMS["NASA FIRMS NRT Feed<br/>(VIIRS NOAA-20/21/SNPP & MODIS)"] --> DAEMON["FIRMS Poller Daemon<br/>(5-Minute Ingestion Cadence)"]
+        FIRMS["NASA FIRMS NRT Telemetry<br/>VIIRS NOAA-20/21/SNPP and MODIS"] --> DAEMON["FIRMS Poller Daemon<br/>5-Minute Ingestion Cadence"]
         DAEMON --> GEOFENCE{"Survey of India<br/>Sovereign Geofence"}
-        GEOFENCE -->|Within Sovereign India| ST_DBSCAN["ST-DBSCAN Clustering Engine<br/>(eps=1500m, time_window=24h)"]
+        GEOFENCE -->|Within Sovereign India| ST_DBSCAN["ST-DBSCAN Clustering Engine<br/>Radius 1500m, Time 24h"]
         GEOFENCE -->|Transboundary| DISCARD["Discard Non-Sovereign Point"]
     end
 
     subgraph DATABASE["2. Spatial Database Layer"]
-        ST_DBSCAN --> POSTGIS[("PostgreSQL 16 + PostGIS 3.4<br/>• thermal_observations<br/>• thermal_events<br/>• industrial_facilities<br/>• event_anomalies")]
+        ST_DBSCAN --> POSTGIS[("PostgreSQL 16 and PostGIS 3.4<br/>Spatial Storage and Indexing")]
     end
 
     subgraph ANALYTICS["3. Analytical ML and Baseline Engine"]
-        POSTGIS --> FEAT_ENG["14-D Feature Extractor<br/>(FRP, Variance, Land Cover, Zoning)"]
-        FEAT_ENG --> XGB["Calibrated XGBoost v1.1<br/>(Platt Scaled / Isotonic ECE < 3.2%)"]
-        POSTGIS --> BASELINE["90-Day Facility Baseline Engine<br/>(Gaussian Mean & Std Dev, N >= 10)"]
-        XGB --> ANOM_EVAL["Anomaly Severity Evaluator<br/>(Z-Score: Critical, Abnormal, Elevated, Nominal)"]
+        POSTGIS --> FEAT_ENG["14-D Feature Extractor<br/>FRP, Variance, Land Cover, Zoning"]
+        FEAT_ENG --> XGB["Calibrated XGBoost v1.1<br/>Platt-Scaled, ECE under 3.2%"]
+        POSTGIS --> BASELINE["90-Day Facility Baseline Engine<br/>Gaussian Mean and Std Dev"]
+        XGB --> ANOM_EVAL["Anomaly Severity Evaluator<br/>Critical, Abnormal, Elevated, Nominal"]
         BASELINE --> ANOM_EVAL
-        ANOM_EVAL --> TIER2["Tier 2 On-Demand Compute Engine<br/>• Exact TreeSHAP Values<br/>• ESA WorldCover 10m Breakdown<br/>• Sentinel-2 MSI Optical Delta"]
+        ANOM_EVAL --> TIER2["Tier 2 On-Demand Compute Engine<br/>TreeSHAP Values and Optical Context"]
     end
 
-    subgraph API["4. FastAPI Gateway Services"]
+    subgraph GATEWAY["4. FastAPI Gateway Services"]
         TIER2 --> API_GIS["/api/v1/gis/events (Dynamic Bbox)"]
-        TIER2 --> API_EVT["/api/v1/events/{id} (Full Dossier)"]
+        TIER2 --> API_EVT["/api/v1/events/id (Full Dossier)"]
         TIER2 --> API_NEWS["/api/v1/news (24h Real-Time Feed)"]
         TIER2 --> API_NOTIF["/api/v1/notifications (Alert Queue)"]
         TIER2 --> API_RPT["/api/v1/reports/generate (PDF Dossier)"]
@@ -143,12 +143,12 @@ flowchart TD
     end
 
     subgraph FRONTEND["5. Next.js 16 Tactical Radar Dashboard"]
-        API_GIS --> MAP["MapLibre GL Vector / Hybrid Map<br/>• Dynamic Camera Offset ([-180, 0])<br/>• 9-Icon Tactical Symbology"]
-        API_EVT --> DOSSIER["5-Tab Event Dossier Panel<br/>• Overview • ML Breakdown • Baseline<br/>• Optical Context • AI Brief"]
+        API_GIS --> MAP["MapLibre GL Vector and Hybrid Map<br/>Dynamic Camera Offset and Symbology"]
+        API_EVT --> DOSSIER["5-Tab Event Dossier Panel<br/>Overview, ML, Baseline, Optical, Brief"]
         API_NEWS --> NEWS_DRAWER["Thermo News Real-Time Drawer"]
         API_NOTIF --> ALERTS_DRAWER["Operational Alerts Drawer"]
         API_CHAT --> CHAT_DRAWER["Grounded AI Tactical Chat"]
-        API_RPT --> REPORT_ARCHIVE["Forensic PDF Archive (SHA-256)"]
+        API_RPT --> REPORT_ARCHIVE["Forensic PDF Archive with SHA-256"]
     end
 ```
 
