@@ -14,7 +14,7 @@ export default function WorkspaceLayout({
       <Suspense fallback={<div className="w-20 lg:w-64 border-r border-slate-800 bg-slate-900" />}>
         <Sidebar />
       </Suspense>
-      <main className="flex-1 relative overflow-hidden">
+      <main className="flex-1 relative h-full min-h-0 overflow-y-auto">
         {children}
       </main>
       <Suspense fallback={null}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import Map, { MapRef, Marker, Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -94,6 +95,36 @@ export default function MapComponent({
   selectedEventId,
 }: MapComponentProps) {
   const mapRef = useRef<MapRef>(null);
+  const searchParams = useSearchParams();
+  const [focusedFacility, setFocusedFacility] = useState<{ id: string; name: string; lat: number; lon: number } | null>(null);
+
+  // Read facility focus params from URL
+  useEffect(() => {
+    const focusLat = searchParams.get("focus_lat");
+    const focusLon = searchParams.get("focus_lon");
+    const facilityId = searchParams.get("facility_id");
+    const facilityName = searchParams.get("facility_name");
+
+    if (focusLat && focusLon) {
+      const lat = parseFloat(focusLat);
+      const lon = parseFloat(focusLon);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        setFocusedFacility({
+          id: facilityId || "fac-focus",
+          name: facilityName ? decodeURIComponent(facilityName) : "Target Facility",
+          lat,
+          lon,
+        });
+        mapRef.current?.flyTo({
+          center: [lon, lat],
+          zoom: 13.5,
+          pitch: 20,
+          duration: 1800,
+          essential: true,
+        });
+      }
+    }
+  }, [searchParams]);
 
   // Viewport
   const [viewport, setViewport] = useState<Viewport>({

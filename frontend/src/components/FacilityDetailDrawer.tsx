@@ -61,18 +61,23 @@ export default function FacilityDetailDrawer({
     setError(null);
     setLoadingStep(1);
 
-    // Live 5-step investigation pipeline animation
-    const timer1 = setTimeout(() => setLoadingStep(2), 300);
-    const timer2 = setTimeout(() => setLoadingStep(3), 650);
-    const timer3 = setTimeout(() => setLoadingStep(4), 1050);
-    const timer4 = setTimeout(() => setLoadingStep(5), 1400);
+    const startTime = Date.now();
+    // Guaranteed smooth 5-stage progression (1.3s total)
+    const timer1 = setTimeout(() => { if (isMounted) setLoadingStep(2); }, 250);
+    const timer2 = setTimeout(() => { if (isMounted) setLoadingStep(3); }, 520);
+    const timer3 = setTimeout(() => { if (isMounted) setLoadingStep(4); }, 800);
+    const timer4 = setTimeout(() => { if (isMounted) setLoadingStep(5); }, 1100);
 
     fetchFacilityIntelligence(facility.id, windowDays)
       .then((data) => {
-        if (isMounted) {
-          setIntel(data);
-          setLoading(false);
-        }
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, 1350 - elapsed);
+        setTimeout(() => {
+          if (isMounted) {
+            setIntel(data);
+            setLoading(false);
+          }
+        }, remaining);
       })
       .catch((err) => {
         if (isMounted) {
