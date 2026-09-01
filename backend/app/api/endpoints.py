@@ -107,9 +107,17 @@ def get_gis_events(
 
     effective_limit = min(limit, get_zoom_limit(zoom))
 
+    # Priority ordering: Critical & Abnormal anomalies surfaced first, followed by Elevated & Routine
+    severity_order = case(
+        (ThermalEvent.anomaly_tier == "CRITICAL", 1),
+        (ThermalEvent.anomaly_tier == "ABNORMAL", 2),
+        (ThermalEvent.anomaly_tier == "ELEVATED", 3),
+        else_=4
+    )
+
     all_events = (
         query
-        .order_by(ThermalEvent.latest_detected_utc.desc())
+        .order_by(severity_order, ThermalEvent.latest_detected_utc.desc())
         .limit(effective_limit)
         .all()
     )

@@ -105,7 +105,7 @@ export default function MapComponent({
   });
 
   // Unified Filter States
-  const [windowHours, setWindowHours] = useState<number | null>(24);
+  const [windowHours, setWindowHours] = useState<number | null>(null);
   const [showAllDetections, setShowAllDetections] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [classFilter, setClassFilter] = useState<string>("");

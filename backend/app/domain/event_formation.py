@@ -1,111 +1,143 @@
-import os
-import sys
+"""
+Spatio-Temporal Event Formation & Facility Association Pipeline
+Runs ST-DBSCAN clustering on thermal observations, associates nearest industrial facilities
+via PostGIS spatial queries, and triggers full ML intelligence classification.
+"""
 import uuid
-from datetime import datetime
+import numpy as np
+from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-import psycopg2
-
-sys.path.append(os.path.abspath('backend'))
-from app.db.database import engine, SessionLocal
-from app.db.models import ThermalObservation, ThermalEvent
+from app.db.models import ThermalObservation, ThermalEvent, EventObservation, IndustrialFacility
 from app.domain.clustering import run_st_dbscan, compute_event_metrics
+from app.domain.anomaly import process_event_intelligence
 
-def process_events(session: Session, eps_spatial: float = 750.0, eps_temporal_hours: float = 12.0) -> int:
+def form_events_from_observations(session: Session, lookback_days: int = 7) -> int:
     """
-    Idempotent ST-DBSCAN Event Formation Pipeline.
-    Preserves raw observation telemetry and lineage in event_observations.
+    Gathers active observations from database within lookback window,
+    runs ST-DBSCAN spatio-temporal clustering, associates nearest industrial facility,
+    and updates/creates thermal_events with attached event_observations.
     """
-    # 1. Fetch raw observations
-    observations = session.query(ThermalObservation).order_by(ThermalObservation.observation_timestamp_utc.asc()).all()
-    if not observations:
-        print("No observations to process.")
+    query = session.query(ThermalObservation).order_by(ThermalObservation.observation_timestamp_utc.asc())
+    all_obs = query.all()
+    if not all_obs:
         return 0
 
-    obs_dicts = []
-    for o in observations:
-        obs_dicts.append({
+    obs_dicts = [
+        {
             "id": str(o.id),
             "latitude": float(o.latitude),
             "longitude": float(o.longitude),
-            "frp_mw": float(o.frp_mw),
-            "brightness_temp_k": float(o.brightness_temp_k),
-            "observation_timestamp_utc": o.observation_timestamp_utc
-        })
+            "frp_mw": float(o.frp_mw or 1.0),
+            "brightness_temp_k": float(o.brightness_temp_k or 300.0),
+            "observation_timestamp_utc": o.observation_timestamp_utc,
+            "satellite_sensor": o.satellite_sensor,
+            "day_night": o.day_night
+        }
+        for o in all_obs
+    ]
 
-    # Release connection before heavy CPU bound ST-DBSCAN
-    session.commit()
-    session.close()
-
-    # 2. Run ST-DBSCAN
-    clusters = run_st_dbscan(obs_dicts, eps_spatial_m=eps_spatial, eps_temporal_hours=eps_temporal_hours, min_pts=1)
-
-    # Re-open session
-    from app.db.database import SessionLocal
-    session = SessionLocal()
-    print(f"ST-DBSCAN formed {len(clusters)} events from {len(observations)} observations.")
-
-    # TRUNCATE events to ensure idempotency in batch MVP mode
-    session.execute(text("TRUNCATE TABLE event_observations CASCADE;"))
-    session.execute(text("TRUNCATE TABLE event_anomalies CASCADE;"))
-    session.execute(text("TRUNCATE TABLE event_classifications CASCADE;"))
-    session.execute(text("TRUNCATE TABLE thermal_events CASCADE;"))
-    session.commit()
-
-    # 3. Persist Events and Observation Lineage
-    events_created = 0
+    clusters = run_st_dbscan(obs_dicts, eps_spatial_m=750.0, eps_temporal_hours=12.0, min_pts=1)
+    
+    events_formed_or_updated = 0
 
     for cluster in clusters:
         metrics = compute_event_metrics(cluster)
         c_lat = metrics["centroid_lat"]
         c_lon = metrics["centroid_lon"]
-        wkt = metrics["boundary_wkt"]
-        
-        # Sort observation IDs to create a stable hash for this exact cluster
-        obs_ids = sorted([str(obs["id"]) for obs in cluster])
-        stable_hash = uuid.uuid5(uuid.NAMESPACE_OID, "".join(obs_ids))
-        
-        state_code = "IND"
-        dt_str = metrics["first_detected_utc"].strftime("%Y%m")
-        # Generate a deterministic short hash for the public ID
-        short_hash = str(stable_hash).split('-')[0].upper()
-        event_public_id = f"EVT-{state_code}-{dt_str}-{short_hash}"
+        first_utc = metrics["first_detected_utc"]
+        latest_utc = metrics["latest_detected_utc"]
+        peak_frp = metrics["peak_frp_mw"]
+        mean_frp = metrics["mean_frp_mw"]
+        total_frp = metrics["aggregate_frp_mw"]
+        max_k = metrics["max_brightness_k"]
+        obs_count = metrics["observation_count"]
+        area_ha = metrics["bounding_area_ha"]
+        boundary_wkt = metrics["boundary_wkt"]
 
-        evt = ThermalEvent(
-            id=stable_hash,
-            event_id=event_public_id,
-            centroid=f"SRID=4326;POINT({c_lon} {c_lat})",
-            boundary_geom=f"SRID=4326;{wkt}",
-            latitude=c_lat,
-            longitude=c_lon,
-            bounding_area_ha=metrics["bounding_area_ha"],
-            first_detected_utc=metrics["first_detected_utc"],
-            latest_detected_utc=metrics["latest_detected_utc"],
-            observation_count=metrics["observation_count"],
-            peak_frp_mw=metrics["peak_frp_mw"],
-            mean_frp_mw=metrics["mean_frp_mw"],
-            aggregate_frp_mw=metrics["aggregate_frp_mw"],
-            max_brightness_k=metrics["max_brightness_k"],
-            lifecycle_status="ACTIVE"
-        )
-        session.add(evt)
-        session.flush()
-        events_created += 1
+        # Spatial Query: Find closest industrial facility
+        fac_q = text("""
+            SELECT id, name, sector_category, state, district,
+                   ST_Distance(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography) as dist_m
+            FROM industrial_facilities
+            WHERE is_active = true
+            ORDER BY centroid <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)
+            LIMIT 1;
+        """)
+        fac_res = session.execute(fac_q, {"lat": c_lat, "lon": c_lon}).fetchone()
 
-        # Insert lineage in event_observations junction table
-        for obs_id in obs_ids:
-            link_sql = text("""
-                INSERT INTO event_observations (id, event_id, observation_id, attached_at)
-                VALUES (:id, :evt_id, :obs_id, NOW())
-                ON CONFLICT (event_id, observation_id) DO NOTHING;
-            """)
-            session.execute(link_sql, {"id": str(uuid.uuid4()), "evt_id": stable_hash, "obs_id": obs_id})
+        associated_fac_id = None
+        dist_to_fac = 99999.0
+        primary_land_use = "Cropland"
 
-    session.commit()
-    return events_created
+        if fac_res and fac_res[5] is not None:
+            dist_to_fac = float(fac_res[5])
+            if dist_to_fac <= 3500.0:  # Within 3.5km industrial boundary
+                associated_fac_id = fac_res[0]
+                primary_land_use = fac_res[2] or "Industrial"
+            else:
+                primary_land_use = "Cropland" if c_lat > 24.0 else "Regional Hotspot"
 
-if __name__ == "__main__":
-    session = SessionLocal()
-    count = process_events(session)
-    print(f"CHECKPOINT A: Formed and persisted {count} thermal events in PostGIS.")
-    session.close()
+        # Check if an existing event covers this cluster (same centroid proximity < 500m)
+        existing_event = session.query(ThermalEvent).filter(
+            text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 500)")
+        ).params(lon=c_lon, lat=c_lat).first()
+
+        if existing_event:
+            existing_event.peak_frp_mw = max(float(existing_event.peak_frp_mw or 0.0), peak_frp)
+            existing_event.mean_frp_mw = (float(existing_event.mean_frp_mw or 0.0) + mean_frp) / 2.0
+            existing_event.aggregate_frp_mw = max(float(existing_event.aggregate_frp_mw or 0.0), total_frp)
+            existing_event.observation_count = obs_count
+            existing_event.latest_detected_utc = latest_utc
+            existing_event.distance_to_facility_m = dist_to_fac
+            if associated_fac_id and not existing_event.associated_facility_id:
+                existing_event.associated_facility_id = associated_fac_id
+                existing_event.primary_land_use = primary_land_use
+            target_event = existing_event
+        else:
+            short_id = f"EVT-{datetime.now().year}-{str(uuid.uuid4())[:6].upper()}"
+            target_event = ThermalEvent(
+                event_id=short_id,
+                centroid=f"SRID=4326;POINT({c_lon} {c_lat})",
+                boundary_geom=f"SRID=4326;{boundary_wkt}",
+                latitude=c_lat,
+                longitude=c_lon,
+                bounding_area_ha=area_ha,
+                first_detected_utc=first_utc,
+                latest_detected_utc=latest_utc,
+                peak_frp_mw=peak_frp,
+                mean_frp_mw=mean_frp,
+                aggregate_frp_mw=total_frp,
+                max_brightness_k=max_k,
+                observation_count=obs_count,
+                associated_facility_id=associated_fac_id,
+                distance_to_facility_m=dist_to_fac,
+                primary_land_use=primary_land_use,
+                classification="OTHER_UNCERTAIN",
+                anomaly_tier="NORMAL",
+                lifecycle_status="ACTIVE"
+            )
+            session.add(target_event)
+            session.flush()
+
+        for o_dict in cluster:
+            o_uuid = uuid.UUID(o_dict["id"])
+            existing_link = session.query(EventObservation).filter(
+                EventObservation.event_id == target_event.id,
+                EventObservation.observation_id == o_uuid
+            ).first()
+            if not existing_link:
+                link = EventObservation(
+                    event_id=target_event.id,
+                    observation_id=o_uuid
+                )
+                session.add(link)
+
+        session.commit()
+
+        # Trigger ML intelligence & Anomaly scoring
+        process_event_intelligence(session, target_event.event_id)
+        events_formed_or_updated += 1
+
+    return events_formed_or_updated

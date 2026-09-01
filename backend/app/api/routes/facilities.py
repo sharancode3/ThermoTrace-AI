@@ -80,7 +80,6 @@ def list_facilities(
             or_(
                 IndustrialFacility.sector_category.ilike(f"%{s_clean}%"),
                 IndustrialFacility.sector_category == s_clean,
-                IndustrialFacility.sub_type.ilike(f"%{s_clean}%"),
             )
         )
 

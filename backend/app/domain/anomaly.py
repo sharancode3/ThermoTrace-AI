@@ -30,14 +30,16 @@ except ImportError:
 MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/models/thermo_xgb_v1.0.0.joblib'))
 CLASSES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/models/classes.npy'))
 
+_CACHED_MODEL = None
+_CACHED_CLASSES = None
+
 def get_model():
-    model = None
-    classes = None
-    if os.path.exists(MODEL_PATH):
-        model = joblib.load(MODEL_PATH)
-    if os.path.exists(CLASSES_PATH):
-        classes = np.load(CLASSES_PATH, allow_pickle=True)
-    return model, classes
+    global _CACHED_MODEL, _CACHED_CLASSES
+    if _CACHED_MODEL is None and os.path.exists(MODEL_PATH):
+        _CACHED_MODEL = joblib.load(MODEL_PATH)
+    if _CACHED_CLASSES is None and os.path.exists(CLASSES_PATH):
+        _CACHED_CLASSES = np.load(CLASSES_PATH, allow_pickle=True)
+    return _CACHED_MODEL, _CACHED_CLASSES
 
 def compute_uncertainty(confidence: float, obs_count: int, entropy: float) -> str:
     if confidence < 0.60 or obs_count < 1 or entropy > 1.2:
