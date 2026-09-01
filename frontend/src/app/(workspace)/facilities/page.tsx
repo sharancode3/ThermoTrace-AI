@@ -292,10 +292,18 @@ export default function FacilitiesPage() {
                         <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700">
                           {facility.facility_code}
                         </span>
-                        <span className="flex items-center gap-1 rounded border border-blue-100 bg-blue-50/80 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-                          {getSectorIcon(facility.sector_category)}
-                          {facility.sector_category}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {facility.historical_event_count && facility.historical_event_count > 0 ? (
+                            <span className="flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                              <Flame className="h-3 w-3 text-rose-600 animate-pulse" />
+                              {facility.historical_event_count} Active
+                            </span>
+                          ) : null}
+                          <span className="flex items-center gap-1 rounded border border-blue-100 bg-blue-50/80 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                            {getSectorIcon(facility.sector_category)}
+                            {facility.sector_category}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Name & Subtype */}

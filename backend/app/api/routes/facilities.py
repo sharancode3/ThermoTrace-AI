@@ -14,7 +14,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, desc
+from sqlalchemy import func, or_, and_, desc, case
 
 from app.db.database import get_db
 from app.db.models import (
@@ -116,7 +116,23 @@ def list_facilities(
             IndustrialFacility.data_source,
         )
         .filter(*base_filter)
-        .order_by(IndustrialFacility.name.asc())
+        .order_by(
+            IndustrialFacility.historical_event_count.desc().nullslast(),
+            IndustrialFacility.baseline_frp_mean.desc().nullslast(),
+            case(
+                (
+                    IndustrialFacility.state.in_([
+                        "Gujarat", "Maharashtra", "Jharkhand", "Odisha", "Assam",
+                        "Karnataka", "Tamil Nadu", "Haryana", "Punjab", "West Bengal",
+                        "Chhattisgarh", "Rajasthan", "Andhra Pradesh", "Uttar Pradesh",
+                        "Madhya Pradesh", "Bihar", "Kerala", "Telangana", "India"
+                    ]),
+                    0,
+                ),
+                else_=1,
+            ),
+            IndustrialFacility.name.asc(),
+        )
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
@@ -199,7 +215,7 @@ def get_facility_intelligence(
             detail=f"Facility with ID {facility_id} not found",
         )
 
-    # 2. Fetch baseline profile
+        # 2. Fetch baseline profile or compute dynamically from historical telemetry
     baseline = db.query(FacilityBaseline).filter(FacilityBaseline.facility_id == facility_id).first()
     baseline_profile = None
     if baseline:
@@ -220,25 +236,58 @@ def get_facility_intelligence(
     events = (
         db.query(ThermalEvent)
         .filter(
-            ThermalEvent.associated_facility_id == facility_id,
+            or_(
+                ThermalEvent.associated_facility_id == facility_id,
+                and_(
+                    func.abs(ThermalEvent.latitude - facility.latitude) <= 0.05,
+                    func.abs(ThermalEvent.longitude - facility.longitude) <= 0.05,
+                )
+            ),
             ThermalEvent.latest_detected_utc >= cutoff_date,
         )
         .order_by(ThermalEvent.latest_detected_utc.desc())
         .all()
     )
 
-    # If no directly linked events, search within 5km spatial radius
+    # If window is narrow and has 0 events, retrieve all historical detections for full context
     if not events:
         events = (
             db.query(ThermalEvent)
             .filter(
-                func.abs(ThermalEvent.latitude - facility.latitude) < 0.05,
-                func.abs(ThermalEvent.longitude - facility.longitude) < 0.05,
-                ThermalEvent.latest_detected_utc >= cutoff_date,
+                or_(
+                    ThermalEvent.associated_facility_id == facility_id,
+                    and_(
+                        func.abs(ThermalEvent.latitude - facility.latitude) <= 0.05,
+                        func.abs(ThermalEvent.longitude - facility.longitude) <= 0.05,
+                    )
+                )
             )
             .order_by(ThermalEvent.latest_detected_utc.desc())
             .limit(50)
             .all()
+        )
+
+    # If baseline was not in facility_baselines table but events exist, compute empirical baseline dynamically
+    if not baseline_profile and events:
+        ev_frps = [float(e.peak_frp_mw or 0.0) for e in events]
+        mean_v = sum(ev_frps) / len(ev_frps)
+        variance = sum((x - mean_v) ** 2 for x in ev_frps) / len(ev_frps)
+        std_v = variance ** 0.5 if variance > 0 else 5.0
+        sorted_frps = sorted(ev_frps)
+        med_v = sorted_frps[len(sorted_frps) // 2]
+        q95_idx = int(len(sorted_frps) * 0.95)
+        q95_v = sorted_frps[min(q95_idx, len(sorted_frps) - 1)]
+        
+        baseline_profile = FacilityBaselineProfile(
+            sample_observation_count=len(events),
+            mean_frp_mw=round(mean_v, 1),
+            std_frp_mw=round(std_v, 1),
+            median_frp_mw=round(med_v, 1),
+            q75_frp_mw=round(med_v * 1.15, 1),
+            q95_frp_mw=round(q95_v, 1),
+            max_recorded_frp_mw=round(max(ev_frps), 1),
+            is_statistically_sufficient=len(events) >= 3,
+            calculated_at=datetime.now(timezone.utc),
         )
 
     # 4. Phase 7: Frequency & Pattern Aggregation

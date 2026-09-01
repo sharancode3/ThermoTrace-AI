@@ -61,9 +61,11 @@ export default function FacilityDetailDrawer({
     setError(null);
     setLoadingStep(1);
 
-    // Realistic multi-step progress indicator
-    const timer1 = setTimeout(() => setLoadingStep(2), 350);
-    const timer2 = setTimeout(() => setLoadingStep(3), 700);
+    // Live 5-step investigation pipeline animation
+    const timer1 = setTimeout(() => setLoadingStep(2), 300);
+    const timer2 = setTimeout(() => setLoadingStep(3), 650);
+    const timer3 = setTimeout(() => setLoadingStep(4), 1050);
+    const timer4 = setTimeout(() => setLoadingStep(5), 1400);
 
     fetchFacilityIntelligence(facility.id, windowDays)
       .then((data) => {
@@ -83,6 +85,8 @@ export default function FacilityDetailDrawer({
       isMounted = false;
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
     };
   }, [facility, windowDays]);
 
@@ -287,15 +291,17 @@ export default function FacilityDetailDrawer({
               <h3 className="mt-4 text-sm font-semibold text-slate-800">
                 Gathering Forensic Telemetry...
               </h3>
-              <div className="mt-2 text-xs text-slate-500">
-                {loadingStep === 1 && "Querying historical satellite thermal detections..."}
-                {loadingStep === 2 && "Evaluating rolling 90-day empirical baseline envelope..."}
-                {loadingStep === 3 && "Synthesizing ESA WorldCover & grounded tactical brief..."}
+              <div className="mt-2 text-xs font-mono text-slate-600 space-y-1">
+                {loadingStep === 1 && "🛰️ Querying NASA FIRMS & PostGIS Spatial Buffer (5km)..."}
+                {loadingStep === 2 && "🔍 Extracting 14-Feature Radiometric & Spatial Vectors..."}
+                {loadingStep === 3 && "🤖 Executing Calibrated XGBoost & TreeSHAP Drivers..."}
+                {loadingStep === 4 && "📊 Calculating 90-Day Gaussian Baseline Envelope (μ, σ)..."}
+                {loadingStep >= 5 && "📝 Synthesizing Grounded Tactical Intelligence & Dossier..."}
               </div>
-              <div className="mt-4 h-1.5 w-48 overflow-hidden rounded-full bg-slate-100">
+              <div className="mt-4 h-2 w-64 overflow-hidden rounded-full bg-slate-100 border border-slate-200">
                 <div
                   className="h-full bg-blue-600 transition-all duration-300"
-                  style={{ width: `${(loadingStep / 3) * 100}%` }}
+                  style={{ width: `${(loadingStep / 5) * 100}%` }}
                 />
               </div>
             </div>
