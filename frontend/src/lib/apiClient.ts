@@ -3,7 +3,7 @@ const API_BASE_URL =
     ? "/api/v1"
     : process.env.INTERNAL_BACKEND_URL
       ? `${process.env.INTERNAL_BACKEND_URL}/api/v1`
-      : "http://backend:8000/api/v1";
+      : "http://127.0.0.1:8000/api/v1";
 
 export type Viewport = {
   west: number;
@@ -234,4 +234,115 @@ export async function askThermalChat(
   }
 
   return response.json();
+}
+
+export type FacilitySummary = {
+  id: string;
+  facility_code: string;
+  name: string;
+  sector_category: string;
+  sub_type?: string;
+  operator_name?: string;
+  state: string;
+  district?: string;
+  latitude: number;
+  longitude: number;
+  baseline_frp_mean?: number;
+  baseline_frp_std?: number;
+  baseline_frp_median?: number;
+  historical_event_count: number;
+  is_statistically_sufficient: boolean;
+  is_active: boolean;
+  data_source?: string;
+};
+
+export type FacilityListResponse = {
+  items: FacilitySummary[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  sectors: string[];
+  states: string[];
+};
+
+export type FacilityHistoricalEvent = {
+  event_id: string;
+  first_detected_utc: string;
+  latest_detected_utc: string;
+  peak_frp_mw: number;
+  mean_frp_mw: number;
+  classification: string;
+  anomaly_tier: string;
+  z_score?: number;
+  confidence_pct?: number;
+  observation_count: number;
+  distance_to_facility_m?: number;
+};
+
+export type FacilityBaselineProfile = {
+  sample_observation_count: number;
+  mean_frp_mw: number;
+  std_frp_mw: number;
+  median_frp_mw: number;
+  q75_frp_mw: number;
+  q95_frp_mw: number;
+  max_recorded_frp_mw: number;
+  is_statistically_sufficient: boolean;
+  calculated_at?: string;
+};
+
+export type GroundedBrief = {
+  observed: string[];
+  derived: string[];
+  modelled: string[];
+  unknown: string[];
+  narrative_summary: string;
+};
+
+export type FacilityIntelligence = {
+  facility: FacilitySummary;
+  baseline_profile?: FacilityBaselineProfile;
+  window_days: number;
+  window_metrics: {
+    total_events: number;
+    distinct_active_days: number;
+    mean_frp_mw: number;
+    peak_frp_mw: number;
+    longest_streak_days: number;
+    activity_trend: string;
+    classification_counts: Record<string, number>;
+    anomaly_tier_counts: Record<string, number>;
+    first_detected_in_window?: string;
+    latest_detected_in_window?: string;
+  };
+  historical_events: FacilityHistoricalEvent[];
+  land_cover_context: {
+    built_up_industrial_pct: number;
+    barren_soil_pct: number;
+    vegetation_pct: number;
+    water_bodies_pct: number;
+    buffer_radius_meters: number;
+    satellite_source: string;
+  };
+  grounded_brief: GroundedBrief;
+  cached_at: string;
+};
+
+export async function fetchFacilities(params: {
+  search?: string;
+  sector?: string;
+  state?: string;
+  page?: number;
+  page_size?: number;
+} = {}): Promise<FacilityListResponse> {
+  return get<FacilityListResponse>("/facilities", params);
+}
+
+export async function fetchFacilityIntelligence(
+  facilityId: string,
+  windowDays: number = 30
+): Promise<FacilityIntelligence> {
+  return get<FacilityIntelligence>(`/facilities/${facilityId}/intelligence`, {
+    window_days: windowDays,
+  });
 }

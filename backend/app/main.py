@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import endpoints
-from app.api.routes import chat, stream, reports
+from app.api.routes import chat, stream, reports, facilities
 
 app = FastAPI(
     title="Thermo Intelligence REST API",
@@ -22,6 +22,7 @@ app.include_router(endpoints.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(stream.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
+app.include_router(facilities.router, prefix="/api/v1")
 
 @app.get("/api/v1/health")
 def health_check():
