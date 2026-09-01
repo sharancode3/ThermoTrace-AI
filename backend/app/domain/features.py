@@ -169,7 +169,7 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
         is_ind = 0
 
     features = {
-        "dist_to_facility": dist_to_fac if dist_to_fac <= 3500.0 else -1.0,
+        "dist_to_facility": dist_to_fac,
         "facility_category_encoded": fac_cat,
         "peak_frp_mw": float(event.peak_frp_mw),
         "mean_frp_mw": float(event.mean_frp_mw),

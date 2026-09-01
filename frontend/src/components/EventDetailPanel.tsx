@@ -74,23 +74,28 @@ export function EventDetailPanel({
     window.dispatchEvent(new CustomEvent("thermo-open-chat", { detail: { eventId } }));
   };
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     if (!eventId) return;
     setIsExportingPDF(true);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-      const downloadUrl = `${apiBase}/api/v1/reports/events/${eventId}/download`;
+      const rawApi = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const base = rawApi.replace(/\/api\/v1\/?$/, "");
+      const downloadUrl = `${base}/api/v1/reports/events/${eventId}/download`;
+      const res = await fetch(downloadUrl);
+      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.setAttribute("download", `ThermoTrace_Report_${eventId}.pdf`);
-      link.target = "_blank";
+      link.href = blobUrl;
+      link.download = `ThermoTrace_Event_${eventId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error("Report export failed:", err);
     } finally {
-      setTimeout(() => setIsExportingPDF(false), 1500);
+      setIsExportingPDF(false);
     }
   };
 

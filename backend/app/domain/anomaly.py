@@ -140,7 +140,31 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             entropy = -float(np.sum([p * np.log(p + 1e-9) for p in probs]))
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count, entropy)
             
-            if confidence < 0.40:
+            # Sovereign Grounded & Physical Consistency Overrides
+            is_ind = int(features.get("is_industrial_zone", 0))
+            pct_crop = float(features.get("pct_cropland", 0.0))
+            pct_for = float(features.get("pct_forest", 0.0))
+            dur_hrs = float(features.get("duration_hours", 0.0))
+            p_frp = float(features.get("peak_frp_mw", 0.0))
+            obs_ct = int(event.observation_count or 1)
+
+            if is_ind:
+                if p_frp >= 250.0:
+                    predicted_class = "IND_FIRE"
+                    confidence = max(confidence, 0.94)
+                elif dur_hrs >= 24.0 or obs_ct >= 5:
+                    predicted_class = "IND_FLARE"
+                    confidence = max(confidence, 0.92)
+                else:
+                    predicted_class = "IND_ROUTINE"
+                    confidence = max(confidence, 0.88)
+            elif pct_for >= 0.60:
+                predicted_class = "WILDFIRE"
+                confidence = max(confidence, 0.91)
+            elif pct_crop >= 0.60:
+                predicted_class = "AGRI_BURN"
+                confidence = max(confidence, 0.93)
+            elif confidence < 0.45:
                 predicted_class = "OTHER_UNCERTAIN"
                 
             # Tier 1 Eager: SHAP TreeExplainer is deferred to Tier 2 On-Demand drawer open
