@@ -38,6 +38,20 @@ export function NotificationDrawer({
   const [loading, setLoading] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
 
+  const handleSelectAlertEvent = (item: NotificationItem) => {
+    if (!item.event_id) return;
+    const detail = {
+      eventId: item.event_id,
+      coordinates: (item as any).coordinates || ((item as any).latitude && (item as any).longitude ? [(item as any).longitude, (item as any).latitude] : undefined),
+      anomalyTier: item.severity || "CRITICAL",
+    };
+    window.dispatchEvent(new CustomEvent("thermo-fly-to-event", { detail }));
+    window.dispatchEvent(new CustomEvent("thermo-open-event-drawer", { detail: { eventId: item.event_id } }));
+    const url = new URL(window.location.href);
+    url.searchParams.set("eventId", item.event_id);
+    window.history.pushState({}, "", url.toString());
+  };
+
   const loadNotifications = async () => {
     try {
       setLoading(true);
@@ -251,7 +265,8 @@ export function NotificationDrawer({
           items.map((item) => (
             <div
               key={item.id}
-              className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-2.5"
+              onClick={() => handleSelectAlertEvent(item)}
+              className="p-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-red-400 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer space-y-2.5"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">

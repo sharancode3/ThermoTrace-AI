@@ -5,7 +5,7 @@ import sys
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import text, case, or_
+from sqlalchemy import text, case, or_, func, and_
 from geoalchemy2.shape import to_shape
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
@@ -761,30 +761,53 @@ def get_event_intelligence(event_id: str, db: Session = Depends(get_db)):
 def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
     """
     Authoritative Thermo News Stream:
-    - Sorted strictly based on detection/publishing time (newest first).
-    - Filters to the past 24 hours of NASA FIRMS telemetry (with graceful fallback if sparse).
+    - Continuous rolling 24-hour window: an item created at 13:00 today remains eligible until 13:00 tomorrow.
+    - No midnight batch reset or calendar-day truncation.
+    - Uses UTC timestamps consistently.
+    - Graceful fallback: If active 24h window has fewer than 4 items, includes most recent bulletins so news feed is never blank.
+    - Non-destructive: older events remain permanently in PostgreSQL database.
     """
     query = (
         db.query(ThermoNews)
         .join(ThermalEvent, ThermoNews.event_id == ThermalEvent.id)
     )
     
-    if hours and hours > 0:
-        time_cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-        filtered_items = query.filter(
+    latest_ts = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar()
+    now_utc = datetime.now(timezone.utc)
+    ref_time = latest_ts if (latest_ts and latest_ts > now_utc - timedelta(days=7)) else now_utc
+    
+    h_window = hours if (hours and hours > 0) else 24
+    time_cutoff = ref_time - timedelta(hours=h_window)
+    
+    # Priority ordering: Critical & Abnormal bulletins first, followed by newest publication timestamp
+    severity_order = case(
+        (ThermoNews.severity_tag == "CRITICAL", 1),
+        (ThermoNews.severity_tag == "ABNORMAL", 2),
+        else_=3
+    )
+    
+    filtered_items = (
+        query
+        .filter(
             or_(
                 ThermoNews.published_at >= time_cutoff,
                 ThermalEvent.latest_detected_utc >= time_cutoff
             )
-        ).order_by(ThermoNews.published_at.desc(), ThermalEvent.latest_detected_utc.desc()).limit(60).all()
-        
-        if len(filtered_items) >= 3:
-            news_items = filtered_items
-        else:
-            # Fallback to most recent bulletins if past 24h has fewer than 3 events
-            news_items = query.order_by(ThermoNews.published_at.desc(), ThermalEvent.latest_detected_utc.desc()).limit(60).all()
+        )
+        .order_by(severity_order, ThermoNews.published_at.desc(), ThermalEvent.latest_detected_utc.desc())
+        .limit(60)
+        .all()
+    )
+    
+    if len(filtered_items) >= 4:
+        news_items = filtered_items
     else:
-        news_items = query.order_by(ThermoNews.published_at.desc(), ThermalEvent.latest_detected_utc.desc()).limit(60).all()
+        news_items = (
+            query
+            .order_by(severity_order, ThermoNews.published_at.desc(), ThermalEvent.latest_detected_utc.desc())
+            .limit(60)
+            .all()
+        )
         
     results = []
     for item in news_items:
@@ -838,36 +861,44 @@ from app.db.models import Notification
 def get_notifications(db: Session = Depends(get_db)):
     """
     Authoritative Operational Alerts:
-    - Strict Alert Filter: ONLY CRITICAL, ABNORMAL, and INDUSTRIAL (IND_FIRE, IND_FLARE, IND_ROUTINE) events are included.
-    - Limits to the most recent 100 alerts ordered strictly by time descending.
+    - Displays top 100 highest-priority actionable incidents (CRITICAL and ABNORMAL).
+    - Query-level LIMIT 100 with zero destructive database deletion.
+    - Synchronizes any newly formed CRITICAL or ABNORMAL anomalies into notifications.
+    - Ordered strictly by severity priority (CRITICAL > ABNORMAL), peak FRP descending, and timestamp descending.
     """
-    # Seed initial notifications if table is empty
-    count = db.query(Notification).count()
-    if count == 0:
-        alert_events = db.query(ThermalEvent).filter(
-            or_(
-                ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"]),
-                ThermalEvent.classification.like("IND_%")
-            )
-        ).order_by(ThermalEvent.latest_detected_utc.desc()).limit(100).all()
-        
-        for evt in alert_events:
+    # 1. Sync un-notified CRITICAL or ABNORMAL events into notifications table
+    unsynced_events = (
+        db.query(ThermalEvent)
+        .filter(
+            ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"]),
+            ~ThermalEvent.id.in_(db.query(Notification.event_id))
+        )
+        .all()
+    )
+    if unsynced_events:
+        for evt in unsynced_events:
             fac = db.query(IndustrialFacility).filter(IndustrialFacility.id == evt.associated_facility_id).first()
             fac_name = fac.name if fac else "Regional Monitored Sector"
-            title = f"{'Critical Incident' if evt.anomaly_tier == 'CRITICAL' else ('Abnormal Flaring' if evt.anomaly_tier == 'ABNORMAL' else 'Industrial Hotspot')}: [{evt.event_id}]"
-            msg = f"Observed peak FRP of {evt.peak_frp_mw:.1f} MW near {fac_name}. Classification: {evt.classification}."
+            title = f"{'Critical Thermal Emergency' if evt.anomaly_tier == 'CRITICAL' else 'Abnormal Thermal Flaring'}: [{evt.event_id}]"
+            msg = f"Radiance {evt.peak_frp_mw:.1f} MW near {fac_name}. Classification: {evt.classification}."
             notif = Notification(
                 event_id=evt.id,
                 title=title,
                 message=msg,
-                severity=evt.anomaly_tier if evt.anomaly_tier in ["CRITICAL", "ABNORMAL"] else "ABNORMAL",
+                severity=evt.anomaly_tier,
                 is_read=False,
                 created_at=evt.latest_detected_utc or datetime.now(timezone.utc)
             )
             db.add(notif)
         db.commit()
 
-    # Query strictly CRITICAL, ABNORMAL, or INDUSTRIAL records, limited to last 100
+    # 2. Query top 100 notifications ordered by severity and peak FRP
+    severity_order = case(
+        (Notification.severity == "CRITICAL", 1),
+        (Notification.severity == "ABNORMAL", 2),
+        else_=3
+    )
+
     notifications = (
         db.query(Notification)
         .join(ThermalEvent, Notification.event_id == ThermalEvent.id)
@@ -877,7 +908,7 @@ def get_notifications(db: Session = Depends(get_db)):
                 ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"])
             )
         )
-        .order_by(Notification.created_at.desc())
+        .order_by(severity_order, ThermalEvent.peak_frp_mw.desc(), Notification.created_at.desc())
         .limit(100)
         .all()
     )

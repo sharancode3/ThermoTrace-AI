@@ -258,7 +258,7 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
     news_record.headline = headline
     news_record.summary = summary
     news_record.severity_tag = severity
-    news_record.published_at_utc = event.latest_detected_utc or datetime.now(timezone.utc)
+    news_record.published_at = event.latest_detected_utc or datetime.now(timezone.utc)
 
     # 7. Create/Update Operational Alert Notification for Critical, Abnormal, or Industrial events
     is_alert_worthy = (

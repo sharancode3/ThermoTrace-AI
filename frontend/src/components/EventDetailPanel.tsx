@@ -63,6 +63,15 @@ export function EventDetailPanel({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleAskAboutEvent = () => {
+    if (!eventId) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("overlay", "chat");
+    url.searchParams.set("eventId", eventId);
+    window.history.pushState({}, "", url.toString());
+    window.dispatchEvent(new CustomEvent("thermo-open-chat", { detail: { eventId } }));
+  };
+
   const handleExportDossier = () => {
     if (!data) return;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -966,12 +975,20 @@ export function EventDetailPanel({
       {/* Footer Actions */}
       <div className="p-4 border-t border-slate-200 shrink-0 bg-slate-50/50 flex gap-2">
         <button 
+          onClick={handleAskAboutEvent}
+          disabled={!data}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
+        >
+          <Cpu className="w-4 h-4 text-orange-400" />
+          Ask AI About Event
+        </button>
+        <button 
           onClick={handleExportDossier}
           disabled={!data}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
         >
           <Download className="w-4 h-4" />
-          Export Tactical Dossier (JSON)
+          Export Dossier
         </button>
       </div>
     </div>

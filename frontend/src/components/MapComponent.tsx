@@ -167,7 +167,7 @@ export default function MapComponent({
   useEffect(() => {
     const handleFlyToEvent = (event: Event) => {
       const customEvent = event as CustomEvent;
-      const { coordinates, peakFrp, anomalyTier } = customEvent.detail || {};
+      const { coordinates, peakFrp, anomalyTier, eventId } = customEvent.detail || {};
       if (!Array.isArray(coordinates) || coordinates.length < 2) return;
 
       const [lon, lat] = coordinates.map(Number);
@@ -183,12 +183,16 @@ export default function MapComponent({
         targetPitch = 15;
       }
 
+      if (onEventClick && eventId) {
+        onEventClick(eventId);
+      }
       mapRef.current?.flyTo({
         center: [lon, lat],
         zoom: targetZoom,
         pitch: targetPitch,
         duration: 1500,
         essential: true,
+        padding: { top: 60, bottom: 60, left: 80, right: 480 },
       });
     };
 

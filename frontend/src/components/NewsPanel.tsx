@@ -44,6 +44,21 @@ export function NewsPanel({
   const [filterType, setFilterType] = useState("ALL");
   const [isStreaming, setIsStreaming] = useState(false);
 
+  const handleSelectNewsEvent = (item: NewsItem) => {
+    if (!item.event_id) return;
+    const detail = {
+      eventId: item.event_id,
+      coordinates: (item as any).coordinates || ((item as any).latitude && (item as any).longitude ? [(item as any).longitude, (item as any).latitude] : undefined),
+      peakFrp: item.peak_frp_mw || 0,
+      anomalyTier: item.anomaly_tier || item.severity_tag || "NORMAL",
+    };
+    window.dispatchEvent(new CustomEvent("thermo-fly-to-event", { detail }));
+    window.dispatchEvent(new CustomEvent("thermo-open-event-drawer", { detail: { eventId: item.event_id } }));
+    const url = new URL(window.location.href);
+    url.searchParams.set("eventId", item.event_id);
+    window.history.pushState({}, "", url.toString());
+  };
+
   const loadNews = async () => {
     try {
       setLoading(true);
@@ -319,6 +334,7 @@ export function NewsPanel({
           filteredItems.map((item) => (
             <div
               key={item.id}
+              onClick={() => handleSelectNewsEvent(item)}
               className="p-4 bg-white hover:bg-slate-50/90 border border-slate-200 hover:border-orange-500/40 rounded-xl cursor-pointer transition shadow-sm hover:shadow-md space-y-2.5 group relative"
             >
               <div className="flex items-center justify-between">
