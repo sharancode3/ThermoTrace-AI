@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Monitor", href: "/monitor" },
   { icon: Building2, label: "Facilities", href: "/facilities" },
   { icon: FileText, label: "Reports", href: "/reports" },
+  { icon: BarChart2, label: "National Analytics", href: "/analytics" },
 ];
 
 function FlamePlusIcon({ active = false }: { active?: boolean }) {
