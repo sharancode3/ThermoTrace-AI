@@ -113,8 +113,7 @@ export default function FacilityDetailDrawer({
   const handleExportPDF = () => {
     setIsExporting(true);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-      const downloadUrl = `${apiBase}/api/v1/facilities/${facility.id}/report/download?window_days=${windowDays}`;
+      const downloadUrl = `/api/v1/facilities/${facility.id}/report/download?window_days=${windowDays}`;
       window.open(downloadUrl, '_blank');
     } catch (err) {
       console.error('Export failed', err);

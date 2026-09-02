@@ -115,6 +115,7 @@ export default function MapComponent({
           lat,
           lon,
         });
+        setWindowHours(720); // Expand to 30 days so nearby persistent facility hotspots are visible
         mapRef.current?.flyTo({
           center: [lon, lat],
           zoom: 13.5,
@@ -529,6 +530,26 @@ export default function MapComponent({
           >
             <div className="pointer-events-none">
               <div className="w-12 h-12 rounded-full border-2 border-orange-500 animate-ping absolute -top-3 -left-3 opacity-60" />
+            </div>
+          </Marker>
+        )}
+
+        {/* Focused Target Facility Location Beacon */}
+        {focusedFacility && (
+          <Marker
+            key="focused-facility-marker"
+            longitude={focusedFacility.lon}
+            latitude={focusedFacility.lat}
+            anchor="bottom"
+          >
+            <div className="relative flex flex-col items-center pointer-events-none group">
+              <div className="px-2.5 py-1 bg-blue-900/90 text-white text-[11px] font-bold rounded-lg shadow-xl border border-blue-400/60 whitespace-nowrap mb-1 backdrop-blur-sm">
+                🏢 {focusedFacility.name}
+              </div>
+              <div className="relative flex items-center justify-center">
+                <span className="absolute w-8 h-8 rounded-full bg-blue-500/40 animate-ping" />
+                <span className="relative w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-lg" />
+              </div>
             </div>
           </Marker>
         )}

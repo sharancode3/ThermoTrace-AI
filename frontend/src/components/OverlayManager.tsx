@@ -1249,7 +1249,17 @@ export function OverlayManager() {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Polling Interval:</span>
-                  <span className="text-slate-900 font-semibold font-mono">Every 15 min</span>
+                  <div className="text-right">
+                    <span className="text-slate-900 font-semibold font-mono">Autonomous (Every 15 min)</span>
+                  </div>
+                </div>
+                <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-lg text-[10px] text-blue-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1 text-blue-950">
+                    ℹ️ Polar Orbit Telemetry Cadence
+                  </div>
+                  <p className="leading-relaxed text-blue-800">
+                    Our daemon synchronizes with NASA FIRMS servers every 15 minutes. However, VIIRS and MODIS are <strong>polar-orbiting sun-synchronous satellites</strong> that overpass India ~every 1.5–3 hours (typically ~10:30–13:30 IST daytime and ~01:30–03:30 IST nighttime). When no satellite passes overhead in a 15-min cycle, the daemon confirms nominal synchronization with zero new overpasses.
+                  </p>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Coverage:</span>
