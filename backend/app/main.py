@@ -1,3 +1,4 @@
+import os
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -34,11 +35,19 @@ async def firms_periodic_poller_daemon():
         # Sleep for 10 minutes (600 seconds)
         await asyncio.sleep(300)
 
+ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "false").lower() in ("true", "1", "yes")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    poller_task = asyncio.create_task(firms_periodic_poller_daemon())
+    poller_task = None
+    if ENABLE_FIRMS_POLLING:
+        print("[FIRMS DAEMON] Automated NASA FIRMS telemetry polling enabled (10-minute cadence).")
+        poller_task = asyncio.create_task(firms_periodic_poller_daemon())
+    else:
+        print("[FIRMS DAEMON] NASA FIRMS live polling is PAUSED (System running in high-performance frozen baseline mode).")
     yield
-    poller_task.cancel()
+    if poller_task:
+        poller_task.cancel()
 
 app = FastAPI(
     title="Thermo Intelligence REST API",

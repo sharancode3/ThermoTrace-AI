@@ -169,36 +169,31 @@ def download_national_report(target_date: Optional[str] = None, db: Session = De
 
 @router.get("/{report_id}/download")
 def download_report(report_id: str, db: Session = Depends(get_db)):
-    """Download a generated PDF dossier directly."""
+    """Download a generated PDF dossier directly (always refreshed with latest vector graphics)."""
     report = db.query(Report).filter(Report.report_id == report_id).first()
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
 
-    pdf_path = Path(report.storage_path)
-    if not pdf_path.exists() or not pdf_path.is_file():
-        # Regenerate if file was cleared
-        evt = db.query(ThermalEvent).filter(ThermalEvent.id == report.event_id).first()
-        if evt:
-            report_vm = ReportService.get_report_view_model(db, evt.event_id)
-            if report_vm:
-                PDFRenderer.render_and_save(report_vm, pdf_path)
-
-    if not pdf_path.exists() or not pdf_path.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF file could not be retrieved")
-
     event = db.query(ThermalEvent).filter(ThermalEvent.id == report.event_id).first()
-    report_vm = (
-        ReportService.get_report_view_model(db, event.event_id)
-        if event else {}
-    )
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Associated thermal event not found")
+
+    report_vm = ReportService.get_report_view_model(db, event.event_id)
+    if not report_vm:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not build report view model")
+
+    pdf_path = Path(report.storage_path)
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    saved_path = PDFRenderer.render_and_save(report_vm, pdf_path)
+
     download_filename = _build_report_filename(
-        classification=report_vm.get("classification") or (event.classification if event else None),
+        classification=report_vm.get("classification") or event.classification,
         location_name=report_vm.get("facility_district") or report_vm.get("facility_state"),
-        event_id=report_vm.get("event_id") or (event.event_id if event else None),
+        event_id=report_vm.get("event_id") or event.event_id,
     )
 
     return FileResponse(
-        path=pdf_path,
+        path=saved_path,
         media_type="application/pdf",
         filename=download_filename,
     )
