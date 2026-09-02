@@ -631,7 +631,7 @@ export function OverlayManager() {
           <div className="flex items-center justify-between px-2.5 py-1 bg-orange-50/80 border border-orange-200/80 rounded-lg text-[10px] text-orange-800 font-medium">
             <div className="flex items-center gap-1.5">
               <Radio className="w-3 h-3 text-orange-600 animate-pulse" />
-              <span>NASA FIRMS Telemetry (5-min Polling)</span>
+              <span>NASA FIRMS Telemetry (15-min Polling)</span>
             </div>
             <span className="font-mono font-bold bg-orange-200/70 px-1.5 py-0.2 rounded text-[9px]">PAST 24H</span>
           </div>
@@ -1240,7 +1240,7 @@ export function OverlayManager() {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Polling Interval:</span>
-                  <span className="text-slate-900 font-semibold font-mono">Every 5 min</span>
+                  <span className="text-slate-900 font-semibold font-mono">Every 15 min</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Coverage:</span>

@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 /**
  * Foreground-Triggered Polling Hook for NASA FIRMS Telemetry.
  * Active ONLY when the browser tab/window is active and visible.
- * Triggers poll strictly every 5 minutes (300,000ms).
+ * Triggers poll strictly every 15 minutes (900,000ms).
  */
 export function useFirmsPoller(onNewData?: () => void) {
   const isPollingRef = useRef<boolean>(false);
@@ -13,8 +13,8 @@ export function useFirmsPoller(onNewData?: () => void) {
 
   const executePoll = async (force: boolean = false) => {
     const now = Date.now();
-    // Guard: Prevent polling more than once per 5 minutes (300,000 ms) unless explicitly forced
-    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 300000) {
+    // Guard: Prevent polling more than once per 15 minutes (900,000 ms) unless explicitly forced
+    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 900000) {
       return;
     }
 
@@ -43,12 +43,12 @@ export function useFirmsPoller(onNewData?: () => void) {
     // 1. Initial check on mount
     executePoll();
 
-    // 2. Strict 5-minute foreground interval
+    // 2. Strict 15-minute foreground interval
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         executePoll();
       }
-    }, 300000);
+    }, 900000);
 
     return () => {
       clearInterval(interval);
