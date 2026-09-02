@@ -247,14 +247,21 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
     pct_forest = lc["pct_forest"]
     is_ind = lc["is_ind"]
 
+    first_t = event.first_detected_utc
+    latest_t = event.latest_detected_utc
+    if first_t and latest_t:
+        dur_hrs = abs((latest_t - first_t).total_seconds()) / 3600.0
+    else:
+        dur_hrs = 0.0
+
     features = {
         "dist_to_facility": dist_to_fac,
         "facility_category_encoded": fac_cat,
-        "peak_frp_mw": float(event.peak_frp_mw),
-        "mean_frp_mw": float(event.mean_frp_mw),
+        "peak_frp_mw": float(event.peak_frp_mw or 0.0),
+        "mean_frp_mw": float(event.mean_frp_mw or 0.0),
         "frp_variance": frp_var,
-        "max_brightness_k": float(event.max_brightness_k),
-        "duration_hours": float((event.latest_detected_utc - event.first_detected_utc).total_seconds() / 3600.0),
+        "max_brightness_k": float(event.max_brightness_k or 300.0),
+        "duration_hours": float(dur_hrs),
         "day_night_ratio": dn_ratio,
         "historical_active_days_90d": hist_days,
         "historical_peak_frp": hist_peak,
@@ -264,3 +271,29 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
         "is_industrial_zone": is_ind,
     }
     return features
+
+
+def build_physical_verification_payload(event: ThermalEvent, facility: Optional[IndustrialFacility] = None) -> Dict[str, Any]:
+    """
+    Constructs an additive, honest physical corroboration object separate from ML confidence.
+    Indicates physical spatial geofence alignment and radiance criteria without inflating ML confidence.
+    """
+    dist_m = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 99999.0
+    peak_frp = float(event.peak_frp_mw or 0.0)
+    inside_polygon = bool(event.associated_facility_id) and (dist_m <= 3500.0)
+    
+    if inside_polygon and peak_frp >= 150.0:
+        note = f"High radiant intensity ({peak_frp:.1f} MW) within registered {facility.sector_category if facility else 'industrial'} facility boundary"
+    elif inside_polygon:
+        note = f"Thermal activity within 3.5km buffer of {facility.name if facility else 'registered industrial complex'}"
+    elif float(event.latitude or 0.0) > 28.0 and peak_frp >= 20.0:
+        note = "Intense thermal signature in Northern agrarian belt"
+    else:
+        note = "Unassociated regional thermal observation"
+
+    return {
+        "inside_industrial_polygon": inside_polygon,
+        "facility_distance_m": round(dist_m, 1),
+        "peak_frp_mw": round(peak_frp, 1),
+        "verification_note": note
+    }
