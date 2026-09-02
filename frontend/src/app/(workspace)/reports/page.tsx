@@ -52,19 +52,28 @@ export default function ReportsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [reportsData, eventsData] = await Promise.all([
-        fetchReports().catch(() => []),
-        fetchGisEvents().catch(() => ({ features: [] }))
-      ]);
+      const reportsData = await fetchReports().catch(() => []);
       setReports(reportsData || []);
-      setEvents(eventsData?.features || []);
-      if (eventsData?.features?.length > 0 && !selectedEventId) {
-        setSelectedEventId(eventsData.features[0].properties.event_id);
-      }
     } catch (err) {
       console.error("Failed to load reports page data:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openGenerateModal = async () => {
+    setShowModal(true);
+    if (events.length === 0) {
+      try {
+        const eventsData = await fetchGisEvents().catch(() => ({ features: [] }));
+        const feats = eventsData?.features || [];
+        setEvents(feats);
+        if (feats.length > 0 && !selectedEventId) {
+          setSelectedEventId(feats[0].properties.event_id);
+        }
+      } catch (err) {
+        console.error("Failed to load events for dossier generation:", err);
+      }
     }
   };
 
@@ -134,7 +143,7 @@ export default function ReportsPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-orange-600" : ""}`} />
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={openGenerateModal}
             className="flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold text-xs transition shadow-sm"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
