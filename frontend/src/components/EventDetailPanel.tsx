@@ -78,22 +78,30 @@ export function EventDetailPanel({
     if (!eventId) return;
     setIsExportingPDF(true);
     try {
-      const rawApi = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-      const base = rawApi.replace(/\/api\/v1\/?$/, "");
-      const downloadUrl = `${base}/api/v1/reports/events/${eventId}/download`;
+      const downloadUrl = `/api/v1/reports/events/${encodeURIComponent(eventId)}/download`;
       const res = await fetch(downloadUrl);
       if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+      
+      // Extract filename from Content-Disposition header if available
+      let filename = `ThermoTrace_Event_${eventId}.pdf`;
+      const disposition = res.headers.get("Content-Disposition");
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      
       const blob = await res.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `ThermoTrace_Event_${eventId}.pdf`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error("Report export failed:", err);
+      alert(`Report download failed: ${err}`);
     } finally {
       setIsExportingPDF(false);
     }

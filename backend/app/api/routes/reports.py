@@ -246,3 +246,27 @@ def download_event_report(event_id: str, db: Session = Depends(get_db)):
         media_type="application/pdf",
         filename=download_filename,
     )
+
+
+@router.get("/national/download")
+def download_national_report(target_date: Optional[str] = None, db: Session = Depends(get_db)):
+    """Generate and download authoritative 1-page forensic National Thermal Intelligence Report."""
+    from app.api.endpoints import get_national_summary
+
+    summary_data = get_national_summary(target_date=target_date, db=db)
+    selected_date = summary_data.get("selected_date") or (target_date if target_date else "ALL")
+
+    output_dir = Path(os.getenv("REPORTS_DIR", "backend/data/reports"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    date_suffix = _safe_filename_part(selected_date) or "ALL_DAYS"
+    filename = f"National_Analysis_Report_{date_suffix}.pdf"
+    pdf_path = output_dir / f"NAT-RPT-{date_suffix}.pdf"
+
+    saved_path = PDFRenderer.render_national_analysis_pdf(summary_data, pdf_path)
+
+    return FileResponse(
+        path=saved_path,
+        media_type="application/pdf",
+        filename=filename,
+    )

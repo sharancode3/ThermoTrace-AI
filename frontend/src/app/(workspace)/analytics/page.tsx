@@ -3,10 +3,11 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
-  Flame, MapPin, BarChart3, CheckCircle2, Copy, ArrowUpRight, 
+  Flame, MapPin, BarChart2, CheckCircle2, Copy, ArrowUpRight, 
   RefreshCw, ShieldCheck, Layers, Database, Calendar,
   TrendingUp, Activity, Cpu, Search, Check, SlidersHorizontal,
-  ChevronRight, Globe, Building2, Filter, AlertTriangle, ChevronDown
+  ChevronRight, Globe, Building2, Filter, AlertTriangle, ChevronDown,
+  FileText, Shield, Zap, LayoutGrid, List
 } from "lucide-react";
 import { fetchNationalAnalytics } from "@/lib/apiClient";
 
@@ -14,6 +15,7 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
+  const [downloadingPDF, setDownloadingPDF] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string>("ALL");
   const [selectedStateName, setSelectedStateName] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState<string>("");
@@ -27,7 +29,6 @@ export default function AnalyticsPage() {
       .then((d) => {
         setData(d);
         if (d?.state_breakdown && d.state_breakdown.length > 0) {
-          // If no state selected or currently selected state is not in list, select top state
           if (!selectedStateName || !d.state_breakdown.some((s: any) => s.state === selectedStateName)) {
             setSelectedStateName(d.state_breakdown[0].state);
           }
@@ -48,7 +49,6 @@ export default function AnalyticsPage() {
     loadData(newDate);
   };
 
-  // Filtered and sorted state list
   const filteredStates = useMemo(() => {
     if (!data?.state_breakdown) return [];
     let list = data.state_breakdown.filter((st: any) => 
@@ -65,11 +65,41 @@ export default function AnalyticsPage() {
     return list;
   }, [data?.state_breakdown, searchFilter, sortBy]);
 
-  // Currently selected state object
   const activeState = useMemo(() => {
     if (!data?.state_breakdown) return null;
     return data.state_breakdown.find((s: any) => s.state === selectedStateName) || data.state_breakdown[0] || null;
   }, [data?.state_breakdown, selectedStateName]);
+
+    const downloadNationalReport = async () => {
+    setDownloadingPDF(true);
+    try {
+      const url = `/api/v1/reports/national/download?target_date=${encodeURIComponent(selectedDate)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+      
+      let filename = `National_Analysis_Report_${selectedDate}.pdf`;
+      const disposition = res.headers.get("Content-Disposition");
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("National report download failed:", err);
+      alert(`National report download failed: ${err}`);
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
 
   const copyEntireReport = () => {
     if (!data) return;
@@ -155,628 +185,675 @@ export default function AnalyticsPage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const getCategoryColor = (cat: string) => {
+  const getCategoryTheme = (cat: string) => {
     switch (cat) {
       case "AGRI_BURN":
-        return { bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-400", bar: "bg-emerald-500" };
+        return { 
+          badgeBg: "bg-emerald-50 text-emerald-800 border-emerald-200", 
+          bar: "bg-emerald-500",
+          dot: "bg-emerald-500"
+        };
       case "WILDFIRE":
-        return { bg: "bg-amber-500/10", border: "border-amber-500/30", text: "text-amber-400", bar: "bg-amber-500" };
+        return { 
+          badgeBg: "bg-amber-50 text-amber-800 border-amber-200", 
+          bar: "bg-amber-500",
+          dot: "bg-amber-500"
+        };
       case "IND_FLARE":
-        return { bg: "bg-cyan-500/10", border: "border-cyan-500/30", text: "text-cyan-400", bar: "bg-cyan-500" };
+        return { 
+          badgeBg: "bg-cyan-50 text-cyan-800 border-cyan-200", 
+          bar: "bg-cyan-500",
+          dot: "bg-cyan-500"
+        };
       case "IND_ROUTINE":
-        return { bg: "bg-blue-500/10", border: "border-blue-500/30", text: "text-blue-400", bar: "bg-blue-500" };
+        return { 
+          badgeBg: "bg-blue-50 text-blue-800 border-blue-200", 
+          bar: "bg-blue-500",
+          dot: "bg-blue-500"
+        };
       case "IND_FIRE":
-        return { bg: "bg-rose-500/10", border: "border-rose-500/30", text: "text-rose-400", bar: "bg-rose-500" };
+        return { 
+          badgeBg: "bg-rose-50 text-rose-800 border-rose-200", 
+          bar: "bg-rose-500",
+          dot: "bg-rose-500"
+        };
       default:
-        return { bg: "bg-slate-500/10", border: "border-slate-500/30", text: "text-slate-400", bar: "bg-slate-500" };
+        return { 
+          badgeBg: "bg-slate-100 text-slate-700 border-slate-200", 
+          bar: "bg-slate-400",
+          dot: "bg-slate-400"
+        };
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#06080e] text-slate-100 p-4 md:p-6 lg:p-8 space-y-6">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       
-      {/* 1. EXECUTIVE HEADER & CALENDAR TOOLBAR */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 via-emerald-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center shadow-lg shadow-cyan-950/40">
-              <Globe className="w-5 h-5 text-cyan-400" />
+      {/* 1. TOP HEADER & SOVEREIGN RIBBON (Matched with Facilities/Reports pages) */}
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-orange-100 border border-orange-200 text-orange-600 rounded-xl shadow-xs">
+                <BarChart2 className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                    National Thermal Intelligence & State Analytics
+                  </h1>
+                  <span className="inline-flex items-center rounded-md bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700 border border-orange-200">
+                    SOVEREIGN INDIA
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Multi-Sensor VIIRS & MODIS Telemetry Grounded with Calibrated Machine Learning Intelligence
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                National Thermal Intelligence & State Analytics
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-700/50 font-mono tracking-wider">
-                  DEFENSE GRADE
-                </span>
-              </h1>
-              <p className="text-xs md:text-sm text-slate-400 mt-0.5">
-                Sovereign Pan-India Multi-Sensor Telemetry (VIIRS/MODIS) • High-Precision Calibrated ML Intelligence
-              </p>
-            </div>
-          </div>
-        </div>
 
-        {/* Action Controls & Calendar Picker */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Calendar Date Selector Dropdown */}
-          <div className="flex items-center gap-2 bg-[#0c101c] border border-slate-800 rounded-lg px-3 py-1.5 shadow-inner">
-            <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span className="text-xs font-medium text-slate-400">Date:</span>
-            <select
-              aria-label="Filter national analysis by date"
-              value={selectedDate}
-              onChange={(e) => handleDateChange(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-2"
-            >
-              <option value="ALL" className="bg-[#0b0f19] text-white">All Monitored History (9 Days)</option>
-              {data?.available_dates?.map((d: string) => (
-                <option key={d} value={d} className="bg-[#0b0f19] text-white">
-                  {d} {d === data?.available_dates[0] ? "(Latest)" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Action Toolbar */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Calendar Date Selector */}
+              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs">
+                <Calendar className="w-4 h-4 text-orange-600 shrink-0" />
+                <span className="text-xs font-semibold text-slate-600">Date:</span>
+                <select
+                  aria-label="Filter national analysis by date"
+                  value={selectedDate}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL">All Monitored History (9 Days)</option>
+                  {data?.available_dates?.map((d: string) => (
+                    <option key={d} value={d}>
+                      {d} {d === data?.available_dates[0] ? "(Latest)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-[#0c101c] border border-slate-800 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode("split")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === "split"
-                  ? "bg-cyan-950/80 text-cyan-300 border border-cyan-800/50 shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Split State Console
-            </button>
-            <button
-              onClick={() => setViewMode("matrix")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === "matrix"
-                  ? "bg-cyan-950/80 text-cyan-300 border border-cyan-800/50 shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Territory Matrix View
-            </button>
-          </div>
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1">
+                <button
+                  onClick={() => setViewMode("split")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === "split"
+                      ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Split Console
+                </button>
+                <button
+                  onClick={() => setViewMode("matrix")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    viewMode === "matrix"
+                      ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Territory Matrix
+                </button>
+              </div>
 
-          {/* Copy Report Button */}
-          <button
-            onClick={copyEntireReport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-xs font-medium text-slate-200 transition-all active:scale-95 shadow-sm"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Dossier Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5 text-slate-400" />
-                <span>Export Dossier</span>
-              </>
-            )}
-          </button>
-
-          {/* Refresh Button */}
-          <button
-            onClick={() => loadData(selectedDate)}
-            disabled={loading}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-all disabled:opacity-50"
-            title="Refresh Live Telemetry"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
-          </button>
-        </div>
-      </div>
-
-      {/* 2. CHRONOLOGICAL 9-DAY TIMELINE QUICK PRESET BAR */}
-      {data?.daily_history && data.daily_history.length > 0 && (
-        <div className="bg-[#0a0e19] border border-slate-800/80 rounded-xl p-3 shadow-md">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                9-Day Chronological Historical Progression
-              </span>
-            </div>
-            <div className="flex items-center gap-1 text-[11px] text-slate-400">
-              <span>Filter view by day:</span>
+              {/* Download National Report PDF Button */}
               <button
-                onClick={() => handleDateChange("ALL")}
-                className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
-                  selectedDate === "ALL"
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                    : "bg-slate-800/80 text-slate-400 hover:text-white"
-                }`}
+                onClick={downloadNationalReport}
+                disabled={downloadingPDF || !data}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-xs font-semibold text-white transition-all shadow-xs active:scale-95"
+                title="Download 1-Page Authoritative National Thermal Dossier (PDF)"
               >
-                All 9 Days
+                {downloadingPDF ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 stroke-[2.2]" />
+                )}
+                <span>{downloadingPDF ? "Generating PDF..." : "Download Report (PDF)"}</span>
+              </button>
+
+              {/* Copy Report Button */}
+              <button
+                onClick={copyEntireReport}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-all shadow-2xs active:scale-95"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+                    <span className="text-emerald-700">Dossier Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Export Dossier</span>
+                  </>
+                )}
+              </button>
+
+              {/* Refresh Button */}
+              <button
+                onClick={() => loadData(selectedDate)}
+                disabled={loading}
+                className="p-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-all shadow-2xs disabled:opacity-50"
+                title="Refresh Live Telemetry"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-orange-600" : ""}`} />
               </button>
             </div>
           </div>
-
-          <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
-            {data.daily_history.map((day: any) => {
-              const isSelected = selectedDate === day.date;
-              return (
-                <button
-                  key={day.date}
-                  onClick={() => handleDateChange(day.date)}
-                  className={`text-left p-2.5 rounded-lg border transition-all ${
-                    isSelected
-                      ? "bg-cyan-950/60 border-cyan-500 shadow-lg shadow-cyan-950/50 ring-1 ring-cyan-500"
-                      : "bg-[#0d1222] border-slate-800/80 hover:border-slate-700 hover:bg-[#11172c]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-slate-400">{day.date.slice(5)}</span>
-                    <span className="text-[9px] px-1 rounded bg-slate-800 text-slate-300 font-mono">
-                      {day.dominant_category === "AGRI_BURN" ? "AGRI" : day.dominant_category === "WILDFIRE" ? "WILD" : "IND"}
-                    </span>
-                  </div>
-                  <div className="text-sm font-bold text-white mt-1">
-                    {day.event_count}
-                    <span className="text-[10px] font-normal text-slate-400 ml-1">evts</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono truncate">
-                    Pk: {day.max_frp_mw} MW
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </div>
-      )}
-
-      {/* 3. UPPER INTELLIGENCE GRID: PAN-INDIA DOSSIER & ML RIGOR */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* LEFT (7 cols): Sovereign Pan-India Composite Summary */}
-        <div className="lg:col-span-7 bg-[#0a0e19] border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                <h2 className="text-sm font-bold tracking-wide uppercase text-white">
-                  Pan-India Sovereign Thermal Baseline
-                </h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 font-mono">
-                  {data?.selected_date && data.selected_date !== "ALL" ? `FILTER: ${data.selected_date}` : "ALL 9 DAYS"}
-                </span>
-                <span className="text-xs font-mono text-slate-400">
-                  {data?.total_active_events || 0} Total Sovereign Events
-                </span>
-              </div>
-            </div>
-
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-              <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                <div className="text-[11px] text-slate-400 uppercase font-medium">Active Hotspots</div>
-                <div className="text-xl font-black text-white font-mono mt-0.5">
-                  {data?.total_active_events || 0}
-                </div>
-                <div className="text-[10px] text-emerald-400 mt-0.5">100% Sovereign India</div>
-              </div>
-              <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                <div className="text-[11px] text-slate-400 uppercase font-medium">Territories</div>
-                <div className="text-xl font-black text-cyan-400 font-mono mt-0.5">
-                  {data?.total_monitored_territories || data?.state_breakdown?.length || 0}
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Active States / UTs</div>
-              </div>
-              <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                <div className="text-[11px] text-slate-400 uppercase font-medium">Mean ML Conf.</div>
-                <div className="text-xl font-black text-emerald-400 font-mono mt-0.5">
-                  {data?.mean_confidence_pct || 93.1}%
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Calibrated Softmax</div>
-              </div>
-              <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                <div className="text-[11px] text-slate-400 uppercase font-medium">Peak Radiance</div>
-                <div className="text-xl font-black text-amber-400 font-mono mt-0.5">
-                  {data?.pan_india_breakdown?.[0]?.max_frp || 284.1} <span className="text-xs">MW</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">VIIRS 375m I-Band</div>
-              </div>
-            </div>
-
-            {/* Category Breakdown Progress Bars */}
-            <div className="space-y-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                Source Classification Distribution
-              </div>
-              {data?.pan_india_breakdown?.map((cat: any) => {
-                const style = getCategoryColor(cat.category);
-                return (
-                  <div key={cat.category} className="bg-[#0e1424] border border-slate-800/70 rounded-lg p-2.5">
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${style.bg} ${style.text} border ${style.border}`}>
-                          {cat.category}
-                        </span>
-                        <span className="text-slate-300 text-xs truncate max-w-[280px]">
-                          {cat.interpretation}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 font-mono">
-                        <span className="text-white font-bold">{cat.count}</span>
-                        <span className="text-slate-400 text-[11px] w-12 text-right">{cat.percentage}%</span>
-                      </div>
-                    </div>
-                    {/* Progress Track */}
-                    <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
-                      <div 
-                        className={`h-full ${style.bar} transition-all duration-500`}
-                        style={{ width: `${Math.max(cat.percentage, 1)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT (5 cols): Calibrated Machine Learning Rigor Dossier */}
-        <div className="lg:col-span-5 bg-[#0a0e19] border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-sm font-bold tracking-wide uppercase text-white">
-                  Machine Learning Calibration Rigor
-                </h2>
-              </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 font-mono">
-                ZERO FAKING • PRODUCTION MODEL
-              </span>
-            </div>
-
-            {/* Model Architecture Specs */}
-            <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3 mb-4 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Classifier:</span>
-                <span className="text-white font-mono font-semibold">Calibrated XGBoost 2.0</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Calibration Method:</span>
-                <span className="text-cyan-400 font-mono">Isotonic & Softmax Probabilities</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Grounding Source:</span>
-                <span className="text-emerald-400 font-mono">ESA 10m + CPCB Geofence</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Telemetry Ingestion:</span>
-                <span className="text-white font-mono">Every 10 Minutes (Live FIRMS)</span>
-              </div>
-            </div>
-
-            {/* Calibration Performance Metrics */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div className="bg-[#0e1424] border border-slate-800/60 rounded-lg p-2.5">
-                <div className="text-[10px] text-slate-400 uppercase">Macro F1 Score</div>
-                <div className="text-base font-bold text-emerald-400 font-mono">0.942</div>
-                <div className="text-[9px] text-slate-500">Cross-Validated</div>
-              </div>
-              <div className="bg-[#0e1424] border border-slate-800/60 rounded-lg p-2.5">
-                <div className="text-[10px] text-slate-400 uppercase">Softmax ROC-AUC</div>
-                <div className="text-base font-bold text-cyan-400 font-mono">0.981</div>
-                <div className="text-[9px] text-slate-500">Multi-Class OVR</div>
-              </div>
-              <div className="bg-[#0e1424] border border-slate-800/60 rounded-lg p-2.5">
-                <div className="text-[10px] text-slate-400 uppercase">Brier Score</div>
-                <div className="text-base font-bold text-emerald-400 font-mono">0.041</div>
-                <div className="text-[9px] text-slate-500">Probability Error &lt; 5%</div>
-              </div>
-              <div className="bg-[#0e1424] border border-slate-800/60 rounded-lg p-2.5">
-                <div className="text-[10px] text-slate-400 uppercase">Feature Vector</div>
-                <div className="text-base font-bold text-amber-400 font-mono">14 Canonical</div>
-                <div className="text-[9px] text-slate-500">Radiometric + Spatial</div>
-              </div>
-            </div>
-
-            {/* 14 Canonical Features Pill Tags */}
-            <div className="text-[11px] text-slate-400 mb-1.5 font-medium">14 Canonical Evaluated Features:</div>
-            <div className="flex flex-wrap gap-1 text-[10px] font-mono text-slate-300">
-              {["peak_frp_mw", "mean_frp_mw", "frp_variance", "max_brightness_k", "duration_hours", "day_night_ratio", "pct_cropland", "pct_forest", "pct_urban", "is_industrial_zone", "dist_to_facility", "facility_category", "historical_90d_active", "historical_peak_frp"].map((feat) => (
-                <span key={feat} className="px-1.5 py-0.5 bg-[#0e1424] border border-slate-800 rounded text-slate-400">
-                  {feat}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
       </div>
 
-      {/* 4. SPLIT-SCREEN STATE INTELLIGENCE CONSOLE OR COMPARISON MATRIX */}
-      {viewMode === "split" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* LEFT PANE (4.5 cols): Master State Selector List */}
-          <div className="lg:col-span-5 bg-[#0a0e19] border border-slate-800/80 rounded-xl p-4 shadow-lg flex flex-col h-[680px]">
-            {/* Master Header & Filters */}
-            <div className="space-y-3 mb-3 shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                    Monitored Territories ({filteredStates.length})
-                  </h3>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-slate-400">Sort:</span>
-                  <select
-                    aria-label="Sort monitored territories"
-                    value={sortBy}
-                    onChange={(e: any) => setSortBy(e.target.value)}
-                    className="bg-[#0e1424] border border-slate-800 rounded text-[11px] text-slate-300 px-2 py-0.5 focus:outline-none"
-                  >
-                    <option value="events">Hotspots</option>
-                    <option value="frp">Peak FRP</option>
-                    <option value="name">Name</option>
-                  </select>
-                </div>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        
+        {/* 2. CHRONOLOGICAL 9-DAY TIMELINE PROGRESSION BAR */}
+        {data?.daily_history && data.daily_history.length > 0 && (
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-orange-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  9-Day Chronological Historical Progression
+                </span>
               </div>
-
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Filter territory (e.g. Tamil Nadu, Gujarat)..."
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="w-full bg-[#0e1424] border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                />
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span>Filter view by day:</span>
+                <button
+                  onClick={() => handleDateChange("ALL")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    selectedDate === "ALL"
+                      ? "bg-orange-600 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  All 9 Days
+                </button>
               </div>
             </div>
 
-            {/* Scrollable Territory List */}
-            <div className="space-y-1.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
-              {filteredStates.map((st: any) => {
-                const isSelected = activeState?.state === st.state;
-                const topCat = st.classifications?.[0]?.category || "AGRI_BURN";
-                const catStyle = getCategoryColor(topCat);
-
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2.5">
+              {data.daily_history.map((day: any) => {
+                const isSelected = selectedDate === day.date;
                 return (
                   <button
-                    key={st.state}
-                    onClick={() => setSelectedStateName(st.state)}
-                    className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between ${
+                    key={day.date}
+                    onClick={() => handleDateChange(day.date)}
+                    className={`text-left p-3 rounded-xl border transition-all ${
                       isSelected
-                        ? "bg-gradient-to-r from-cyan-950/70 to-slate-900 border-cyan-500/80 shadow-md ring-1 ring-cyan-500/40"
-                        : "bg-[#0e1424]/80 border-slate-800/60 hover:border-slate-700 hover:bg-[#11182c]"
+                        ? "bg-orange-50/70 border-orange-400 shadow-sm ring-2 ring-orange-400/30"
+                        : "bg-slate-50/60 border-slate-200 hover:border-slate-300 hover:bg-slate-100/80"
                     }`}
                   >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-cyan-400 animate-pulse" : "bg-slate-600"}`} />
-                        <span className="text-xs font-bold text-white truncate">{st.state}</span>
-                        <span className="text-[10px] font-mono text-slate-400">({st.percentage_of_national}%)</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold ${catStyle.bg} ${catStyle.text} border ${catStyle.border}`}>
-                          {topCat}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          Pk: {st.max_frp_mw} MW
-                        </span>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold text-slate-600">{day.date.slice(5)}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold bg-white border border-slate-200 text-slate-700">
+                        {day.dominant_category === "AGRI_BURN" ? "AGRI" : day.dominant_category === "WILDFIRE" ? "WILD" : "IND"}
+                      </span>
                     </div>
-
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-black text-white font-mono">
-                        {st.event_count}
-                      </div>
-                      <div className="text-[9px] text-slate-400 font-mono">
-                        {st.mean_confidence}% conf
-                      </div>
+                    <div className="text-base font-black text-slate-900 mt-1">
+                      {day.event_count}
+                      <span className="text-[11px] font-medium text-slate-500 ml-1">evts</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate mt-0.5">
+                      Peak: {day.max_frp_mw} MW
                     </div>
                   </button>
                 );
               })}
             </div>
           </div>
+        )}
 
-          {/* RIGHT PANE (7.5 cols): Master Detail Deep Dive Console */}
-          <div className="lg:col-span-7 bg-[#0a0e19] border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col justify-between">
-            {activeState ? (
-              <div className="space-y-5">
-                {/* Detail Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-black text-white tracking-tight">
-                        {activeState.state}
-                      </h2>
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800/50 font-mono font-bold">
-                        {activeState.percentage_of_national}% OF NATIONAL SHARE
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Ground-Truth Calibrated Thermal Profile & Territorial Radiative Analysis
-                    </p>
-                  </div>
-
-                  <Link
-                    href={`/monitor?state=${encodeURIComponent(activeState.state)}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 text-xs font-semibold text-cyan-300 transition-all shadow-sm"
-                  >
-                    <span>Inspect on Live Map</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </Link>
+        {/* 3. UPPER INTELLIGENCE GRID: PAN-INDIA DOSSIER & ML RIGOR */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* LEFT (7 cols): Sovereign Pan-India Composite Summary */}
+          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <Shield className="w-5 h-5 text-orange-600" />
+                  <h2 className="text-sm font-bold tracking-wide uppercase text-slate-900">
+                    Pan-India Sovereign Thermal Baseline
+                  </h2>
                 </div>
-
-                {/* State Metrics Quad */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-400 uppercase font-medium">Territory Hotspots</div>
-                    <div className="text-xl font-black text-white font-mono mt-0.5">
-                      {activeState.event_count}
-                    </div>
-                    <div className="text-[9px] text-emerald-400 mt-0.5 font-mono">
-                      {activeState.percentage_of_national}% national burden
-                    </div>
-                  </div>
-                  <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-400 uppercase font-medium">Mean Radiative Power</div>
-                    <div className="text-xl font-black text-cyan-400 font-mono mt-0.5">
-                      {activeState.mean_frp_mw} <span className="text-xs">MW</span>
-                    </div>
-                    <div className="text-[9px] text-slate-400 mt-0.5">Average Intensity</div>
-                  </div>
-                  <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-400 uppercase font-medium">Peak Radiative Power</div>
-                    <div className="text-xl font-black text-amber-400 font-mono mt-0.5">
-                      {activeState.max_frp_mw} <span className="text-xs">MW</span>
-                    </div>
-                    <div className="text-[9px] text-slate-400 mt-0.5">Highest Cluster Peak</div>
-                  </div>
-                  <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-400 uppercase font-medium">Calibrated ML Conf.</div>
-                    <div className="text-xl font-black text-emerald-400 font-mono mt-0.5">
-                      {activeState.mean_confidence}%
-                    </div>
-                    <div className="text-[9px] text-slate-400 mt-0.5 font-mono">
-                      Median: {activeState.median_confidence}%
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 border border-emerald-200">
+                    {data?.selected_date && data.selected_date !== "ALL" ? `DATE: ${data.selected_date}` : "ALL 9 DAYS"}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-500">
+                    {data?.total_active_events || 0} Events
+                  </span>
                 </div>
-
-                {/* State Category Breakdown Table */}
-                <div className="space-y-2.5">
-                  <div className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Territory Source Classification Breakdown
-                  </div>
-                  <div className="space-y-2">
-                    {activeState.classifications?.map((c: any) => {
-                      const style = getCategoryColor(c.category);
-                      return (
-                        <div key={c.category} className="bg-[#0e1424] border border-slate-800/70 rounded-lg p-3">
-                          <div className="flex items-center justify-between text-xs mb-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${style.bg} ${style.text} border ${style.border}`}>
-                                {c.category}
-                              </span>
-                              <span className="text-slate-200 text-xs font-medium">
-                                {c.interpretation}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 font-mono">
-                              <span className="text-white font-bold">{c.count}</span>
-                              <span className="text-slate-400 text-xs w-12 text-right">{c.percentage}%</span>
-                            </div>
-                          </div>
-                          {/* Progress Track */}
-                          <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
-                            <div 
-                              className={`h-full ${style.bar} transition-all duration-500`}
-                              style={{ width: `${Math.max(c.percentage, 1)}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* State Daily Trend Mini Series */}
-                {activeState.daily_trend && Object.keys(activeState.daily_trend).length > 0 && (
-                  <div className="bg-[#0e1424] border border-slate-800/80 rounded-lg p-3.5">
-                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-                      <span>9-Day Daily Hotspot Progression ({activeState.state})</span>
-                      <span className="font-mono text-[10px] text-cyan-400">Total: {activeState.event_count} events</span>
-                    </div>
-                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                      {Object.entries(activeState.daily_trend).map(([day, cnt]: any) => (
-                        <div key={day} className="bg-[#0b0f19] border border-slate-800/80 rounded p-2 text-center">
-                          <div className="text-[9px] font-mono text-slate-400">{day.slice(5)}</div>
-                          <div className="text-xs font-bold text-white font-mono mt-0.5">{cnt}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 text-xs py-16">
-                Select a territory on the left to inspect its deep-dive intelligence.
+
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                  <div className="text-[11px] text-slate-500 uppercase font-semibold">Active Hotspots</div>
+                  <div className="text-2xl font-black text-slate-900 font-mono mt-0.5">
+                    {data?.total_active_events || 0}
+                  </div>
+                  <div className="text-[11px] text-emerald-700 font-medium mt-0.5">100% Sovereign India</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                  <div className="text-[11px] text-slate-500 uppercase font-semibold">Territories</div>
+                  <div className="text-2xl font-black text-slate-900 font-mono mt-0.5">
+                    {data?.total_monitored_territories || data?.state_breakdown?.length || 0}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Active States / UTs</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                  <div className="text-[11px] text-slate-500 uppercase font-semibold">Mean ML Conf.</div>
+                  <div className="text-2xl font-black text-emerald-600 font-mono mt-0.5">
+                    {data?.mean_confidence_pct || 93.1}%
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Calibrated Softmax</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                  <div className="text-[11px] text-slate-500 uppercase font-semibold">Peak Radiance</div>
+                  <div className="text-2xl font-black text-orange-600 font-mono mt-0.5">
+                    {data?.pan_india_breakdown?.[0]?.max_frp || 284.1} <span className="text-xs font-normal">MW</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">VIIRS 375m I-Band</div>
+                </div>
               </div>
-            )}
-          </div>
 
-        </div>
-      ) : (
-        /* MATRIX VIEW: All 17 States Side-By-Side Comparison Grid */
-        <div className="bg-[#0a0e19] border border-slate-800/80 rounded-xl p-5 shadow-lg space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                Comprehensive Territory Comparison Matrix (All {filteredStates.length} Territories)
-              </h3>
-            </div>
-            <span className="text-xs font-mono text-slate-400">
-              Sorted by: {sortBy.toUpperCase()}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-800 text-[11px] font-mono text-slate-400 uppercase bg-[#0e1424]">
-                  <th className="py-2.5 px-3">#</th>
-                  <th className="py-2.5 px-3">Territory</th>
-                  <th className="py-2.5 px-3">Hotspots</th>
-                  <th className="py-2.5 px-3">National Share</th>
-                  <th className="py-2.5 px-3">Mean FRP</th>
-                  <th className="py-2.5 px-3">Peak FRP</th>
-                  <th className="py-2.5 px-3">ML Conf.</th>
-                  <th className="py-2.5 px-3">Dominant Source</th>
-                  <th className="py-2.5 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-xs">
-                {filteredStates.map((st: any, idx: number) => {
-                  const topCat = st.classifications?.[0]?.category || "AGRI_BURN";
-                  const catStyle = getCategoryColor(topCat);
+              {/* Category Breakdown Progress Bars */}
+              <div className="space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Source Classification Distribution
+                </div>
+                {data?.pan_india_breakdown?.map((cat: any) => {
+                  const theme = getCategoryTheme(cat.category);
                   return (
-                    <tr key={st.state} className="hover:bg-[#0e1424]/80 transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-slate-500">{idx + 1}</td>
-                      <td className="py-2.5 px-3 font-bold text-white">{st.state}</td>
-                      <td className="py-2.5 px-3 font-mono font-bold text-white">{st.event_count}</td>
-                      <td className="py-2.5 px-3 font-mono text-cyan-400">{st.percentage_of_national}%</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-300">{st.mean_frp_mw} MW</td>
-                      <td className="py-2.5 px-3 font-mono text-amber-400">{st.max_frp_mw} MW</td>
-                      <td className="py-2.5 px-3 font-mono text-emerald-400">{st.mean_confidence}%</td>
-                      <td className="py-2.5 px-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${catStyle.bg} ${catStyle.text} border ${catStyle.border}`}>
-                          {topCat}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <Link
-                          href={`/monitor?state=${encodeURIComponent(st.state)}`}
-                          className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-xs font-medium"
-                        >
-                          <span>Map</span>
-                          <ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                      </td>
-                    </tr>
+                    <div key={cat.category} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                      <div className="flex items-center justify-between text-xs mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold border ${theme.badgeBg}`}>
+                            {cat.category}
+                          </span>
+                          <span className="text-slate-700 text-xs font-medium truncate max-w-[280px]">
+                            {cat.interpretation}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 font-mono">
+                          <span className="text-slate-900 font-bold">{cat.count}</span>
+                          <span className="text-slate-500 text-xs w-12 text-right">{cat.percentage}%</span>
+                        </div>
+                      </div>
+                      {/* Progress Track */}
+                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className={`h-full ${theme.bar} transition-all duration-500 rounded-full`}
+                          style={{ width: `${Math.max(cat.percentage, 1)}%` }}
+                        />
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
+
+          {/* RIGHT (5 cols): Calibrated Machine Learning Rigor Dossier */}
+          <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <Cpu className="w-5 h-5 text-emerald-600" />
+                  <h2 className="text-sm font-bold tracking-wide uppercase text-slate-900">
+                    Machine Learning Calibration Rigor
+                  </h2>
+                </div>
+                <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 border border-emerald-200">
+                  PRODUCTION MODEL
+                </span>
+              </div>
+
+              {/* Model Architecture Specs */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 mb-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Classifier:</span>
+                  <span className="text-slate-900 font-mono font-bold">Calibrated XGBoost 2.0</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Probability Calibration:</span>
+                  <span className="text-emerald-700 font-mono font-semibold">Isotonic & Softmax Engine</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Terrain Grounding:</span>
+                  <span className="text-slate-800 font-mono">ESA WorldCover 10m + CPCB Geofence</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">FIRMS Ingestion Poller:</span>
+                  <span className="text-orange-700 font-mono font-semibold">Every 10 Minutes Autonomous</span>
+                </div>
+              </div>
+
+              {/* Calibration Performance Metrics */}
+              <div className="grid grid-cols-2 gap-2.5 mb-4">
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Macro F1 Score</div>
+                  <div className="text-lg font-black text-emerald-700 font-mono">0.942</div>
+                  <div className="text-[10px] text-slate-500">Cross-Validated</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Softmax ROC-AUC</div>
+                  <div className="text-lg font-black text-blue-700 font-mono">0.981</div>
+                  <div className="text-[10px] text-slate-500">Multi-Class OVR</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Brier Score</div>
+                  <div className="text-lg font-black text-emerald-700 font-mono">0.041</div>
+                  <div className="text-[10px] text-slate-500">Probability Error &lt; 5%</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Feature Vector</div>
+                  <div className="text-lg font-black text-orange-700 font-mono">14 Canonical</div>
+                  <div className="text-[10px] text-slate-500">Radiometric + Spatial</div>
+                </div>
+              </div>
+
+              {/* 14 Canonical Features Pill Tags */}
+              <div className="text-xs font-semibold text-slate-600 mb-2">14 Canonical Physical Features:</div>
+              <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-600">
+                {["peak_frp_mw", "mean_frp_mw", "frp_variance", "max_brightness_k", "duration_hours", "day_night_ratio", "pct_cropland", "pct_forest", "pct_urban", "is_industrial_zone", "dist_to_facility", "facility_category", "historical_90d_active", "historical_peak_frp"].map((feat) => (
+                  <span key={feat} className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded-md font-medium">
+                    {feat}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
-      )}
+
+        {/* 4. SPLIT-SCREEN STATE INTELLIGENCE CONSOLE OR COMPARISON MATRIX */}
+        {viewMode === "split" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* LEFT PANE (4.5 cols): Master State Selector List */}
+            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col h-[700px]">
+              {/* Master Header & Filters */}
+              <div className="space-y-3 mb-4 shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-orange-600" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                      Monitored Territories ({filteredStates.length})
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500 font-medium">Sort:</span>
+                    <select
+                      aria-label="Sort monitored territories"
+                      value={sortBy}
+                      onChange={(e: any) => setSortBy(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 px-2.5 py-1 focus:outline-none"
+                    >
+                      <option value="events">Hotspots</option>
+                      <option value="frp">Peak FRP</option>
+                      <option value="name">Name</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Filter territory (e.g. Tamil Nadu, Gujarat)..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Scrollable Territory List */}
+              <div className="space-y-2 overflow-y-auto pr-1 flex-1">
+                {filteredStates.map((st: any) => {
+                  const isSelected = activeState?.state === st.state;
+                  const topCat = st.classifications?.[0]?.category || "AGRI_BURN";
+                  const theme = getCategoryTheme(topCat);
+
+                  return (
+                    <button
+                      key={st.state}
+                      onClick={() => setSelectedStateName(st.state)}
+                      className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
+                        isSelected
+                          ? "bg-orange-50/80 border-orange-400 shadow-xs ring-1 ring-orange-400/30"
+                          : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 pr-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-orange-600" : "bg-slate-400"}`} />
+                          <span className="text-xs font-bold text-slate-900 truncate">{st.state}</span>
+                          <span className="text-[11px] font-mono font-medium text-slate-500">({st.percentage_of_national}%)</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold border ${theme.badgeBg}`}>
+                            {topCat}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono">
+                            Peak: {st.max_frp_mw} MW
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-base font-black text-slate-900 font-mono">
+                          {st.event_count}
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          {st.mean_confidence}% conf
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* RIGHT PANE (7.5 cols): Master Detail Deep Dive Console */}
+            <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between">
+              {activeState ? (
+                <div className="space-y-6">
+                  {/* Detail Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                          {activeState.state}
+                        </h2>
+                        <span className="inline-flex items-center rounded-md bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-800 border border-orange-200">
+                          {activeState.percentage_of_national}% NATIONAL SHARE
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        Ground-Truth Calibrated Thermal Profile & Territorial Radiative Analysis
+                      </p>
+                    </div>
+
+                    <Link
+                      href={`/monitor?state=${encodeURIComponent(activeState.state)}`}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-xs font-semibold text-white transition-all shadow-xs"
+                    >
+                      <span>Inspect on Live Map</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </Link>
+                  </div>
+
+                  {/* State Metrics Quad */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                      <div className="text-[10px] text-slate-500 uppercase font-semibold">Territory Hotspots</div>
+                      <div className="text-2xl font-black text-slate-900 font-mono mt-0.5">
+                        {activeState.event_count}
+                      </div>
+                      <div className="text-[11px] text-emerald-700 font-medium mt-0.5 font-mono">
+                        {activeState.percentage_of_national}% national burden
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                      <div className="text-[10px] text-slate-500 uppercase font-semibold">Mean Radiative Power</div>
+                      <div className="text-2xl font-black text-slate-900 font-mono mt-0.5">
+                        {activeState.mean_frp_mw} <span className="text-xs font-normal text-slate-500">MW</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">Average Intensity</div>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                      <div className="text-[10px] text-slate-500 uppercase font-semibold">Peak Radiative Power</div>
+                      <div className="text-2xl font-black text-orange-600 font-mono mt-0.5">
+                        {activeState.max_frp_mw} <span className="text-xs font-normal text-slate-500">MW</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">Highest Cluster Peak</div>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                      <div className="text-[10px] text-slate-500 uppercase font-semibold">Calibrated ML Conf.</div>
+                      <div className="text-2xl font-black text-emerald-600 font-mono mt-0.5">
+                        {activeState.mean_confidence}%
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 font-mono">
+                        Median: {activeState.median_confidence}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* State Category Breakdown Table */}
+                  <div className="space-y-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                      Territory Source Classification Breakdown
+                    </div>
+                    <div className="space-y-2.5">
+                      {activeState.classifications?.map((c: any) => {
+                        const theme = getCategoryTheme(c.category);
+                        return (
+                          <div key={c.category} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                            <div className="flex items-center justify-between text-xs mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold border ${theme.badgeBg}`}>
+                                  {c.category}
+                                </span>
+                                <span className="text-slate-800 text-xs font-semibold">
+                                  {c.interpretation}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 font-mono">
+                                <span className="text-slate-900 font-bold">{c.count}</span>
+                                <span className="text-slate-500 text-xs w-12 text-right">{c.percentage}%</span>
+                              </div>
+                            </div>
+                            {/* Progress Track */}
+                            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                              <div 
+                                className={`h-full ${theme.bar} transition-all duration-500 rounded-full`}
+                                style={{ width: `${Math.max(c.percentage, 1)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* State Daily Trend Mini Series */}
+                  {activeState.daily_trend && Object.keys(activeState.daily_trend).length > 0 && (
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+                      <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center justify-between">
+                        <span>9-Day Daily Hotspot Progression ({activeState.state})</span>
+                        <span className="font-mono text-xs font-bold text-orange-600">Total: {activeState.event_count} events</span>
+                      </div>
+                      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                        {Object.entries(activeState.daily_trend).map(([day, cnt]: any) => (
+                          <div key={day} className="bg-white border border-slate-200 rounded-lg p-2.5 text-center shadow-2xs">
+                            <div className="text-[10px] font-mono font-semibold text-slate-500">{day.slice(5)}</div>
+                            <div className="text-sm font-bold text-slate-900 font-mono mt-0.5">{cnt}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-400 text-xs py-16">
+                  Select a territory on the left to inspect its deep-dive intelligence.
+                </div>
+              )}
+            </div>
+
+          </div>
+        ) : (
+          /* MATRIX VIEW: All Territories Side-By-Side Comparison Grid */
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="w-5 h-5 text-orange-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  Comprehensive Territory Comparison Matrix (All {filteredStates.length} Territories)
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-semibold text-slate-500">
+                Sorted by: {sortBy.toUpperCase()}
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[11px] font-mono text-slate-500 uppercase bg-slate-50">
+                    <th className="py-3 px-3.5">#</th>
+                    <th className="py-3 px-3.5">Territory</th>
+                    <th className="py-3 px-3.5">Hotspots</th>
+                    <th className="py-3 px-3.5">National Share</th>
+                    <th className="py-3 px-3.5">Mean FRP</th>
+                    <th className="py-3 px-3.5">Peak FRP</th>
+                    <th className="py-3 px-3.5">ML Conf.</th>
+                    <th className="py-3 px-3.5">Dominant Source</th>
+                    <th className="py-3 px-3.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {filteredStates.map((st: any, idx: number) => {
+                    const topCat = st.classifications?.[0]?.category || "AGRI_BURN";
+                    const theme = getCategoryTheme(topCat);
+                    return (
+                      <tr key={st.state} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-3.5 font-mono text-slate-400 font-bold">{idx + 1}</td>
+                        <td className="py-3 px-3.5 font-bold text-slate-900">{st.state}</td>
+                        <td className="py-3 px-3.5 font-mono font-black text-slate-900">{st.event_count}</td>
+                        <td className="py-3 px-3.5 font-mono font-bold text-orange-600">{st.percentage_of_national}%</td>
+                        <td className="py-3 px-3.5 font-mono text-slate-700">{st.mean_frp_mw} MW</td>
+                        <td className="py-3 px-3.5 font-mono text-slate-700">{st.max_frp_mw} MW</td>
+                        <td className="py-3 px-3.5 font-mono text-emerald-700 font-bold">{st.mean_confidence}%</td>
+                        <td className="py-3 px-3.5">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border ${theme.badgeBg}`}>
+                            {topCat}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3.5 text-right">
+                          <Link
+                            href={`/monitor?state=${encodeURIComponent(st.state)}`}
+                            className="inline-flex items-center gap-1 text-orange-600 hover:text-orange-700 text-xs font-semibold"
+                          >
+                            <span>Map</span>
+                            <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+      </div>
 
     </div>
   );
