@@ -23,17 +23,20 @@ def _run_sync_poller_cycle():
     except Exception as e:
         print(f"[FIRMS DAEMON ERROR] {e}")
 
+POLL_INTERVAL_MINUTES = int(os.getenv("FIRMS_POLL_INTERVAL_MINUTES", "15"))
+POLL_INTERVAL_SECONDS = POLL_INTERVAL_MINUTES * 60
+
 async def firms_periodic_poller_daemon():
-    """Autonomous 10-Minute NASA FIRMS Telemetry Polling & ML Intelligence Worker."""
+    """Autonomous 15-Minute NASA FIRMS Telemetry Polling & ML Intelligence Worker."""
     # Delay initial check slightly to let server bind
-    await asyncio.sleep(2)
+    await asyncio.sleep(5)
     while True:
         try:
             await asyncio.to_thread(_run_sync_poller_cycle)
         except Exception as e:
             print(f"[FIRMS DAEMON THREAD ERROR] {e}")
-        # Sleep for 10 minutes (600 seconds)
-        await asyncio.sleep(300)
+        # Sleep for configured interval (default: 15 minutes = 900 seconds)
+        await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "false").lower() in ("true", "1", "yes")
 
@@ -41,7 +44,7 @@ ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "false").lower() in ("t
 async def lifespan(app: FastAPI):
     poller_task = None
     if ENABLE_FIRMS_POLLING:
-        print("[FIRMS DAEMON] Automated NASA FIRMS telemetry polling enabled (10-minute cadence).")
+        print(f"[FIRMS DAEMON] Automated NASA FIRMS telemetry polling enabled ({POLL_INTERVAL_MINUTES}-minute cadence).")
         poller_task = asyncio.create_task(firms_periodic_poller_daemon())
     else:
         print("[FIRMS DAEMON] NASA FIRMS live polling is PAUSED (System running in high-performance frozen baseline mode).")
