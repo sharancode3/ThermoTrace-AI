@@ -301,8 +301,9 @@ class PDFRenderer:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.pdfgen.canvas import Canvas
         from reportlab.platypus import (
-            PageBreak,
+            KeepTogether,
             Paragraph,
             SimpleDocTemplate,
             Spacer,
@@ -326,6 +327,47 @@ class PDFRenderer:
             topMargin=22,
             bottomMargin=22,
         )
+
+        class NumberedCanvas(Canvas):
+            """Two-pass canvas that prints PAGE X OF Y on every generated page."""
+
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                super().__init__(*args, **kwargs)
+                self._saved_page_states: list[dict[str, Any]] = []
+
+            def showPage(self) -> None:
+                self._saved_page_states.append(dict(self.__dict__))
+                self._startPage()
+
+            def save(self) -> None:
+                total_pages = len(self._saved_page_states)
+
+                for page_number, state in enumerate(
+                    self._saved_page_states,
+                    start=1,
+                ):
+                    self.__dict__.update(state)
+                    self._draw_page_number(page_number, total_pages)
+                    super().showPage()
+
+                super().save()
+
+            def _draw_page_number(
+                self,
+                page_number: int,
+                total_pages: int,
+            ) -> None:
+                page_width, _ = A4
+
+                self.saveState()
+                self.setFont("Courier-Bold", 5.8)
+                self.setFillColor(colors.HexColor("#64748B"))
+                self.drawRightString(
+                    page_width - doc.rightMargin,
+                    10,
+                    f"PAGE {page_number} OF {total_pages}",
+                )
+                self.restoreState()
         styles = getSampleStyleSheet()
         primary_color = colors.HexColor("#0F172A")
         bg_light = colors.HexColor("#F8FAFC")
@@ -403,6 +445,14 @@ class PDFRenderer:
             table.setStyle(TableStyle(style))
             return table
 
+        def section_block(title: str, flowable: Any) -> KeepTogether:
+            """Keep a section heading with its first content block."""
+            return KeepTogether([
+                Paragraph(f"<b>{numbered_heading(title)}</b>", sec_head_style),
+                Spacer(1, 1),
+                flowable,
+            ])
+
         story = []
 
         # PAGE 1: EXECUTIVE INTELLIGENCE, RADIOMETRICS & VISUAL ANALYTICS
@@ -472,9 +522,6 @@ class PDFRenderer:
         story.append(kpi_table)
         story.append(Spacer(1, 4))
 
-        story.append(Paragraph(f"<b>{numbered_heading('Verified Multi-Sensor Radiometric Metrics')}</b>", sec_head_style))
-        story.append(Spacer(1, 1))
-
         baseline_mean = PDFRenderer._safe_float(value("anomaly_baseline_mean_frp_mw", "facility_baseline_frp_mean"), default=0.0)
         ratio_txt = f"{peak_frp / baseline_mean:.1f}x Baseline Mean" if baseline_mean > 0 else f"{anomaly_tier} Anomaly"
 
@@ -510,11 +557,11 @@ class PDFRenderer:
                 Paragraph("Active Multi-Sensor Track", body_style),
             ],
         ]
-        story.append(styled_table(telemetry_data, [135, 115, 145, 145], header=True))
+        story.append(section_block(
+            "Verified Multi-Sensor Radiometric Metrics",
+            styled_table(telemetry_data, [135, 115, 145, 145], header=True),
+        ))
         story.append(Spacer(1, 4))
-
-        story.append(Paragraph(f"<b>{numbered_heading('Visual Radiometric Analytics & ML Attribution (High-DPI)')}</b>", sec_head_style))
-        story.append(Spacer(1, 1))
 
         chart_a = PDFRenderer._build_frp_matplotlib_image(report_view_model, width_pt=267, height_pt=92)
         chart_b = PDFRenderer._build_ml_probs_matplotlib_image(report_view_model, width_pt=267, height_pt=92)
@@ -527,52 +574,15 @@ class PDFRenderer:
             ("TOPPADDING", (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
         ]))
-        story.append(chart_panel)
+        story.append(section_block(
+            "Visual Radiometric Analytics & ML Attribution (High-DPI)",
+            chart_panel,
+        ))
         story.append(Spacer(1, 3))
 
         chart_c = PDFRenderer._build_landcover_matplotlib_image(report_view_model, width_pt=536, height_pt=42)
         story.append(chart_c)
         story.append(Spacer(1, 3))
-
-        p1_footer = [
-            [
-                Paragraph(f"<b>CLASSIFICATION:</b> OFFICIAL INTELLIGENCE BRIEF • REF: {event_id}", small_mono),
-                Paragraph("<b>PAGE 1 OF 2</b>", small_mono)
-            ]
-        ]
-        p1_ft_table = Table(p1_footer, colWidths=[350, 190])
-        p1_ft_table.setStyle(TableStyle([
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-        ]))
-        story.append(p1_ft_table)
-
-        # PAGE 2: PHYSICAL GROUNDING, INFRASTRUCTURE, NEARBY EVENTS & DIRECTIVES
-        story.append(PageBreak())
-
-        p2_header = [
-            [
-                Paragraph("<b>GOVERNMENT OF INDIA // SOVEREIGN INFRASTRUCTURE & PASS REGISTER</b><br/>"
-                          f"<b><font size=9.5 color='#EA580C'>EVENT {event_id} // REGIONAL AUDIT & INCIDENT DIRECTIVES</font></b>", title_style),
-                Table([
-                    [Paragraph(f"<b>SEVERITY: {anomaly_tier}</b>", badge_style)],
-                    [Paragraph(f"<font size=5.5 color='#64748B'>{now_ist} ({now_utc})</font>", ParagraphStyle('RDate2', fontName='Helvetica', fontSize=5.5, alignment=1))],
-                ], colWidths=[150], style=[("BACKGROUND", (0,0), (-1,0), severity_col), ("PADDING", (0,0), (-1,-1), 1)])
-            ]
-        ]
-        p2_h_table = Table(p2_header, colWidths=[385, 155])
-        p2_h_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ]))
-        story.append(p2_h_table)
-        story.append(Spacer(1, 3))
-
-        story.append(Paragraph(f"<b>{numbered_heading('Centroid Location & Associated Industrial Plant Audit')}</b>", sec_head_style))
-        story.append(Spacer(1, 1))
 
         deg = "\u00b0"
         loc_data = [
@@ -619,12 +629,13 @@ class PDFRenderer:
                 Paragraph("<b>Spatial Buffer</b>", bold_cell_style),
                 Paragraph("Open Industrial / Rural Corridor", body_style),
             ])
-        story.append(styled_table(loc_data, [115, 155, 115, 155], header=True))
+        story.append(section_block(
+            "Centroid Location & Associated Industrial Plant Audit",
+            styled_table(loc_data, [115, 155, 115, 155], header=True),
+        ))
         story.append(Spacer(1, 3))
 
         nearby_facilities = value("nearby_facilities", default=[]) or []
-        story.append(Paragraph(f"<b>{numbered_heading('Nearby Sovereign Industrial Infrastructure (50 km Buffer)')}</b>", sec_head_style))
-        story.append(Spacer(1, 1))
 
         if nearby_facilities:
             nearby_rows = [
@@ -651,16 +662,18 @@ class PDFRenderer:
                     Paragraph(d_str, mono_style),
                     Paragraph(f"{f_bmean:.1f} MW" if f_bmean > 0 else "0.0 MW", body_style),
                 ])
-            story.append(styled_table(nearby_rows, [160, 120, 100, 80, 80], header=True))
+            nearby_content = styled_table(nearby_rows, [160, 120, 100, 80, 80], header=True)
         else:
             no_fac = Table([[Paragraph("No registered industrial facilities located within 50 km radius.", body_style)]], colWidths=[540])
             no_fac.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), bg_light), ("BOX", (0, 0), (-1, -1), 0.5, border_color), ("PADDING", (0, 0), (-1, -1), 3)]))
-            story.append(no_fac)
+            nearby_content = no_fac
+        story.append(section_block(
+            "Nearby Sovereign Industrial Infrastructure (50 km Buffer)",
+            nearby_content,
+        ))
         story.append(Spacer(1, 3))
 
         nearby_events = value("nearby_events", default=[]) or []
-        story.append(Paragraph(f"<b>{numbered_heading('Regional Active Anomaly Cluster & Concurrent Events (75 km Buffer)')}</b>", sec_head_style))
-        story.append(Spacer(1, 1))
 
         if nearby_events:
             evts_rows = [
@@ -690,16 +703,18 @@ class PDFRenderer:
                     Paragraph(f"{e_dkm:.1f} km", mono_style),
                     Paragraph(e_t, body_style),
                 ])
-            story.append(styled_table(evts_rows, [110, 100, 85, 80, 65, 100], header=True))
+            nearby_events_content = styled_table(evts_rows, [110, 100, 85, 80, 65, 100], header=True)
         else:
             no_evt = Table([[Paragraph("Isolated thermal incident. No concurrent thermal anomalies detected within 75 km.", body_style)]], colWidths=[540])
             no_evt.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), bg_light), ("BOX", (0, 0), (-1, -1), 0.5, border_color), ("PADDING", (0, 0), (-1, -1), 3)]))
-            story.append(no_evt)
+            nearby_events_content = no_evt
+        story.append(section_block(
+            "Regional Active Anomaly Cluster & Concurrent Events (75 km Buffer)",
+            nearby_events_content,
+        ))
         story.append(Spacer(1, 3))
 
         obs_list = value("event_observation_history", default=[]) or []
-        story.append(Paragraph(f"<b>{numbered_heading('Multi-Sensor Satellite Telemetry & Radiometric Pass Register')}</b>", sec_head_style))
-        story.append(Spacer(1, 1))
 
         obs_rows = [
             [
@@ -735,11 +750,11 @@ class PDFRenderer:
                 Paragraph(f"{max_bright:.1f} K", mono_style),
                 Paragraph("Direct Telemetry Ingest", body_style),
             ])
-        story.append(styled_table(obs_rows, [18, 125, 125, 95, 87, 90], header=True))
+        story.append(section_block(
+            "Multi-Sensor Satellite Telemetry & Radiometric Pass Register",
+            styled_table(obs_rows, [18, 125, 125, 95, 87, 90], header=True),
+        ))
         story.append(Spacer(1, 3))
-
-        story.append(Paragraph(f"<b>{numbered_heading('Statutory SOP Compliance Directives & Containment Protocol')}</b>", sec_head_style))
-        story.append(Spacer(1, 1))
 
         actions = [
             ("ACTION 01", "<b>Immediate On-Site Physical Inspection:</b> Dispatch SPCB / Regional Disaster Response team to verify combustion source and evaluate containment perimeter."),
@@ -761,13 +776,16 @@ class PDFRenderer:
             ("TOPPADDING", (0, 0), (-1, -1), 2.2),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2.2),
         ]))
-        story.append(act_table)
+        story.append(section_block(
+            "Statutory SOP Compliance Directives & Containment Protocol",
+            act_table,
+        ))
         story.append(Spacer(1, 2))
 
         p2_footer = [
             [
                 Paragraph("<b>CLEARANCE:</b> OFFICIAL NATIONAL SURVEILLANCE DOSSIER // RESTRICTED ACCESS", small_mono),
-                Paragraph("<b>INTEGRITY:</b> SHA256-AUTHENTICATED • PAGE 2 OF 2", small_mono)
+                Paragraph("<b>INTEGRITY:</b> SHA256-AUTHENTICATED", small_mono)
             ]
         ]
         p2_ft_table = Table(p2_footer, colWidths=[350, 190])
@@ -778,7 +796,7 @@ class PDFRenderer:
         ]))
         story.append(p2_ft_table)
 
-        doc.build(story)
+        doc.build(story, canvasmaker=NumberedCanvas)
         pdf_bytes = buffer.getvalue()
         buffer.close()
         return pdf_bytes
