@@ -1149,30 +1149,64 @@ def get_national_summary(target_date: Optional[str] = Query(None, description="O
             "uncertain_count": d_val["categories"].get("OTHER_UNCERTAIN", 0)
         })
 
-    # 3. State breakdown list for selected view
-    state_list = []
-    for st_name, data in sorted(states_dict.items(), key=lambda x: x[1]["event_count"], reverse=True):
-        st_total = data["event_count"]
-        st_classes = []
-        for c_name, c_cnt in data["classifications"].most_common():
-            st_classes.append({
-                "category": c_name,
-                "count": c_cnt,
-                "percentage": round((c_cnt / max(1, st_total)) * 100, 1),
-                "interpretation": get_ground_truth_interpretation(c_name, st_name)
-            })
+    # 3. State breakdown list for selected view (Includes all 28 States & 8 Union Territories)
+    ALL_SOVEREIGN_TERRITORIES = [
+        "Tamil Nadu", "Andhra Pradesh", "Karnataka", "Maharashtra", "Gujarat",
+        "Jharkhand", "Odisha", "Punjab", "Haryana", "Telangana", "Assam",
+        "Madhya Pradesh", "West Bengal", "Kerala", "Chhattisgarh", "Uttar Pradesh",
+        "Bihar", "Rajasthan", "Arunachal Pradesh", "Goa", "Himachal Pradesh",
+        "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Sikkim", "Tripura",
+        "Uttarakhand", "Delhi (NCT)", "Jammu & Kashmir", "Ladakh", "Puducherry",
+        "Chandigarh", "Andaman & Nicobar Islands", "Dadra & Nagar Haveli and Daman & Diu", "Lakshadweep"
+    ]
 
-        state_list.append({
-            "state": st_name,
-            "event_count": st_total,
-            "percentage_of_national": round((st_total / max(1, view_total_count)) * 100, 1),
-            "mean_frp_mw": round(data["total_frp"] / max(1, st_total), 2),
-            "max_frp_mw": round(data["max_frp"], 2),
-            "mean_confidence": round(float(np.mean(data["confidences"])) * 100, 1) if data["confidences"] else 92.0,
-            "median_confidence": round(float(np.median(data["confidences"])) * 100, 1) if data["confidences"] else 92.0,
-            "classifications": st_classes,
-            "daily_trend": dict(data["daily_counts"])
-        })
+    # Combine active states with all sovereign territories
+    all_territory_keys = set(ALL_SOVEREIGN_TERRITORIES) | set(states_dict.keys())
+    
+    state_list = []
+    for st_name in sorted(all_territory_keys, key=lambda name: (states_dict.get(name, {}).get("event_count", 0), name == "Tamil Nadu"), reverse=True):
+        data = states_dict.get(st_name)
+        if data and data["event_count"] > 0:
+            st_total = data["event_count"]
+            st_classes = []
+            for c_name, c_cnt in data["classifications"].most_common():
+                st_classes.append({
+                    "category": c_name,
+                    "count": c_cnt,
+                    "percentage": round((c_cnt / max(1, st_total)) * 100, 1),
+                    "interpretation": get_ground_truth_interpretation(c_name, st_name)
+                })
+
+            state_list.append({
+                "state": st_name,
+                "event_count": st_total,
+                "percentage_of_national": round((st_total / max(1, view_total_count)) * 100, 1),
+                "mean_frp_mw": round(data["total_frp"] / max(1, st_total), 2),
+                "max_frp_mw": round(data["max_frp"], 2),
+                "mean_confidence": round(float(np.mean(data["confidences"])) * 100, 1) if data["confidences"] else 92.0,
+                "median_confidence": round(float(np.median(data["confidences"])) * 100, 1) if data["confidences"] else 92.0,
+                "classifications": st_classes,
+                "daily_trend": dict(data["daily_counts"]),
+                "status": "ACTIVE_HOTSPOTS"
+            })
+        else:
+            state_list.append({
+                "state": st_name,
+                "event_count": 0,
+                "percentage_of_national": 0.0,
+                "mean_frp_mw": 0.0,
+                "max_frp_mw": 0.0,
+                "mean_confidence": 100.0,
+                "median_confidence": 100.0,
+                "classifications": [{
+                    "category": "NOMINAL_BASELINE",
+                    "count": 0,
+                    "percentage": 100.0,
+                    "interpretation": "Zero active thermal anomalies detected in current satellite pass"
+                }],
+                "daily_trend": {},
+                "status": "NOMINAL_COMPLIANT"
+            })
 
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),

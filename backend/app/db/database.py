@@ -23,7 +23,7 @@ def _resolve_postgres_host() -> str:
     candidates = []
     if configured:
         candidates.append(configured)
-    candidates.extend(["127.0.0.1", "localhost"])
+    candidates.extend(["postgres", "127.0.0.1", "localhost"])
 
     # Query WSL IP if available
     try:
