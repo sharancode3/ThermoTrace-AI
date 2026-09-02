@@ -22,7 +22,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('thermo_theme') || 'dark';
+                const theme = localStorage.getItem('thermo_theme') || 'light';
                 if (theme === 'dark') {
                   document.documentElement.classList.add('dark');
                 } else {

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { 
   FileText, Download, Plus, RefreshCw, CheckCircle2, ShieldCheck, 
-  Flame, AlertTriangle, Search, Filter, ExternalLink, ArrowDownToLine, Loader2
+  Flame, AlertTriangle, Search, Filter, ExternalLink, ArrowDownToLine, 
+  Loader2, UserCheck, Settings2, Sliders, CheckSquare, Square, Building2
 } from "lucide-react";
 import { fetchReports, generateReport, fetchGisEvents } from "@/lib/apiClient";
 
@@ -13,10 +14,73 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Modal & Personalization State
+  const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [customTitle, setCustomTitle] = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const [investigatorName, setInvestigatorName] = useState("");
+  const [customNotes, setCustomNotes] = useState("");
+  const [roleProfile, setRoleProfile] = useState<string>("cpcb_inspector");
+  const [selectedSections, setSelectedSections] = useState<string[]>([
+    "executive_summary",
+    "radiometric_telemetry",
+    "dual_charts",
+    "land_cover",
+    "facility_boundary",
+    "nearby_infrastructure",
+    "provenance"
+  ]);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const roleProfiles = [
+    {
+      id: "cpcb_inspector",
+      label: "CPCB Environmental Inspector",
+      desc: "Pollution control compliance, emissions limits & regulatory follow-up",
+      badge: "REGULATORY"
+    },
+    {
+      id: "facility_safety",
+      label: "Plant Safety & Operations Manager",
+      desc: "Equipment flare thresholds, shutdown records & operational baselines",
+      badge: "INDUSTRIAL"
+    },
+    {
+      id: "sdma_disaster",
+      label: "State Disaster Management (SDMA)",
+      desc: "Emergency triage, rapid containment & nearby population assets",
+      badge: "TACTICAL"
+    },
+    {
+      id: "agri_audit",
+      label: "Agricultural & Biomass Officer",
+      desc: "Seasonal crop residue burns & cropland boundary verification",
+      badge: "AGRARIAN"
+    },
+    {
+      id: "ntro_intelligence",
+      label: "National Defense & Intelligence Analyst",
+      desc: "Multi-sensor satellite passes & sovereign geofence validation",
+      badge: "SOVEREIGN"
+    }
+  ];
+
+  const availableSections = [
+    { id: "executive_summary", label: "Executive Summary & Anomaly Severity Index", desc: "Core incident overview and Z-score deviation" },
+    { id: "radiometric_telemetry", label: "Verified Radiometric Telemetry & Passes Register", desc: "VIIRS/MODIS Brightness Temperature & FRP Megawatts" },
+    { id: "dual_charts", label: "Vector Analytics Charts (Baseline & Softmax Probabilities)", desc: "High-density ReportLab vector visualizations" },
+    { id: "land_cover", label: "ESA WorldCover 10m Land-Cover Terrain Analysis", desc: "Built-up industrial vs. vegetation buffer distribution" },
+    { id: "facility_boundary", label: "Industrial Boundary Match & Proximity Audit", desc: "Direct facility polygon overlay and radial distance" },
+    { id: "nearby_infrastructure", label: "Nearby Registered Industrial Infrastructure Matrix", desc: "Adjacent hazardous assets within 10 km radius" },
+    { id: "provenance", label: "Cryptographic Provenance & SHA-256 Checksum", desc: "Digital verification and sovereign chain of custody" }
+  ];
+
+  const toggleSection = (id: string) => {
+    setSelectedSections(prev => 
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
 
   const loadData = async () => {
     try {
@@ -47,13 +111,18 @@ export default function ReportsPage() {
     setGenerating(true);
     setMessage(null);
     try {
-      const res = await generateReport(selectedEventId, customTitle || undefined);
-      setMessage({ text: `Report ${res.report_id} generated successfully!`, type: "success" });
+      // Build personalized title including role tag if custom title not specified
+      const activeRole = roleProfiles.find(r => r.id === roleProfile);
+      const finalTitle = customTitle || `Dossier (${activeRole?.badge || "AUDIT"}): ${selectedEventId}`;
+
+      const res = await generateReport(selectedEventId, finalTitle, selectedSections);
+      setMessage({ text: `Personalized Dossier ${res.report_id} generated successfully for ${activeRole?.label}!`, type: "success" });
       setShowModal(false);
       setCustomTitle("");
+      setCustomNotes("");
       await loadData();
     } catch (err: any) {
-      setMessage({ text: err.message || "Failed to generate report", type: "error" });
+      setMessage({ text: err.message || "Failed to generate dossier", type: "error" });
     } finally {
       setGenerating(false);
     }
@@ -72,7 +141,7 @@ export default function ReportsPage() {
 
   return (
     <div className="p-8 h-full overflow-y-auto w-full bg-slate-50 text-slate-800">
-      {/* Header */}
+      {/* Sovereign Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-6 border-b border-slate-200 gap-4">
         <div>
           <div className="flex items-center gap-2.5">
@@ -80,8 +149,11 @@ export default function ReportsPage() {
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Thermal Intelligence Dossiers</h1>
-              <p className="text-xs text-slate-500 font-medium">Authoritative forensic PDF intelligence briefs generated under contract v3.3.0</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Thermal Intelligence Dossiers</h1>
+                <span className="px-2 py-0.5 bg-orange-100 text-orange-800 border border-orange-200 rounded text-[10px] font-mono font-bold">PERSONALIZED PDF EXPORTER</span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Tailor and generate authoritative forensic PDF intelligence briefs based on your operational profile</p>
             </div>
           </div>
         </div>
@@ -99,7 +171,7 @@ export default function ReportsPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold text-xs transition shadow-sm"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            Generate New Dossier
+            Generate Custom Dossier
           </button>
         </div>
       </div>
@@ -121,7 +193,7 @@ export default function ReportsPage() {
         <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Generated Dossiers</div>
           <div className="text-2xl font-bold text-slate-900">{reports.length}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Stored securely in pipeline repository</div>
+          <div className="text-[11px] text-slate-500 mt-1">Stored securely in cloud repository</div>
         </div>
 
         <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
@@ -185,7 +257,7 @@ export default function ReportsPage() {
                   <td colSpan={7} className="py-16 text-center text-slate-500">
                     <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300" />
                     <p className="font-semibold text-slate-700">No reports found</p>
-                    <p className="text-xs text-slate-400 mt-1">Click "Generate New Dossier" to produce a PDF forensic brief for any thermal event.</p>
+                    <p className="text-xs text-slate-400 mt-1">Click "Generate Custom Dossier" to produce a tailored PDF forensic brief.</p>
                   </td>
                 </tr>
               ) : (
@@ -235,23 +307,27 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Generate Report Modal */}
+      {/* Personalized Dossier Studio Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+            <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between sticky top-0 bg-slate-50 z-10">
+              <div className="flex items-center gap-2.5">
                 <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
-                  <FileText className="w-5 h-5" />
+                  <Sliders className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">Generate Intelligence Dossier PDF</h3>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Personalized Intelligence Dossier Studio</h3>
+                  <p className="text-[11px] text-slate-500">Configure report sections, recipient role profile, and compliance focus</p>
+                </div>
               </div>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700 text-sm font-bold">✕</button>
             </div>
 
-            <form onSubmit={handleGenerate} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleGenerate} className="p-6 space-y-5 text-xs">
+              {/* Step 1: Select Event */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Target Thermal Event Cluster</label>
+                <label className="block font-bold text-slate-800 mb-1.5">1. Target Thermal Event Incident</label>
                 <select
                   value={selectedEventId}
                   onChange={(e) => setSelectedEventId(e.target.value)}
@@ -266,22 +342,77 @@ export default function ReportsPage() {
                 </select>
               </div>
 
+              {/* Step 2: Select Operational Role Profile */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Dossier Title (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Critical Tactical Assessment: Gujarat Flaring Facility"
-                  value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-orange-500 focus:bg-white transition"
-                />
+                <label className="block font-bold text-slate-800 mb-1.5">2. Operational Recipient Role Profile</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {roleProfiles.map((role) => (
+                    <div
+                      key={role.id}
+                      onClick={() => setRoleProfile(role.id)}
+                      className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                        roleProfile === role.id 
+                          ? "border-orange-500 bg-orange-50/70 shadow-xs" 
+                          : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-900">{role.label}</span>
+                        <span className="text-[9px] font-mono font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{role.badge}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">{role.desc}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 space-y-1 text-[11px]">
-                <div className="font-semibold text-slate-800">Included Dossier Sections:</div>
-                <div>• Executive Summary & Anomaly Severity Index</div>
-                <div>• Verified Satellite Radiometric Telemetry Table</div>
-                <div>• Provenance Audit Trail & SHA-256 Digital Verification</div>
+              {/* Step 3: Custom Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Dossier Title (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Critical Safety Audit Brief"
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-orange-500 focus:bg-white transition"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Investigator / Officer Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dr. A. Sharma (Inspector)"
+                    value={investigatorName}
+                    onChange={(e) => setInvestigatorName(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-orange-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Step 4: Modular Sections Selection */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1.5">3. Modular Sections to Include in PDF</label>
+                <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  {availableSections.map((sec) => {
+                    const isChecked = selectedSections.includes(sec.id);
+                    return (
+                      <div
+                        key={sec.id}
+                        onClick={() => toggleSection(sec.id)}
+                        className="flex items-start gap-2.5 p-2 bg-white rounded-lg border border-slate-100 hover:border-slate-200 cursor-pointer transition"
+                      >
+                        <div className="mt-0.5 text-orange-600">
+                          {isChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 text-slate-300" />}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-900 text-[11px]">{sec.label}</div>
+                          <div className="text-[10px] text-slate-500">{sec.desc}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
@@ -295,10 +426,10 @@ export default function ReportsPage() {
                 <button
                   type="submit"
                   disabled={generating || !selectedEventId}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold transition disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold transition disabled:opacity-50 shadow-sm"
                 >
                   {generating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {generating ? "Compiling PDF..." : "Generate PDF"}
+                  {generating ? "Compiling Custom PDF..." : "Generate Personalized PDF"}
                 </button>
               </div>
             </form>

@@ -136,15 +136,20 @@ export function Sidebar() {
 
         <div className="text-xs font-semibold text-slate-400 mt-6 mb-2 uppercase tracking-wider hidden lg:block px-3">System & Guide</div>
 
-        {/* System Guide & Symbology Handbook */}
-        <button 
-          onClick={() => toggleOverlay("info")}
-          className={cn("flex items-center p-3 rounded-lg transition-colors group w-full text-left", currentOverlay === "info" ? "bg-orange-50 text-orange-700 font-bold border border-orange-200 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}
-          title="System Architecture, 9-Icon Symbology & Guide"
+        {/* System Guide & Architecture Manual (Dedicated Full Page) */}
+        <Link
+          href="/guide"
+          className={cn(
+            "flex items-center p-3 rounded-lg transition-colors group w-full text-left",
+            pathname === "/guide"
+              ? "bg-slate-100 text-orange-600 font-semibold"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          )}
+          title="Authoritative Engineering Architecture, Algorithms & System Guide"
         >
-          <BookOpen className={cn("w-5 h-5", currentOverlay === "info" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+          <BookOpen className={cn("w-5 h-5", pathname === "/guide" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
           <span className="hidden lg:block ml-3">System Guide & Info</span>
-        </button>
+        </Link>
       </nav>
       
       <div className="p-4 border-t border-slate-200 text-center lg:text-left shrink-0">

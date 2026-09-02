@@ -131,7 +131,7 @@ export function OverlayManager() {
                 item.severity === "ABNORMAL" || 
                 (item.classification && item.classification.startsWith("IND_")) ||
                 item.title?.toLowerCase().includes("industrial")
-              ).slice(0, 100)
+              ).slice(0, 250)
             : [];
           setNotifications(filtered);
         })

@@ -892,7 +892,7 @@ def get_notifications(db: Session = Depends(get_db)):
             db.add(notif)
         db.commit()
 
-    # 2. Query top 100 notifications ordered by severity and peak FRP
+    # 2. Query top 250 notifications ordered by severity and peak FRP
     severity_order = case(
         (Notification.severity == "CRITICAL", 1),
         (Notification.severity == "ABNORMAL", 2),
@@ -909,7 +909,7 @@ def get_notifications(db: Session = Depends(get_db)):
             )
         )
         .order_by(severity_order, ThermalEvent.peak_frp_mw.desc(), Notification.created_at.desc())
-        .limit(100)
+        .limit(250)
         .all()
     )
     
