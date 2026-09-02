@@ -25,14 +25,14 @@ def _run_sync_poller_cycle():
 async def firms_periodic_poller_daemon():
     """Autonomous 10-Minute NASA FIRMS Telemetry Polling & ML Intelligence Worker."""
     # Delay initial check slightly to let server bind
-    await asyncio.sleep(10)
+    await asyncio.sleep(2)
     while True:
         try:
             await asyncio.to_thread(_run_sync_poller_cycle)
         except Exception as e:
             print(f"[FIRMS DAEMON THREAD ERROR] {e}")
         # Sleep for 10 minutes (600 seconds)
-        await asyncio.sleep(600)
+        await asyncio.sleep(300)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

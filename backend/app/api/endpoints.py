@@ -62,7 +62,7 @@ def get_gis_events(
     classification: Optional[str] = None,
     anomaly_tier: Optional[str] = None,
     include_closed: bool = Query(False),
-    show_all: bool = Query(False),
+    show_all: bool = Query(True),
     focus_event_id: Optional[str] = None,
     limit: int = Query(2000, ge=1, le=5000),
     db: Session = Depends(get_db),
