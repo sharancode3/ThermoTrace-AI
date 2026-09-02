@@ -71,6 +71,15 @@ app.include_router(stream.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(facilities.router, prefix="/api/v1")
 
+@app.get("/")
+def root_check():
+    return {
+        "status": "online",
+        "service": "ThermoTrace AI Sovereign Thermal Intelligence REST Engine",
+        "version": "1.0.0",
+        "docs": "/docs"
+    }
+
 @app.get("/api/v1/health")
 def health_check():
     return {

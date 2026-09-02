@@ -49,8 +49,15 @@ def _resolve_postgres_host() -> str:
 
     return "127.0.0.1"
 
-POSTGRES_SERVER = _resolve_postgres_host()
-SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
+# Support Cloud DATABASE_URL (Supabase, Neon, Render Postgres) or Local Fallback
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    SQLALCHEMY_DATABASE_URL = DATABASE_URL
+    if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+else:
+    POSTGRES_SERVER = _resolve_postgres_host()
+    SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, pool_size=15, max_overflow=25)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
