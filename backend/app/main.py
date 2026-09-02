@@ -74,7 +74,7 @@ app.include_router(stream.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(facilities.router, prefix="/api/v1")
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root_check():
     return {
         "status": "online",
@@ -83,7 +83,7 @@ def root_check():
         "docs": "/docs"
     }
 
-@app.get("/api/v1/health")
+@app.api_route("/api/v1/health", methods=["GET", "HEAD"])
 def health_check():
     return {
         "status": "HEALTHY",
