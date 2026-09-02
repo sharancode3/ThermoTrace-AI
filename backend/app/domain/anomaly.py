@@ -152,19 +152,21 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
                 if p_frp >= 250.0:
                     predicted_class = "IND_FIRE"
                     confidence = max(confidence, 0.94)
-                elif dur_hrs >= 24.0 or obs_ct >= 5:
+                elif dur_hrs >= 24.0 or obs_ct >= 4:
                     predicted_class = "IND_FLARE"
                     confidence = max(confidence, 0.92)
                 else:
                     predicted_class = "IND_ROUTINE"
-                    confidence = max(confidence, 0.88)
-            elif pct_for >= 0.60:
+                    confidence = max(confidence, 0.89)
+            elif pct_for >= 0.40:
                 predicted_class = "WILDFIRE"
                 confidence = max(confidence, 0.91)
-            elif pct_crop >= 0.60:
+            elif pct_crop >= 0.35:
                 predicted_class = "AGRI_BURN"
                 confidence = max(confidence, 0.93)
-            elif confidence < 0.45:
+            elif confidence >= 0.40:
+                predicted_class = str(classes[pred_idx])
+            else:
                 predicted_class = "OTHER_UNCERTAIN"
                 
             # Tier 1 Eager: SHAP TreeExplainer is deferred to Tier 2 On-Demand drawer open
@@ -206,7 +208,7 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
     cls_record.input_feature_vector = features
 
     # 5. Facility Baseline & Anomaly Engine
-    facility = session.query(IndustrialFacility).filter(IndustrialFacility.id == event.associated_facility_id).first()
+    facility = session.query(IndustrialFacility).filter(IndustrialFacility.id == event.associated_facility_id).first() if event.associated_facility_id else None
     current_frp = float(event.peak_frp_mw or 0.0)
     
     anomaly_record = session.query(EventAnomaly).filter(EventAnomaly.event_id == event.id).first()

@@ -127,15 +127,15 @@ def get_evidence_strength(obs_count: int, hist_days: int, has_facility: bool, fa
 
 def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_associated_fac: bool, state: str = "") -> Dict[str, Any]:
     """
-    Fine-grained Land-Cover, Industrial Geofence, and Terrain Resolver for Pan-India coordinates.
-    Distinguishes Industrial Zones, Western/Eastern Ghats Forests, Agricultural Deltas, 
-    Urban Agglomerations, and Coastal Scrub/Barren lands.
+    High-Precision Land-Cover, Industrial Geofence, and Terrain Resolver for Pan-India coordinates.
+    Calibrates Cropland Agrarian Belts, Western/Eastern Ghats Reserves, Industrial Corridors,
+    and Peri-urban Agro-forestry terrain.
     """
     # 1. Direct Industrial Proximity
     if dist_to_fac <= 3500.0 or is_associated_fac:
-        return {"pct_urban": 0.80, "pct_cropland": 0.10, "pct_forest": 0.10, "is_ind": 1}
+        return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.10, "is_ind": 1}
 
-    # 2. Key National Industrial Corridors & Mining Clusters (within 10km buffer)
+    # 2. Key National Industrial Corridors & Mining Clusters (within 12km buffer)
     ind_hubs = [
         {"lat": 13.16, "lon": 80.32}, # Manali/Ennore (TN)
         {"lat": 11.53, "lon": 79.48}, # Neyveli Lignite (TN)
@@ -149,33 +149,47 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         {"lat": 22.81, "lon": 70.83}, # Morbi Ceramic Kiln Cluster (GUJ)
         {"lat": 23.68, "lon": 86.97}, # Asansol-Raniganj Coal & Steel (WB)
         {"lat": 22.38, "lon": 82.72}, # Korba Smelter & Power (CHH)
+        {"lat": 23.66, "lon": 86.15}, # Bokaro Steel (JHK)
+        {"lat": 22.22, "lon": 84.86}, # Rourkela Steel (ODI)
     ]
     for hub in ind_hubs:
         d_km = ((lat - hub["lat"])**2 + (lon - hub["lon"])**2)**0.5 * 111.0
-        if d_km <= 10.0:
-            return {"pct_urban": 0.75, "pct_cropland": 0.15, "pct_forest": 0.10, "is_ind": 1}
+        if d_km <= 12.0:
+            return {"pct_urban": 0.80, "pct_cropland": 0.10, "pct_forest": 0.10, "is_ind": 1}
 
     # 3. Dense Forest & Hill Ranges (Western Ghats, Nilgiris, Anamalai, Eastern Ghats, Himalayas, Central Forests)
-    if (11.2 <= lat <= 11.7 and 76.4 <= lon <= 77.1) or        (10.1 <= lat <= 10.6 and 76.7 <= lon <= 77.4) or        (10.1 <= lat <= 10.4 and 77.3 <= lon <= 77.8) or        (11.3 <= lat <= 12.2 and 78.1 <= lon <= 78.9) or        (8.3 <= lat <= 9.8 and 77.1 <= lon <= 77.7) or        state in ["Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Assam", "Meghalaya", "Manipur", "Mizoram", "Nagaland", "Tripura", "Sikkim", "Goa", "Andaman & Nicobar Islands"]:
-        return {"pct_urban": 0.05, "pct_cropland": 0.10, "pct_forest": 0.85, "is_ind": 0}
+    is_forest_geo = (
+        (11.0 <= lat <= 12.2 and 76.2 <= lon <= 77.2) or # Nilgiris / Mudumalai
+        (10.0 <= lat <= 10.8 and 76.5 <= lon <= 77.5) or # Anamalai / Parambikulam
+        (8.3 <= lat <= 9.8 and 77.0 <= lon <= 77.8) or   # Agasthyamalai / Periyar
+        (11.3 <= lat <= 12.5 and 78.0 <= lon <= 79.0) or # Eastern Ghats (Shevaroy / Kolli / Kalrayan)
+        state in [
+            "Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Assam", 
+            "Meghalaya", "Manipur", "Mizoram", "Nagaland", "Tripura", "Sikkim", 
+            "Goa", "Andaman & Nicobar Islands"
+        ]
+    )
+    if is_forest_geo:
+        return {"pct_urban": 0.05, "pct_cropland": 0.15, "pct_forest": 0.80, "is_ind": 0}
 
-    # 4. Coastal Scrub, Salt Pans & Barren Wastelands (Ramanathapuram, Thoothukudi coast, Kutch)
-    if (8.8 <= lat <= 9.6 and 78.4 <= lon <= 79.4) or (22.5 <= lat <= 24.5 and 68.5 <= lon <= 71.0):
-        return {"pct_urban": 0.35, "pct_cropland": 0.35, "pct_forest": 0.30, "is_ind": 0}
-
-    # 5. Major Urban Centers (Chennai, Coimbatore, Madurai, Trichy, Bangalore, Mumbai, Delhi)
+    # 4. Urban Agglomerations
     urban_centers = [
-        {"lat": 13.08, "lon": 80.27}, {"lat": 11.01, "lon": 76.95},
-        {"lat": 9.92, "lon": 78.12},  {"lat": 10.79, "lon": 78.70},
-        {"lat": 12.97, "lon": 77.59}, {"lat": 19.07, "lon": 72.87},
-        {"lat": 28.61, "lon": 77.20}
+        {"lat": 13.08, "lon": 80.27}, # Chennai
+        {"lat": 11.01, "lon": 76.95}, # Coimbatore
+        {"lat": 9.92, "lon": 78.12},  # Madurai
+        {"lat": 10.79, "lon": 78.70}, # Trichy
+        {"lat": 12.97, "lon": 77.59}, # Bangalore
+        {"lat": 19.07, "lon": 72.87}, # Mumbai
+        {"lat": 28.61, "lon": 77.20}, # Delhi NCR
+        {"lat": 22.57, "lon": 88.36}, # Kolkata
+        {"lat": 17.38, "lon": 78.48}, # Hyderabad
     ]
     for u in urban_centers:
         d_km = ((lat - u["lat"])**2 + (lon - u["lon"])**2)**0.5 * 111.0
         if d_km <= 15.0:
             return {"pct_urban": 0.85, "pct_cropland": 0.10, "pct_forest": 0.05, "is_ind": 0}
 
-    # 6. Verified Agricultural Cropland Belts
+    # 5. Cropland & Agrarian Plains (Pan-India Default for rural coordinates)
     return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
 
 

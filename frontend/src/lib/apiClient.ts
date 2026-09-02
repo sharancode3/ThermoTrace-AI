@@ -79,6 +79,7 @@ export function fetchGisEvents(
   filters: EventFilters = {}
 ) {
   return get<GeoCollection>("/gis/events", {
+    show_all: true,
     ...viewport,
     ...filters,
   });
@@ -343,6 +344,6 @@ export async function fetchFacilityIntelligence(
 }
 
 
-export async function fetchNationalAnalytics(): Promise<any> {
-  return get<any>('/analytics/national-summary');
+export async function fetchNationalAnalytics(targetDate?: string): Promise<any> {
+  return get<any>('/analytics/national-summary', targetDate && targetDate !== 'ALL' ? { target_date: targetDate } : {});
 }
