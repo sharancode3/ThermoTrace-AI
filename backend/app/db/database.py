@@ -4,14 +4,19 @@ import psycopg2
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-env_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.env"))
-if os.path.exists(env_file):
-    with open(env_file, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ[k.strip()] = v.strip()
+# Load environment variables from root and backend .env files
+root_env = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.env"))
+backend_env = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.env"))
+
+for ef in [root_env, backend_env]:
+    if os.path.exists(ef):
+        with open(ef, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    val = v.strip().strip('"').strip("'")
+                    os.environ[k.strip()] = val
 
 POSTGRES_USER = os.getenv("POSTGRES_USER", "thermo_admin")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "thermo_secret")
