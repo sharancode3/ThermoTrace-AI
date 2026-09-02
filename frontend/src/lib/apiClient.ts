@@ -1,9 +1,5 @@
 const API_BASE_URL =
-  typeof window !== "undefined"
-    ? "/api/v1"
-    : process.env.INTERNAL_BACKEND_URL
-      ? `${process.env.INTERNAL_BACKEND_URL}/api/v1`
-      : "http://127.0.0.1:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
 export type Viewport = {
   west: number;
@@ -349,5 +345,5 @@ export async function fetchFacilityIntelligence(
 
 
 export async function fetchNationalAnalytics(): Promise<any> {
-  return get<any>('/api/v1/analytics/national-summary');
+  return get<any>('/analytics/national-summary');
 }
