@@ -43,32 +43,67 @@ class DeterministicGroundedProvider:
         return "Tactical scan complete. Evaluated all active Indian thermal signatures against real-time satellite telemetry."
 
 
-def create_llm_provider(provider_name: Optional[str] = None) -> LLMProvider:
-    """Create an LLM provider instance based on the configured env var or available credentials."""
-    selected = (provider_name or os.getenv("LLM_PROVIDER") or "").lower()
-    
-    if selected == "ollama":
-        return OllamaChatProvider()
-    
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if selected == "openai" or (not selected and openai_key):
-        if openai_key:
-            return OpenAIChatProvider(api_key=openai_key)
-        
-    return DeterministicGroundedProvider()
+class GroqChatProvider:
+    """Concrete Groq-backed provider for high-speed grounded chat & report synthesis."""
 
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+    ) -> None:
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        self.model = model or os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+        self.url = "https://api.groq.com/openai/v1/chat/completions"
 
-try:
-    from dotenv import find_dotenv, load_dotenv
-except ImportError:  # pragma: no cover - optional dependency fallback
-    def find_dotenv(*args, **kwargs):
-        return None
+    def generate(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.1,
+        max_tokens: int = 512,
+    ) -> str:
+        if not self.api_key:
+            return DeterministicGroundedProvider().generate(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
 
-    def load_dotenv(*args, **kwargs):
-        return False
-
-
-load_dotenv(find_dotenv(usecwd=True), override=False)
+        import requests
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        try:
+            resp = requests.post(self.url, headers=headers, json=payload, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+            elif self.model != "openai/gpt-oss-20b":
+                payload["model"] = "openai/gpt-oss-20b"
+                r2 = requests.post(self.url, headers=headers, json=payload, timeout=15)
+                if r2.status_code == 200:
+                    return r2.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"[GROQ LLM INFERENCE NOTICE] Fallback activated: {e}")
+            
+        return DeterministicGroundedProvider().generate(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
 
 
 class OpenAIChatProvider:
@@ -87,7 +122,7 @@ class OpenAIChatProvider:
 
         try:
             from openai import OpenAI
-        except ImportError as exc:  # pragma: no cover - dependency guard
+        except ImportError as exc:
             raise RuntimeError(
                 "The OpenAI Python SDK is not installed. Add `openai` to the backend dependencies."
             ) from exc
@@ -137,13 +172,7 @@ class OllamaChatProvider:
         temperature: float = 0.1,
         max_tokens: int = 512,
     ) -> str:
-        try:
-            import requests
-        except ImportError as exc:  # pragma: no cover - dependency guard
-            raise RuntimeError(
-                "The `requests` library is not installed. Add `requests` to the backend dependencies."
-            ) from exc
-
+        import requests
         payload = {
             "model": self.model,
             "messages": [
@@ -171,4 +200,31 @@ class OllamaChatProvider:
         return content
 
 
-__all__ = ["LLMProvider", "OpenAIChatProvider", "OllamaChatProvider", "DeterministicGroundedProvider", "create_llm_provider"]
+def create_llm_provider(provider_name: Optional[str] = None) -> LLMProvider:
+    """Create an LLM provider instance prioritizing Groq for ultra-fast cloud inference."""
+    selected = (provider_name or os.getenv("LLM_PROVIDER") or "groq").lower()
+
+    groq_key = os.getenv("GROQ_API_KEY")
+    if selected == "groq" or (not selected and groq_key):
+        if groq_key:
+            return GroqChatProvider(api_key=groq_key)
+
+    if selected == "ollama":
+        return OllamaChatProvider()
+
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if selected == "openai" or (not selected and openai_key):
+        if openai_key:
+            return OpenAIChatProvider(api_key=openai_key)
+
+    return DeterministicGroundedProvider()
+
+
+__all__ = [
+    "LLMProvider", 
+    "GroqChatProvider", 
+    "OpenAIChatProvider", 
+    "OllamaChatProvider", 
+    "DeterministicGroundedProvider", 
+    "create_llm_provider"
+]
