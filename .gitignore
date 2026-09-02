@@ -38,5 +38,8 @@ htmlcov/
 *.geotiff
 data/raw/landcover/
 
-
 backend/data/reports/*.pdf
+*.db
+scratch/
+test-results/
+.system_generated/

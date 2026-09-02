@@ -136,7 +136,7 @@ export default function MapComponent({
   });
 
   // Unified Filter States
-  const [windowHours, setWindowHours] = useState<number | null>(null);
+  const [windowHours, setWindowHours] = useState<number | null>(24);
   const [showAllDetections, setShowAllDetections] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [classFilter, setClassFilter] = useState<string>("");
@@ -273,6 +273,7 @@ export default function MapComponent({
       setLoadingEvents(true);
 
       const eventFilters = {
+        hours: windowHours ?? undefined,
         start_time: startTime,
         classification: classFilter || undefined,
         anomaly_tier: severityFilter || undefined,
@@ -630,7 +631,13 @@ export default function MapComponent({
               <select
                 aria-label="Classification Filter"
                 value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setClassFilter(val);
+                  if (val && windowHours === 24) {
+                    setWindowHours(null);
+                  }
+                }}
                 className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
               >
                 <option value="">All Categories</option>

@@ -323,7 +323,7 @@ export function OverlayManager() {
             </div>
             <div className="text-[11px] text-slate-500">
               {overlay === "news" && "Time-Ordered NASA FIRMS Bulletins"}
-              {overlay === "alerts" && `${unreadAlertCount} Unacknowledged • Max 100 Recent`}
+              {overlay === "alerts" && `${unreadAlertCount} Unacknowledged • Max 250 Recent`}
               {overlay === "chat" && "PostGIS Grounded Assistant"}
               {overlay === "analytics" && "Real-Time Pan-India Telemetry & Leaderboard"}
               {overlay === "settings" && "Appearance & NASA FIRMS"}
@@ -624,16 +624,25 @@ export function OverlayManager() {
           )}
         </div>
       )}
-{/* News Filter Toolbar & 24h Live Stream Banner */}
+      {/* News Filter Toolbar & 24h Live Stream Banner */}
       {overlay === "news" && (
         <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
-          {/* Live Ingestion Cadence Notice */}
-          <div className="flex items-center justify-between px-2.5 py-1 bg-orange-50/80 border border-orange-200/80 rounded-lg text-[10px] text-orange-800 font-medium">
-            <div className="flex items-center gap-1.5">
-              <Radio className="w-3 h-3 text-orange-600 animate-pulse" />
-              <span>NASA FIRMS Telemetry (15-min Polling)</span>
+          {/* Live Ingestion Cadence Notice with Dynamic Last Updated Timestamp */}
+          <div className="flex items-center justify-between px-2.5 py-1.5 bg-orange-50/90 border border-orange-200 rounded-lg text-[10px] text-orange-900 font-medium shadow-xs">
+            <div className="flex items-center gap-1.5 truncate">
+              <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+              <span className="font-semibold text-slate-900">NASA FIRMS Telemetry:</span>
+              <span className="text-orange-700 font-mono">
+                {firmsStatus?.last_successful_firms_fetch_utc
+                  ? `Last updated ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)}`
+                  : news.length > 0 && news[0]?.published_at
+                  ? `Last updated ${formatRelativeTime(news[0].published_at)}`
+                  : "Last updated Just now"}
+              </span>
             </div>
-            <span className="font-mono font-bold bg-orange-200/70 px-1.5 py-0.2 rounded text-[9px]">PAST 24H</span>
+            <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
+              AUTONOMOUS 15M SYNC
+            </span>
           </div>
 
           <div className="relative">
@@ -668,7 +677,7 @@ export function OverlayManager() {
         </div>
       )}
 
-      {/* Alerts Filter Toolbar & 100-Alert Cap */}
+      {/* Alerts Filter Toolbar & 250-Alert Cap */}
       {overlay === "alerts" && (
         <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
           {/* Alert Filter Policy Banner */}
@@ -677,7 +686,7 @@ export function OverlayManager() {
               <AlertTriangle className="w-3 h-3 text-amber-600" />
               Critical, Abnormal & Industrial Alarms Only
             </span>
-            <span className="font-mono text-slate-500">Max 100 Recent</span>
+            <span className="font-mono text-slate-500">Max 250 Recent</span>
           </div>
 
           <div className="flex items-center justify-between gap-2">

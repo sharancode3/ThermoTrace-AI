@@ -37,6 +37,7 @@ export type EventFilters = {
   anomaly_tier?: string;
   show_all?: boolean;
   focus_event_id?: string;
+  hours?: number;
 };
 
 function query(

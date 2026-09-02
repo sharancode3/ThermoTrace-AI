@@ -13,12 +13,31 @@ def _run_sync_poller_cycle():
     """Worker executed in background worker thread to prevent event loop blocking."""
     try:
         session = SessionLocal()
-        print("[FIRMS DAEMON] Executing 10-minute automated NASA FIRMS multi-sensor polling & ML hardening...")
+        print("[FIRMS DAEMON] Executing 15-minute automated NASA FIRMS multi-sensor polling & ML hardening...")
         res = poll_firms_foreground_cycle(session, force=False)
         inserted = res.get("inserted_count", 0)
         print(f"[FIRMS DAEMON] Telemetry check completed. New observations inserted: {inserted}")
         events_count = form_events_from_observations(session)
         print(f"[FIRMS DAEMON] ST-DBSCAN clustering & ML hardening completed. Active events refreshed: {events_count}")
+        
+        # Keep facility active hotspot counters in sync
+        from sqlalchemy import text
+        session.execute(text("""
+            UPDATE industrial_facilities f
+            SET historical_event_count = counts.cnt
+            FROM (
+                SELECT f2.id as fid, count(e.id) as cnt
+                FROM industrial_facilities f2
+                JOIN thermal_events e ON (
+                    e.associated_facility_id = f2.id
+                    OR (e.latitude BETWEEN f2.latitude - 0.05 AND f2.latitude + 0.05
+                        AND e.longitude BETWEEN f2.longitude - 0.05 AND f2.longitude + 0.05)
+                )
+                GROUP BY f2.id
+            ) counts
+            WHERE f.id = counts.fid;
+        """))
+        session.commit()
         session.close()
     except Exception as e:
         print(f"[FIRMS DAEMON ERROR] {e}")
@@ -38,7 +57,7 @@ async def firms_periodic_poller_daemon():
         # Sleep for configured interval (default: 15 minutes = 900 seconds)
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
-ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "false").lower() in ("true", "1", "yes")
+ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "true").lower() in ("true", "1", "yes")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -89,8 +108,7 @@ def health_check():
         "status": "HEALTHY",
         "database": "CONNECTED", 
         "redis": "CONNECTED",
-        "ml_model_version": "thermo_xgb_v1.0.0",
-        "cadence_poller": "ACTIVE (10m loop in background thread)",
-        "active_events_count": 670,
-        "critical_anomalies_count": 1
+        "ml_model_version": "thermo_xgb_v1.1.0",
+        "cadence_poller": f"ACTIVE ({POLL_INTERVAL_MINUTES}m loop in background worker)",
+        "autonomous_firms_daemon": ENABLE_FIRMS_POLLING,
     }

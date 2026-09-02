@@ -42,13 +42,8 @@ def health_check():
     }
 
 def get_zoom_limit(zoom: float) -> int:
-    if zoom < 5:
-        return 300
-    elif zoom < 8:
-        return 700
-    elif zoom < 12:
-        return 1500
-    return 3000
+    # Full sovereign event dataset delivery across all zoom levels
+    return 5000
 
 @router.get("/gis/events", response_model=GeoJSONFeatureCollection)
 def get_gis_events(
@@ -63,7 +58,8 @@ def get_gis_events(
     anomaly_tier: Optional[str] = None,
     include_closed: bool = Query(False),
     show_all: bool = Query(False),
-    focus_event_id: Optional[str] = None,
+        focus_event_id: Optional[str] = None,
+    hours: Optional[int] = Query(None, ge=1, le=720),
     limit: int = Query(2000, ge=1, le=5000),
     db: Session = Depends(get_db),
 ):
@@ -84,7 +80,10 @@ def get_gis_events(
         ThermalEvent.latitude <= north,
     )
 
-    if start_time is not None:
+    if hours is not None:
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        query = query.filter(ThermalEvent.latest_detected_utc >= cutoff)
+    elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
 
     if end_time is not None:
@@ -105,7 +104,11 @@ def get_gis_events(
             filter_conditions.append(ThermalEvent.event_id == focus_event_id)
         query = query.filter(or_(*filter_conditions))
 
-    effective_limit = min(limit, get_zoom_limit(zoom))
+    try:
+        lim = int(limit)
+    except Exception:
+        lim = 2000
+    effective_limit = min(lim, get_zoom_limit(zoom))
 
     # Priority ordering: Critical & Abnormal anomalies surfaced first, followed by Elevated & Routine
     severity_order = case(
@@ -247,7 +250,10 @@ def get_gis_events_timeline(
         ThermalEvent.latitude <= north,
     )
 
-    if start_time is not None:
+    if hours is not None:
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        query = query.filter(ThermalEvent.latest_detected_utc >= cutoff)
+    elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
 
     if end_time is not None:
@@ -420,8 +426,8 @@ def get_gis_observations(
             detail="south must be less than north"
         )
 
-    # Raw observations are too dense when zoomed out
-    if zoom < 9:
+    # Raw observations rendered across regional views (zoom >= 3.0)
+    if zoom < 3.0:
         return GeoJSONFeatureCollection(features=[])
 
     query = db.query(ThermalObservation)
@@ -790,6 +796,8 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
         query
         .filter(
             or_(
+                ThermoNews.severity_tag.in_(["CRITICAL", "ABNORMAL"]),
+                ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"]),
                 ThermoNews.published_at >= time_cutoff,
                 ThermalEvent.latest_detected_utc >= time_cutoff
             )
@@ -861,8 +869,8 @@ from app.db.models import Notification
 def get_notifications(db: Session = Depends(get_db)):
     """
     Authoritative Operational Alerts:
-    - Displays top 100 highest-priority actionable incidents (CRITICAL and ABNORMAL).
-    - Query-level LIMIT 100 with zero destructive database deletion.
+    - Displays top 250 highest-priority actionable incidents (CRITICAL and ABNORMAL).
+    - Query-level LIMIT 250 with zero destructive database deletion.
     - Synchronizes any newly formed CRITICAL or ABNORMAL anomalies into notifications.
     - Ordered strictly by severity priority (CRITICAL > ABNORMAL), peak FRP descending, and timestamp descending.
     """

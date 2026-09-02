@@ -23,14 +23,14 @@ def _resolve_postgres_host() -> str:
     candidates = []
     if configured:
         candidates.append(configured)
-    candidates.extend(["postgres", "127.0.0.1", "localhost"])
 
-    # Query WSL IP if available
     try:
-        out = subprocess.check_output(["wsl", "-d", "Ubuntu", "hostname", "-I"], text=True, timeout=2).strip()
+        out = subprocess.check_output(["wsl", "-d", "Ubuntu", "-u", "root", "hostname", "-I"], text=True, timeout=2).strip()
         candidates.extend(out.split())
     except Exception:
         pass
+
+    candidates.extend(["127.0.0.1", "localhost", "postgres", "172.24.28.203"])
 
     for host in candidates:
         try:
@@ -40,7 +40,7 @@ def _resolve_postgres_host() -> str:
                 user=POSTGRES_USER,
                 password=POSTGRES_PASSWORD,
                 dbname=POSTGRES_DB,
-                connect_timeout=2
+                connect_timeout=1
             )
             c.close()
             return host
@@ -49,7 +49,6 @@ def _resolve_postgres_host() -> str:
 
     return "127.0.0.1"
 
-# Support Cloud DATABASE_URL (Supabase, Neon, Render Postgres) or Local Fallback
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL:
     SQLALCHEMY_DATABASE_URL = DATABASE_URL

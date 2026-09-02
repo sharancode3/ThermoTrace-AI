@@ -222,7 +222,15 @@ def get_facility_intelligence(
             detail=f"Facility with ID {facility_id} not found",
         )
 
-        # 2. Fetch baseline profile or compute dynamically from historical telemetry
+    # If facility has zero recorded events, perform an on-demand real-time NASA FIRMS perimeter pull
+    if (facility.historical_event_count or 0) == 0 and facility.latitude and facility.longitude:
+        try:
+            from app.domain.firms_poller import fetch_firms_telemetry_for_facility_area
+            fetch_firms_telemetry_for_facility_area(db, float(facility.latitude), float(facility.longitude), day_range=5)
+        except Exception:
+            pass
+
+    # 2. Fetch baseline profile or compute dynamically from historical telemetry
     baseline = db.query(FacilityBaseline).filter(FacilityBaseline.facility_id == facility_id).first()
     baseline_profile = None
     if baseline:

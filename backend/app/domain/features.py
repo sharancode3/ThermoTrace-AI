@@ -166,7 +166,11 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         # Neyveli Lignite & Power Basin (Tamil Nadu)
         {"min_lat": 11.45, "max_lat": 11.60, "min_lon": 79.40, "max_lon": 79.55, "name": "Neyveli Mining & Power"},
         # Jamnagar Mega-Refinery Complex (Gujarat)
-        {"min_lat": 22.35, "max_lat": 22.55, "min_lon": 69.95, "max_lon": 70.15, "name": "Jamnagar Refining Corridor"},
+        {"min_lat": 22.25, "max_lat": 22.65, "min_lon": 69.80, "max_lon": 70.25, "name": "Jamnagar Refining Corridor"},
+        # Pipavav / Rajula Industrial Port (Gujarat)
+        {"min_lat": 20.80, "max_lat": 21.05, "min_lon": 71.35, "max_lon": 71.60, "name": "Pipavav Industrial Port"},
+        # Cuddalore SIPCOT & Petrochem Corridor (Tamil Nadu)
+        {"min_lat": 11.60, "max_lat": 11.85, "min_lon": 79.65, "max_lon": 79.85, "name": "Cuddalore SIPCOT Complex"},
         # Hazira-Surat Petrochemical Hub (Gujarat)
         {"min_lat": 21.10, "max_lat": 21.25, "min_lon": 72.60, "max_lon": 72.85, "name": "Hazira Industrial Belt"},
         # Dahej-Bharuch PCPIR (Gujarat)

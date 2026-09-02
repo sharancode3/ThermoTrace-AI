@@ -21,7 +21,6 @@ export default function ReportsPage() {
   const [customTitle, setCustomTitle] = useState("");
   const [investigatorName, setInvestigatorName] = useState("");
   const [customNotes, setCustomNotes] = useState("");
-  const [roleProfile, setRoleProfile] = useState<string>("cpcb_inspector");
   const [selectedSections, setSelectedSections] = useState<string[]>([
     "executive_summary",
     "radiometric_telemetry",
@@ -29,42 +28,10 @@ export default function ReportsPage() {
     "land_cover",
     "facility_boundary",
     "nearby_infrastructure",
+    "nearby_events",
     "provenance"
   ]);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
-
-  const roleProfiles = [
-    {
-      id: "cpcb_inspector",
-      label: "CPCB Environmental Inspector",
-      desc: "Pollution control compliance, emissions limits & regulatory follow-up",
-      badge: "REGULATORY"
-    },
-    {
-      id: "facility_safety",
-      label: "Plant Safety & Operations Manager",
-      desc: "Equipment flare thresholds, shutdown records & operational baselines",
-      badge: "INDUSTRIAL"
-    },
-    {
-      id: "sdma_disaster",
-      label: "State Disaster Management (SDMA)",
-      desc: "Emergency triage, rapid containment & nearby population assets",
-      badge: "TACTICAL"
-    },
-    {
-      id: "agri_audit",
-      label: "Agricultural & Biomass Officer",
-      desc: "Seasonal crop residue burns & cropland boundary verification",
-      badge: "AGRARIAN"
-    },
-    {
-      id: "ntro_intelligence",
-      label: "National Defense & Intelligence Analyst",
-      desc: "Multi-sensor satellite passes & sovereign geofence validation",
-      badge: "SOVEREIGN"
-    }
-  ];
 
   const availableSections = [
     { id: "executive_summary", label: "Executive Summary & Anomaly Severity Index", desc: "Core incident overview and Z-score deviation" },
@@ -112,11 +79,11 @@ export default function ReportsPage() {
     setMessage(null);
     try {
       // Build personalized title including role tag if custom title not specified
-      const activeRole = roleProfiles.find(r => r.id === roleProfile);
-      const finalTitle = customTitle || `Dossier (${activeRole?.badge || "AUDIT"}): ${selectedEventId}`;
+      
+      const finalTitle = customTitle.trim() || `Thermal Intelligence Dossier: ${selectedEventId}`;
 
       const res = await generateReport(selectedEventId, finalTitle, selectedSections);
-      setMessage({ text: `Personalized Dossier ${res.report_id} generated successfully for ${activeRole?.label}!`, type: "success" });
+      setMessage({ text: `Tactical Dossier ${res.report_id} generated successfully!`, type: "success" });
       setShowModal(false);
       setCustomTitle("");
       setCustomNotes("");
@@ -317,8 +284,8 @@ export default function ReportsPage() {
                   <Sliders className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Personalized Intelligence Dossier Studio</h3>
-                  <p className="text-[11px] text-slate-500">Configure report sections, recipient role profile, and compliance focus</p>
+                  <h3 className="text-sm font-bold text-slate-900">Thermal Intelligence Dossier Studio</h3>
+                  <p className="text-[11px] text-slate-500">Generate publication-grade PDF reports with full radiometric and spatial evidence</p>
                 </div>
               </div>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700 text-sm font-bold">✕</button>
@@ -342,31 +309,7 @@ export default function ReportsPage() {
                 </select>
               </div>
 
-              {/* Step 2: Select Operational Role Profile */}
-              <div>
-                <label className="block font-bold text-slate-800 mb-1.5">2. Operational Recipient Role Profile</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {roleProfiles.map((role) => (
-                    <div
-                      key={role.id}
-                      onClick={() => setRoleProfile(role.id)}
-                      className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
-                        roleProfile === role.id 
-                          ? "border-orange-500 bg-orange-50/70 shadow-xs" 
-                          : "border-slate-200 bg-white hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-slate-900">{role.label}</span>
-                        <span className="text-[9px] font-mono font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{role.badge}</span>
-                      </div>
-                      <p className="text-[10px] text-slate-500">{role.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Step 3: Custom Details */}
+              {/* Step 2: Custom Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Dossier Title (Optional)</label>
@@ -390,9 +333,9 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              {/* Step 4: Modular Sections Selection */}
+              {/* Step 3: Modular Sections Selection */}
               <div>
-                <label className="block font-bold text-slate-800 mb-1.5">3. Modular Sections to Include in PDF</label>
+                <label className="block font-bold text-slate-800 mb-1.5">2. Analytical Modular Sections to Include in PDF</label>
                 <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
                   {availableSections.map((sec) => {
                     const isChecked = selectedSections.includes(sec.id);
@@ -429,7 +372,7 @@ export default function ReportsPage() {
                   className="flex items-center gap-1.5 px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold transition disabled:opacity-50 shadow-sm"
                 >
                   {generating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {generating ? "Compiling Custom PDF..." : "Generate Personalized PDF"}
+                  {generating ? "Compiling Custom PDF..." : "Generate Tactical Dossier (PDF)"}
                 </button>
               </div>
             </form>
