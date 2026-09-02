@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies required for psycopg2 and GeoAlchemy
+# Install system dependencies required for psycopg2, GeoAlchemy, and ReportLab
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
@@ -19,10 +19,12 @@ RUN apt-get update && apt-get install -y \
     && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 
-
 COPY requirements.txt .
-
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Do not copy all files here so we can use live reload volume in docker-compose
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Copy full application code for production cloud container execution
+COPY . /app
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
