@@ -2582,10 +2582,277 @@
         clip-path: inset(0 0 0 0 round 16px) !important;
       }
     }
+
+    /* =========================================================
+       SIH 2026 Floating Side Glass Overlay (Non-Blocking)
+       ========================================================= */
+    .sih-glass-card {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 180;
+      width: min(390px, calc(100vw - 40px));
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.18);
+      padding: 14px 16px;
+      color: #f8fafc;
+      pointer-events: auto;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease;
+      animation: sihSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .sih-glass-card.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(16px) scale(0.95);
+      pointer-events: none;
+    }
+
+    .sih-glass-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .sih-glass-tags {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sih-flag {
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+
+    .sih-tag-sih {
+      background: rgba(249, 115, 22, 0.2);
+      border: 1px solid rgba(249, 115, 22, 0.45);
+      color: #fb923c;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      padding: 2px 7px;
+      border-radius: 5px;
+      text-transform: uppercase;
+    }
+
+    .sih-tag-ps {
+      background: rgba(56, 189, 248, 0.16);
+      border: 1px solid rgba(56, 189, 248, 0.38);
+      color: #38bdf8;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 5px;
+    }
+
+    .sih-glass-btn-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94a3b8;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sih-glass-btn-icon:hover {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: rgba(239, 68, 68, 0.45);
+      color: #fca5a5;
+    }
+
+    .sih-glass-body {
+      margin-bottom: 12px;
+    }
+
+    .sih-team-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .sih-team-label {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    .sih-team-id {
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .sih-theme-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .sih-ps-quote {
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      line-height: 1.35;
+      font-style: italic;
+      margin: 0;
+      border-left: 2px solid #f97316;
+      padding-left: 8px;
+    }
+
+    .sih-glass-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .sih-status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #86efac;
+    }
+
+    .sih-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: sihPulse 2s infinite ease-in-out;
+    }
+
+    .sih-launch-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #ffffff;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      box-shadow: 0 2px 10px rgba(249, 115, 22, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .sih-launch-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(249, 115, 22, 0.5);
+    }
+
+    .sih-minimized-pill {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 180;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 30px;
+      padding: 6px 14px;
+      color: #f8fafc;
+      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 15px rgba(56, 189, 248, 0.2);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .sih-minimized-pill:hover {
+      background: rgba(30, 41, 59, 0.95);
+      border-color: #38bdf8;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.35);
+    }
+
+    .sih-pill-text {
+      font-weight: 800;
+      color: #fb923c;
+    }
+
+    .sih-pill-team {
+      font-size: 0.68rem;
+      color: #94a3b8;
+    }
+
+    @keyframes sihSlideIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes sihPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
   </style>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to content</a>
+
+  <!-- SIH 2026 Floating Side Glass Overlay (Non-Blocking) -->
+  <aside id="sih-floating-card" class="sih-glass-card" aria-label="Smart India Hackathon 2026 Metadata">
+    <div class="sih-glass-header">
+      <div class="sih-glass-tags">
+        <span class="sih-flag">🇮🇳</span>
+        <span class="sih-tag-sih">SIH 2026</span>
+        <span class="sih-tag-ps">PS 26162</span>
+        <span style="background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1; font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 5px;">NTRO</span>
+      </div>
+      <button id="sih-minimize-btn" class="sih-glass-btn-icon" title="Close" aria-label="Close SIH details" type="button" onclick="document.getElementById('sih-floating-card').style.display='none';">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="sih-glass-body">
+      <div class="sih-team-row">
+        <span class="sih-team-label">Team Deadlock</span>
+        <span class="sih-team-id">BMS/SIH2026/68</span>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px; font-size: 0.68rem; color: #94a3b8;">
+        <span style="color: #38bdf8; font-weight: 700;">Disaster Management</span>
+        <span>&middot;</span>
+        <span>Agency: NTRO</span>
+      </div>
+      <p class="sih-ps-quote">
+        &ldquo;AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources Using NASA FIRMS, OSM &amp; Satellite Data&rdquo;
+      </p>
+    </div>
+
+    <div class="sih-glass-footer">
+      <span class="sih-status-indicator"><span class="sih-status-dot"></span> Live Prototype</span>
+      <a href="/monitor" target="_top" class="sih-launch-link" onclick="window.top.location.href='/monitor'; return false;">
+        Launch Radar <span>&rarr;</span>
+      </a>
+    </div>
+  </aside>
 
   <button class="nav-reveal-btn focus-visible" id="nav-reveal-btn" aria-label="Open navigation" aria-expanded="false" aria-controls="landing-nav" type="button">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -2595,15 +2862,17 @@
 
   <header class="landing-nav" id="landing-nav" aria-label="Primary">
     <div class="nav-inner">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <a href="/" style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; color: #f8fafc; text-decoration: none; letter-spacing: -0.02em;">
-          <span style="font-size: 1.3rem;">🔥</span> ThermoTrace <span style="color: #38bdf8; font-size: 0.9rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);">AI</span>
-        </a>
-      </div>
+      <a href="/" style="display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.18rem; color: #ffffff; text-decoration: none; letter-spacing: -0.025em;" title="ThermoTrace AI">
+        <svg style="width: 26px; height: 26px; color: #ea580c; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(234, 88, 12, 0.6));" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+        </svg>
+        <span>ThermoTrace</span>
+        <span style="color: #38bdf8; font-size: 0.78rem; font-weight: 800; background: rgba(56, 189, 248, 0.15); padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.35); letter-spacing: 0.04em;">AI</span>
+      </a>
       <ul class="nav-links">
         <li><a class="focus-visible" href="#how-it-works">Overview</a></li>
         <li><a class="focus-visible" href="#destinations">Evidence</a></li>
-        <li><a class="focus-visible pill-cta" href="/monitor" style="background: rgba(34, 197, 94, 0.15) !important; border: 1.5px solid #22c55e !important; color: #22c55e !important; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">Launch Radar / Monitor &rarr;</a></li>
+        <li><a class="focus-visible pill-cta" href="/monitor" target="_top" onclick="window.top.location.href='/monitor'; return false;" style="background: rgba(34, 197, 94, 0.15) !important; border: 1.5px solid #22c55e !important; color: #22c55e !important; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">Launch Radar / Monitor &rarr;</a></li>
       </ul>
     </div>
   </header>
@@ -2637,6 +2906,12 @@
       </div>
       <div class="shell hero-inner">
         <div class="hero-grid">
+          <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 30px; padding: 5px 14px; margin-bottom: 0.85rem; width: fit-content;">
+            <span style="font-size: 14px;">🇮🇳</span>
+            <span style="font-size: 12px; font-weight: 800; color: #38bdf8; letter-spacing: 0.04em;">SMART INDIA HACKATHON 2026</span>
+            <span style="color: rgba(255,255,255,0.3);">|</span>
+            <span style="font-size: 12px; font-weight: 700; color: #fb923c;">PS 26162 &middot; Team Deadlock</span>
+          </div>
           <p class="eyebrow">Satellite Intelligence · Evidence First</p>
           <h1>Trust The Signal.</h1>
           <p class="hero-sub">
@@ -3248,6 +3523,45 @@
           target.classList.add("in-view");
         });
       }
+
+      // SIH 2026 Floating Side Overlay Controller (Vanish on Scroll)
+      (function initSihFloatingWidget() {
+        const card = document.getElementById("sih-floating-card");
+        const minBtn = document.getElementById("sih-minimize-btn");
+        let manuallyClosed = false;
+
+        function showCard() {
+          if (card && !manuallyClosed) {
+            card.classList.remove("is-hidden");
+          }
+        }
+
+        function hideCard(isManual = false) {
+          if (isManual) manuallyClosed = true;
+          if (card) {
+            card.classList.add("is-hidden");
+          }
+        }
+
+        if (minBtn) {
+          minBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            hideCard(true);
+          });
+        }
+
+        // Vanish after first scroll (> 150px), re-appear when scrolled back to top
+        window.addEventListener("scroll", () => {
+          if (manuallyClosed) return;
+          const y = window.scrollY || document.documentElement.scrollTop;
+          if (y > 150) {
+            hideCard(false);
+          } else {
+            showCard();
+          }
+        }, { passive: true });
+      })();
     })();
   </script>
 </body>
