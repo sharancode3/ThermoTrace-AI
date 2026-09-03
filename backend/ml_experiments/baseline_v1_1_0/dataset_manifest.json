@@ -1,0 +1,64 @@
+{
+  "timestamp_utc": "2026-09-03T10:31:12.013238+00:00",
+  "datasets": {
+    "three_tier_training_dataset": {
+      "path": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\data\\processed\\three_tier_training_dataset.csv",
+      "sha256": "5aac161f5d46b0ae12464325c664cbfdd27623fcbcc15aa8353c10d2996d3b3c",
+      "rows": 954,
+      "columns": [
+        "event_id",
+        "facility_id",
+        "spatial_group",
+        "dist_to_facility",
+        "facility_category_encoded",
+        "peak_frp_mw",
+        "mean_frp_mw",
+        "frp_variance",
+        "max_brightness_k",
+        "duration_hours",
+        "day_night_ratio",
+        "historical_active_days_90d",
+        "historical_peak_frp",
+        "pct_cropland",
+        "pct_forest",
+        "pct_urban",
+        "is_industrial_zone",
+        "label",
+        "tier",
+        "label_source",
+        "label_confidence"
+      ],
+      "tier_breakdown": {
+        "TIER_A": 750,
+        "TIER_B": 120,
+        "TIER_C": 84
+      },
+      "label_breakdown": {
+        "AGRI_BURN": 191,
+        "IND_FLARE": 171,
+        "WILDFIRE": 162,
+        "OTHER_UNCERTAIN": 148,
+        "IND_ROUTINE": 146,
+        "IND_FIRE": 136
+      }
+    },
+    "hardened_training_dataset": {
+      "path": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\data\\processed\\hardened_training_dataset.csv",
+      "sha256": "4e3c45ca6bb15574c24d3d4a4184910a907fb99706c5e867b1fd26d79364d7a3",
+      "rows": 2132,
+      "tier_breakdown": {
+        "Tier_A_RuleDerived": 1706,
+        "Tier_B_HardNegative": 216,
+        "Tier_C_HandVerified": 210
+      },
+      "label_breakdown": {
+        "AGRI_BURN": 1549,
+        "IND_ROUTINE": 236,
+        "WILDFIRE": 124,
+        "OTHER_UNCERTAIN": 121,
+        "IND_FLARE": 62,
+        "IND_FIRE": 40
+      }
+    }
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "1_Thermal_Only": {
+    "feature_count": 4,
+    "features": [
+      "peak_frp_mw",
+      "mean_frp_mw",
+      "frp_variance",
+      "max_brightness_k"
+    ],
+    "macro_f1": 0.7353,
+    "weighted_f1": 0.8266,
+    "macro_precision": 0.7265,
+    "macro_recall": 0.753,
+    "brier_score": 0.2268,
+    "log_loss": 0.3781,
+    "fit_time_ms": 228.29,
+    "inference_time_ms_per_sample": 0.0305,
+    "per_class_f1": {
+      "AGRI_BURN": 0.8387,
+      "IND_FIRE": 0.875,
+      "IND_FLARE": 0.9286,
+      "IND_ROUTINE": 0.0,
+      "OTHER_UNCERTAIN": 1.0,
+      "WILDFIRE": 0.7692
+    }
+  },
+  "2_Thermal_Temporal": {
+    "feature_count": 6,
+    "features": [
+      "peak_frp_mw",
+      "mean_frp_mw",
+      "frp_variance",
+      "max_brightness_k",
+      "duration_hours",
+      "day_night_ratio"
+    ],
+    "macro_f1": 0.9753,
+    "weighted_f1": 0.9828,
+    "macro_precision": 0.9667,
+    "macro_recall": 0.9881,
+    "brier_score": 0.038,
+    "log_loss": 0.0713,
+    "fit_time_ms": 123.73,
+    "inference_time_ms_per_sample": 0.0262,
+    "per_class_f1": {
+      "AGRI_BURN": 1.0,
+      "IND_FIRE": 1.0,
+      "IND_FLARE": 0.963,
+      "IND_ROUTINE": 0.8889,
+      "OTHER_UNCERTAIN": 1.0,
+      "WILDFIRE": 1.0
+    }
+  },
+  "3_Thermal_LandCover": {
+    "feature_count": 7,
+    "features": [
+      "peak_frp_mw",
+      "mean_frp_mw",
+      "frp_variance",
+      "max_brightness_k",
+      "pct_cropland",
+      "pct_forest",
+      "pct_urban"
+    ],
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "brier_score": 0.0038,
+    "log_loss": 0.0154,
+    "fit_time_ms": 125.54,
+    "inference_time_ms_per_sample": 0.0264,
+    "per_class_f1": {
+      "AGRI_BURN": 1.0,
+      "IND_FIRE": 1.0,
+      "IND_FLARE": 1.0,
+      "IND_ROUTINE": 1.0,
+      "OTHER_UNCERTAIN": 1.0,
+      "WILDFIRE": 1.0
+    }
+  },
+  "4_Thermal_Industrial": {
+    "feature_count": 9,
+    "features": [
+      "peak_frp_mw",
+      "mean_frp_mw",
+      "frp_variance",
+      "max_brightness_k",
+      "dist_to_facility",
+      "facility_category_encoded",
+      "is_industrial_zone",
+      "historical_active_days_90d",
+      "historical_peak_frp"
+    ],
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "brier_score": 0.0037,
+    "log_loss": 0.0155,
+    "fit_time_ms": 124.48,
+    "inference_time_ms_per_sample": 0.0262,
+    "per_class_f1": {
+      "AGRI_BURN": 1.0,
+      "IND_FIRE": 1.0,
+      "IND_FLARE": 1.0,
+      "IND_ROUTINE": 1.0,
+      "OTHER_UNCERTAIN": 1.0,
+      "WILDFIRE": 1.0
+    }
+  },
+  "5_Full_Multimodal_14D": {
+    "feature_count": 14,
+    "features": [
+      "dist_to_facility",
+      "facility_category_encoded",
+      "peak_frp_mw",
+      "mean_frp_mw",
+      "frp_variance",
+      "max_brightness_k",
+      "duration_hours",
+      "day_night_ratio",
+      "historical_active_days_90d",
+      "historical_peak_frp",
+      "pct_cropland",
+      "pct_forest",
+      "pct_urban",
+      "is_industrial_zone"
+    ],
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "brier_score": 0.0001,
+    "log_loss": 0.0052,
+    "fit_time_ms": 117.28,
+    "inference_time_ms_per_sample": 0.0252,
+    "per_class_f1": {
+      "AGRI_BURN": 1.0,
+      "IND_FIRE": 1.0,
+      "IND_FLARE": 1.0,
+      "IND_ROUTINE": 1.0,
+      "OTHER_UNCERTAIN": 1.0,
+      "WILDFIRE": 1.0
+    }
+  }
+}

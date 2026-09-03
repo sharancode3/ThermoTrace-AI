@@ -3,6 +3,10 @@
 import { useFirmsPoller } from "@/hooks/useFirmsPoller";
 
 export function GlobalFirmsPoller() {
-  useFirmsPoller();
+  useFirmsPoller(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("thermo-data-refreshed"));
+    }
+  });
   return null;
 }

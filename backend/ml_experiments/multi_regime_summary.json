@@ -1,0 +1,80 @@
+{
+  "TEST_A_FACILITY_HOLDOUT": {
+    "description": "Pure held-out industrial plants and independent non-facility clusters. Evaluates facility identity generalization.",
+    "train_size": 1988,
+    "test_size": 101,
+    "test_class_distribution": {
+      "AGRI_BURN": 39,
+      "OTHER_UNCERTAIN": 32,
+      "IND_FLARE": 12,
+      "IND_ROUTINE": 9,
+      "WILDFIRE": 7,
+      "IND_FIRE": 2
+    },
+    "test_tier_distribution": {
+      "Tier_C_HandVerified": 52,
+      "Tier_B_HardNegative": 49
+    }
+  },
+  "TEST_B_SPATIAL_HOLDOUT": {
+    "description": "Geographically blocked regional holdout. Nearby spatial clusters isolated. Evaluates spatial transferability.",
+    "train_size": 1128,
+    "test_size": 117,
+    "test_class_distribution": {
+      "AGRI_BURN": 40,
+      "OTHER_UNCERTAIN": 38,
+      "IND_ROUTINE": 13,
+      "IND_FLARE": 12,
+      "WILDFIRE": 9,
+      "IND_FIRE": 5
+    },
+    "test_tier_distribution": {
+      "Tier_C_HandVerified": 60,
+      "Tier_B_HardNegative": 57
+    }
+  },
+  "TEST_C_TEMPORAL_HOLDOUT": {
+    "description": "Strict chronological future-time holdout. Trained on earlier telemetry, evaluated on subsequent passes.",
+    "train_size": 1721,
+    "test_size": 411,
+    "test_class_distribution": {
+      "AGRI_BURN": 170,
+      "OTHER_UNCERTAIN": 101,
+      "IND_FLARE": 45,
+      "IND_ROUTINE": 40,
+      "WILDFIRE": 30,
+      "IND_FIRE": 25
+    },
+    "test_tier_distribution": {
+      "Tier_C_HandVerified": 210,
+      "Tier_B_HardNegative": 201
+    }
+  },
+  "TEST_D_HARD_NEGATIVES": {
+    "description": "Curated boundary stress benchmark. 216 high-confusion edge cases (cropland fires adjacent to refineries, mining brush fires, asphalt heating).",
+    "train_size": 1916,
+    "test_size": 216,
+    "test_class_distribution": {
+      "AGRI_BURN": 120,
+      "OTHER_UNCERTAIN": 96
+    },
+    "test_tier_distribution": {
+      "Tier_B_HardNegative": 216
+    }
+  },
+  "TEST_E_OOD_ADVERSARIAL": {
+    "description": "Adversarial out-of-distribution and high-entropy edge cases. Tests automated abstention and uncertainty awareness.",
+    "train_size": 1924,
+    "test_size": 208,
+    "test_class_distribution": {
+      "OTHER_UNCERTAIN": 116,
+      "AGRI_BURN": 41,
+      "WILDFIRE": 30,
+      "IND_FIRE": 21
+    },
+    "test_tier_distribution": {
+      "Tier_C_HandVerified": 112,
+      "Tier_B_HardNegative": 96
+    }
+  }
+}

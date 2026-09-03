@@ -1,0 +1,18 @@
+{
+  "dataset_path": "backend/data/processed/three_tier_training_dataset.csv",
+  "total_rows": 954,
+  "sha256": "5aac161f5d46b0ae12464325c664cbfdd27623fcbcc15aa8353c10d2996d3b3c",
+  "tier_breakdown": {
+    "TIER_A": 750,
+    "TIER_B": 120,
+    "TIER_C": 84
+  },
+  "label_breakdown": {
+    "AGRI_BURN": 191,
+    "IND_FLARE": 171,
+    "WILDFIRE": 162,
+    "OTHER_UNCERTAIN": 148,
+    "IND_ROUTINE": 146,
+    "IND_FIRE": 136
+  }
+}

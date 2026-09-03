@@ -1,0 +1,812 @@
+{
+  "TEST_A_FACILITY_HOLDOUT": {
+    "regime": "TEST_A_FACILITY_HOLDOUT",
+    "description": "Pure held-out industrial plants and independent non-facility clusters. Evaluates facility identity generalization.",
+    "train_size": 1988,
+    "test_size": 101,
+    "point_estimates": {
+      "macro_f1": 0.9851,
+      "weighted_f1": 0.9898,
+      "macro_precision": 0.9958,
+      "macro_recall": 0.9762,
+      "brier_score": 0.03,
+      "ece_pct": 9.85,
+      "fit_time_ms": 2439.21,
+      "inference_latency_ms": 0.233
+    },
+    "confidence_intervals_95": {
+      "macro_f1_95ci": [
+        0.9407,
+        1.0
+      ],
+      "weighted_f1_95ci": [
+        0.9668,
+        1.0
+      ],
+      "brier_score_95ci": [
+        0.0172,
+        0.0517
+      ],
+      "ece_pct_95ci": [
+        8.55,
+        11.41
+      ],
+      "per_class_f1_95ci": {
+        "AGRI_BURN": [
+          0.9552,
+          1.0
+        ],
+        "IND_FIRE": [
+          0.0,
+          1.0
+        ],
+        "IND_FLARE": [
+          1.0,
+          1.0
+        ],
+        "IND_ROUTINE": [
+          1.0,
+          1.0
+        ],
+        "OTHER_UNCERTAIN": [
+          1.0,
+          1.0
+        ],
+        "WILDFIRE": [
+          0.6667,
+          1.0
+        ]
+      }
+    },
+    "confusion_matrix": [
+      [
+        39,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        12,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        9,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        32,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        6
+      ]
+    ],
+    "classification_report": {
+      "AGRI_BURN": {
+        "precision": 0.975,
+        "recall": 1.0,
+        "f1-score": 0.9873417721518988,
+        "support": 39.0
+      },
+      "IND_FIRE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 2.0
+      },
+      "IND_FLARE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 12.0
+      },
+      "IND_ROUTINE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 9.0
+      },
+      "OTHER_UNCERTAIN": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 32.0
+      },
+      "WILDFIRE": {
+        "precision": 1.0,
+        "recall": 0.8571428571428571,
+        "f1-score": 0.9230769230769231,
+        "support": 7.0
+      },
+      "accuracy": 0.9900990099009901,
+      "macro avg": {
+        "precision": 0.9958333333333332,
+        "recall": 0.9761904761904762,
+        "f1-score": 0.985069782538137,
+        "support": 101.0
+      },
+      "weighted avg": {
+        "precision": 0.9903465346534654,
+        "recall": 0.9900990099009901,
+        "f1-score": 0.9897808670837873,
+        "support": 101.0
+      }
+    },
+    "predictions_artifact": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\ml_experiments\\multi_regime_evaluation\\predictions_TEST_A_FACILITY_HOLDOUT.parquet"
+  },
+  "TEST_B_SPATIAL_HOLDOUT": {
+    "regime": "TEST_B_SPATIAL_HOLDOUT",
+    "description": "Geographically blocked regional holdout. Nearby spatial clusters isolated. Evaluates spatial transferability.",
+    "train_size": 1128,
+    "test_size": 117,
+    "point_estimates": {
+      "macro_f1": 1.0,
+      "weighted_f1": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0,
+      "brier_score": 0.1725,
+      "ece_pct": 13.54,
+      "fit_time_ms": 2003.12,
+      "inference_latency_ms": 0.2
+    },
+    "confidence_intervals_95": {
+      "macro_f1_95ci": [
+        1.0,
+        1.0
+      ],
+      "weighted_f1_95ci": [
+        1.0,
+        1.0
+      ],
+      "brier_score_95ci": [
+        0.0989,
+        0.2485
+      ],
+      "ece_pct_95ci": [
+        9.85,
+        17.25
+      ],
+      "per_class_f1_95ci": {
+        "AGRI_BURN": [
+          1.0,
+          1.0
+        ],
+        "IND_FIRE": [
+          1.0,
+          1.0
+        ],
+        "IND_FLARE": [
+          1.0,
+          1.0
+        ],
+        "IND_ROUTINE": [
+          1.0,
+          1.0
+        ],
+        "OTHER_UNCERTAIN": [
+          1.0,
+          1.0
+        ],
+        "WILDFIRE": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    "confusion_matrix": [
+      [
+        40,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        12,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        13,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        38,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        9
+      ]
+    ],
+    "classification_report": {
+      "AGRI_BURN": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 40.0
+      },
+      "IND_FIRE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 5.0
+      },
+      "IND_FLARE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 12.0
+      },
+      "IND_ROUTINE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 13.0
+      },
+      "OTHER_UNCERTAIN": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 38.0
+      },
+      "WILDFIRE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 9.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 117.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 117.0
+      }
+    },
+    "predictions_artifact": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\ml_experiments\\multi_regime_evaluation\\predictions_TEST_B_SPATIAL_HOLDOUT.parquet"
+  },
+  "TEST_C_TEMPORAL_HOLDOUT": {
+    "regime": "TEST_C_TEMPORAL_HOLDOUT",
+    "description": "Strict chronological future-time holdout. Trained on earlier telemetry, evaluated on subsequent passes.",
+    "train_size": 1721,
+    "test_size": 411,
+    "point_estimates": {
+      "macro_f1": 0.9039,
+      "weighted_f1": 0.8765,
+      "macro_precision": 0.9345,
+      "macro_recall": 0.8852,
+      "brier_score": 0.4978,
+      "ece_pct": 23.52,
+      "fit_time_ms": 1868.85,
+      "inference_latency_ms": 0.06
+    },
+    "confidence_intervals_95": {
+      "macro_f1_95ci": [
+        0.8719,
+        0.9297
+      ],
+      "weighted_f1_95ci": [
+        0.8417,
+        0.9048
+      ],
+      "brier_score_95ci": [
+        0.4282,
+        0.5713
+      ],
+      "ece_pct_95ci": [
+        19.64,
+        27.66
+      ],
+      "per_class_f1_95ci": {
+        "AGRI_BURN": [
+          0.8396,
+          0.9125
+        ],
+        "IND_FIRE": [
+          0.9259,
+          1.0
+        ],
+        "IND_FLARE": [
+          1.0,
+          1.0
+        ],
+        "IND_ROUTINE": [
+          1.0,
+          1.0
+        ],
+        "OTHER_UNCERTAIN": [
+          0.6974,
+          0.8245
+        ],
+        "WILDFIRE": [
+          0.6415,
+          0.902
+        ]
+      }
+    },
+    "confusion_matrix": [
+      [
+        150,
+        0,
+        0,
+        0,
+        20,
+        0
+      ],
+      [
+        0,
+        24,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        45,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        40,
+        0,
+        0
+      ],
+      [
+        20,
+        0,
+        0,
+        0,
+        81,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        9,
+        20
+      ]
+    ],
+    "classification_report": {
+      "AGRI_BURN": {
+        "precision": 0.8771929824561403,
+        "recall": 0.8823529411764706,
+        "f1-score": 0.8797653958944281,
+        "support": 170.0
+      },
+      "IND_FIRE": {
+        "precision": 1.0,
+        "recall": 0.96,
+        "f1-score": 0.9795918367346939,
+        "support": 25.0
+      },
+      "IND_FLARE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 45.0
+      },
+      "IND_ROUTINE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 40.0
+      },
+      "OTHER_UNCERTAIN": {
+        "precision": 0.7297297297297297,
+        "recall": 0.801980198019802,
+        "f1-score": 0.7641509433962265,
+        "support": 101.0
+      },
+      "WILDFIRE": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.8,
+        "support": 30.0
+      },
+      "accuracy": 0.8759124087591241,
+      "macro avg": {
+        "precision": 0.934487118697645,
+        "recall": 0.8851666343104899,
+        "f1-score": 0.903918029337558,
+        "support": 411.0
+      },
+      "weighted avg": {
+        "precision": 0.8827871282731061,
+        "recall": 0.8759124087591241,
+        "f1-score": 0.8764699720278322,
+        "support": 411.0
+      }
+    },
+    "predictions_artifact": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\ml_experiments\\multi_regime_evaluation\\predictions_TEST_C_TEMPORAL_HOLDOUT.parquet"
+  },
+  "TEST_D_HARD_NEGATIVES": {
+    "regime": "TEST_D_HARD_NEGATIVES",
+    "description": "Curated boundary stress benchmark. 216 high-confusion edge cases (cropland fires adjacent to refineries, mining brush fires, asphalt heating).",
+    "train_size": 1916,
+    "test_size": 216,
+    "point_estimates": {
+      "macro_f1": 0.986,
+      "weighted_f1": 0.9861,
+      "macro_precision": 0.9848,
+      "macro_recall": 0.9875,
+      "brier_score": 0.3088,
+      "ece_pct": 13.16,
+      "fit_time_ms": 2078.79,
+      "inference_latency_ms": 0.105
+    },
+    "confidence_intervals_95": {
+      "macro_f1_95ci": [
+        0.9673,
+        1.0
+      ],
+      "weighted_f1_95ci": [
+        0.9677,
+        1.0
+      ],
+      "brier_score_95ci": [
+        0.2618,
+        0.3629
+      ],
+      "ece_pct_95ci": [
+        10.67,
+        18.13
+      ],
+      "per_class_f1_95ci": {
+        "AGRI_BURN": [
+          0.9714,
+          1.0
+        ],
+        "IND_FIRE": [
+          0.0,
+          0.0
+        ],
+        "IND_FLARE": [
+          0.0,
+          0.0
+        ],
+        "IND_ROUTINE": [
+          0.0,
+          0.0
+        ],
+        "OTHER_UNCERTAIN": [
+          0.9637,
+          1.0
+        ],
+        "WILDFIRE": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "confusion_matrix": [
+      [
+        117,
+        0,
+        0,
+        0,
+        3,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        96,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ],
+    "classification_report": {
+      "AGRI_BURN": {
+        "precision": 1.0,
+        "recall": 0.975,
+        "f1-score": 0.9873417721518988,
+        "support": 120.0
+      },
+      "IND_FIRE": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "IND_FLARE": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "IND_ROUTINE": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "OTHER_UNCERTAIN": {
+        "precision": 0.9696969696969697,
+        "recall": 1.0,
+        "f1-score": 0.9846153846153847,
+        "support": 96.0
+      },
+      "WILDFIRE": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "accuracy": 0.9861111111111112,
+      "macro avg": {
+        "precision": 0.3282828282828283,
+        "recall": 0.32916666666666666,
+        "f1-score": 0.3286595261278806,
+        "support": 216.0
+      },
+      "weighted avg": {
+        "precision": 0.9865319865319866,
+        "recall": 0.9861111111111112,
+        "f1-score": 0.9861300443578925,
+        "support": 216.0
+      }
+    },
+    "predictions_artifact": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\ml_experiments\\multi_regime_evaluation\\predictions_TEST_D_HARD_NEGATIVES.parquet"
+  },
+  "TEST_E_OOD_ADVERSARIAL": {
+    "regime": "TEST_E_OOD_ADVERSARIAL",
+    "description": "Adversarial out-of-distribution and high-entropy edge cases. Tests automated abstention and uncertainty awareness.",
+    "train_size": 1924,
+    "test_size": 208,
+    "point_estimates": {
+      "macro_f1": 0.8672,
+      "weighted_f1": 0.8571,
+      "macro_precision": 0.8944,
+      "macro_recall": 0.8736,
+      "brier_score": 1.0084,
+      "ece_pct": 47.9,
+      "fit_time_ms": 2096.32,
+      "inference_latency_ms": 0.112
+    },
+    "confidence_intervals_95": {
+      "macro_f1_95ci": [
+        0.8182,
+        0.9078
+      ],
+      "weighted_f1_95ci": [
+        0.8101,
+        0.9006
+      ],
+      "brier_score_95ci": [
+        0.8794,
+        1.1277
+      ],
+      "ece_pct_95ci": [
+        41.28,
+        54.35
+      ],
+      "per_class_f1_95ci": {
+        "AGRI_BURN": [
+          0.7158,
+          0.8764
+        ],
+        "IND_FIRE": [
+          1.0,
+          1.0
+        ],
+        "IND_FLARE": [
+          0.0,
+          0.0
+        ],
+        "IND_ROUTINE": [
+          0.0,
+          0.0
+        ],
+        "OTHER_UNCERTAIN": [
+          0.8119,
+          0.9075
+        ],
+        "WILDFIRE": [
+          0.6667,
+          0.9123
+        ]
+      }
+    },
+    "confusion_matrix": [
+      [
+        41,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        21,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        20,
+        0,
+        0,
+        0,
+        96,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        10,
+        20
+      ]
+    ],
+    "classification_report": {
+      "AGRI_BURN": {
+        "precision": 0.6721311475409836,
+        "recall": 1.0,
+        "f1-score": 0.803921568627451,
+        "support": 41.0
+      },
+      "IND_FIRE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 21.0
+      },
+      "IND_FLARE": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "IND_ROUTINE": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "OTHER_UNCERTAIN": {
+        "precision": 0.9056603773584906,
+        "recall": 0.8275862068965517,
+        "f1-score": 0.8648648648648649,
+        "support": 116.0
+      },
+      "WILDFIRE": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.8,
+        "support": 30.0
+      },
+      "accuracy": 0.8557692307692307,
+      "macro avg": {
+        "precision": 0.5962985874832457,
+        "recall": 0.582375478927203,
+        "f1-score": 0.5781310722487193,
+        "support": 208.0
+      },
+      "weighted avg": {
+        "precision": 0.8827595231863714,
+        "recall": 0.8557692307692307,
+        "f1-score": 0.8571399453752395,
+        "support": 208.0
+      }
+    },
+    "predictions_artifact": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\ml_experiments\\multi_regime_evaluation\\predictions_TEST_E_OOD_ADVERSARIAL.parquet"
+  }
+}

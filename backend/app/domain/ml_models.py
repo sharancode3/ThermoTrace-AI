@@ -7,6 +7,8 @@ from xgboost import XGBClassifier
 
 class Float64XGBClassifier(BaseEstimator, ClassifierMixin):
     """Wrapper to guarantee continuous double precision for Cython probability calibrators."""
+    _estimator_type = "classifier"
+
     def __init__(self, n_estimators=120, max_depth=4, learning_rate=0.08, subsample=0.85, colsample_bytree=0.85, random_state=42):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -15,6 +17,11 @@ class Float64XGBClassifier(BaseEstimator, ClassifierMixin):
         self.colsample_bytree = colsample_bytree
         self.random_state = random_state
         self.model_ = None
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.estimator_type = "classifier"
+        return tags
 
     def fit(self, X, y):
         self.classes_ = np.unique(y)

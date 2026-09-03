@@ -1,0 +1,6 @@
+{
+  "single_sample_inference_latency_ms": 7.14,
+  "batch_inference_latency_ms_per_100_samples": 42.8,
+  "instance_treeshap_latency_ms": 1.25,
+  "end_to_end_fastapi_event_processing_latency_ms": 18.5
+}

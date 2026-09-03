@@ -58,10 +58,14 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-20 lg:w-64 border-r border-slate-200 bg-white text-slate-600 z-50 shadow-sm relative shrink-0">
-      <div className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-200 shrink-0">
-        <Flame className="w-8 h-8 text-orange-600" />
-        <span className="hidden lg:block ml-3 font-bold text-lg text-slate-900 tracking-tight">Thermo AI</span>
-      </div>
+      <Link 
+        href="/" 
+        title="Return to ThermoTrace AI Landing Page" 
+        className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-200 shrink-0 hover:bg-slate-50 transition-colors cursor-pointer group"
+      >
+        <Flame className="w-8 h-8 text-orange-600 group-hover:scale-105 transition-transform" />
+        <span className="hidden lg:block ml-3 font-bold text-lg text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors">ThermoTrace AI</span>
+      </Link>
       
       <nav className="flex-1 py-4 flex flex-col gap-2 px-3 overflow-y-auto">
         <div className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider hidden lg:block px-3">Main</div>

@@ -1,4 +1,4 @@
-﻿services:
+services:
   # ---------------------------------------------------------
   # PostgreSQL + PostGIS (System of Record)
   # ---------------------------------------------------------
@@ -47,6 +47,7 @@
     ports:
       - "8000:8000"
     environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
@@ -74,6 +75,7 @@
     container_name: thermotrace_celery_worker
     restart: unless-stopped
     environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
@@ -91,7 +93,7 @@
     command: celery -A app.celery_config.celery_app worker --loglevel=info --concurrency=4
 
   # ---------------------------------------------------------
-  # NASA FIRMS 5-Minute Ingestion Daemon
+  # NASA FIRMS 10-Minute Ingestion Daemon
   # ---------------------------------------------------------
   firms_daemon:
     build:
@@ -100,13 +102,14 @@
     container_name: thermotrace_firms_daemon
     restart: unless-stopped
     environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
       - POSTGRES_DB=${POSTGRES_DB:-thermo_db}
       - REDIS_URL=redis://redis:6379/0
       - FIRMS_MAP_KEY=5ee48ea9900661577c1dc26dfcc70550
-      - FIRMS_POLL_INTERVAL_MINUTES=5
+      - FIRMS_POLL_INTERVAL_MINUTES=10
     volumes:
       - ./backend:/app
     depends_on:

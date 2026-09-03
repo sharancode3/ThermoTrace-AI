@@ -23,6 +23,7 @@ from app.domain.features import (
 )
 from app.domain.geocoding import resolve_indian_location
 
+import xgboost as xgb
 try:
     import shap
 except ImportError:
@@ -140,6 +141,39 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             
             entropy = -float(np.sum([p * np.log(p + 1e-9) for p in probs]))
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
+            
+            # Physical Domain Gating & Facility Authority
+            dist_fac = float(features.get("dist_to_facility", 99999.0))
+            is_ind_zone = int(features.get("is_industrial_zone", 0))
+            has_facility = bool(event.associated_facility_id) or (dist_fac <= 4000.0) or (is_ind_zone == 1)
+            peak_frp = float(event.peak_frp_mw or 0.0)
+            max_k = float(event.max_brightness_k or 300.0)
+
+            if has_facility:
+                # 1. Direct Industrial Facility Authority:
+                # Any thermal signature on or adjacent to an industrial plant/refinery is strictly INDUSTRIAL.
+                # Thermal emissions inside a refinery or plant cannot be AGRI_BURN or OTHER_UNCERTAIN.
+                if peak_frp >= 50.0 or max_k >= 355.0 or predicted_class == "IND_FIRE":
+                    predicted_class = "IND_FIRE"
+                elif peak_frp >= 15.0 or max_k >= 335.0 or predicted_class == "IND_FLARE":
+                    predicted_class = "IND_FLARE"
+                else:
+                    predicted_class = "IND_ROUTINE"
+                confidence = max(confidence, 0.90)
+            else:
+                # 2. Non-Facility Rural / Forest Spatial Resolution:
+                pct_crop = float(features.get("pct_cropland", 0.0))
+                pct_for = float(features.get("pct_forest", 0.0))
+                if pct_for >= 0.40 or predicted_class == "WILDFIRE":
+                    predicted_class = "WILDFIRE"
+                    confidence = max(confidence, 0.85)
+                elif pct_crop >= 0.35 or predicted_class in ("AGRI_BURN", "IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                    # Open farmland far from facilities is agricultural crop residue burning
+                    predicted_class = "AGRI_BURN"
+                    confidence = max(confidence, 0.86)
+                else:
+                    if confidence < 0.50 or entropy > 1.35:
+                        predicted_class = "OTHER_UNCERTAIN"
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
             predicted_class = "OTHER_UNCERTAIN"
@@ -197,9 +231,19 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
     std_frp = float(facility.baseline_frp_std) if facility and facility.baseline_frp_std is not None else 0.0
     mean_frp = float(facility.baseline_frp_mean) if facility and facility.baseline_frp_mean is not None else 0.0
 
+    median_frp = float(facility.baseline_frp_median) if facility and getattr(facility, 'baseline_frp_median', None) is not None and facility.baseline_frp_median > 0 else (mean_frp * 0.90 if mean_frp > 0 else 5.0)
+    mad_frp = max(std_frp * 0.6745, 0.5)
+
     if facility and sample_count >= BASELINE_SUFFICIENCY_THRESHOLD and std_frp > 0.0:
         z_score = (current_frp - mean_frp) / std_frp
+        z_mad = (current_frp - median_frp) / mad_frp
         tier = evaluate_anomaly_tier(z_score)
+        
+        # Operational Radiance Safety Gate: Severe industrial blast, major flare, or active fire is strictly CRITICAL
+        if current_frp >= 50.0 or z_score >= 4.0 or z_mad >= 4.0 or event.classification == "IND_FIRE":
+            tier = "CRITICAL"
+        elif (current_frp >= 25.0 or z_score >= 2.5 or event.classification == "IND_FLARE") and tier in ("NORMAL", "ELEVATED"):
+            tier = "ABNORMAL"
         
         event.anomaly_z_score = round(float(z_score), 2)
         event.anomaly_tier = tier
@@ -211,20 +255,26 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         anomaly_record.anomaly_severity = tier
         anomaly_record.contributing_factors = {
             "status": "STATISTICALLY_SUFFICIENT",
+            "baseline_engine": "DUAL_PARAMETRIC_AND_ROBUST_MAD",
             "sample_count": sample_count,
+            "gaussian_z_score": round(float(z_score), 2),
+            "robust_mad_z_score": round(float(z_mad), 2),
+            "baseline_median_mw": round(median_frp, 2),
+            "baseline_mad_mw": round(mad_frp, 2),
             "deviation_mw": round(current_frp - mean_frp, 2),
             "percentage_above_mean": round(((current_frp - mean_frp) / mean_frp) * 100, 2) if mean_frp > 0 else 0.0,
+            "disaster_contamination_quarantine": bool(z_score >= 4.0 or current_frp >= 50.0),
             "physical_verification": phys_verification
         }
     else:
         # Non-facility regional hotspot or agricultural/wildfire event: Grade based on physical radiative intensity
-        if current_frp >= 150.0 or (event.max_brightness_k and event.max_brightness_k >= 385.0):
+        if current_frp >= 50.0 or (event.max_brightness_k and event.max_brightness_k >= 355.0) or event.classification == "IND_FIRE":
             tier = "CRITICAL"
             z_score = 4.2
-        elif current_frp >= 50.0 or (event.max_brightness_k and event.max_brightness_k >= 350.0):
+        elif current_frp >= 20.0 or (event.max_brightness_k and event.max_brightness_k >= 340.0) or event.classification == "IND_FLARE":
             tier = "ABNORMAL"
             z_score = 2.8
-        elif current_frp >= 20.0:
+        elif current_frp >= 10.0:
             tier = "ELEVATED"
             z_score = 1.8
         else:
@@ -327,8 +377,30 @@ def compute_tier2_shap_explainability(session: Session, event: ThermalEvent, mod
             
         xgb_model = getattr(base_est, 'model_', base_est)
         
-        # Compute feature contributions
-        if hasattr(xgb_model, 'feature_importances_'):
+        # Compute instance-level TreeSHAP attributions
+        if hasattr(xgb_model, 'get_booster'):
+            booster = xgb_model.get_booster()
+            x_arr = np.ascontiguousarray([[features[c] for c in feature_cols]], dtype=np.float64)
+            dm = xgb.DMatrix(x_arr, feature_names=feature_cols)
+            # Native C++ TreeSHAP calculation: shape (1, n_classes, n_features + 1)
+            contribs = booster.predict(dm, pred_contribs=True)
+            
+            # Identify predicted class index
+            class_list = list(classes)
+            pred_class = event.classification or "OTHER_UNCERTAIN"
+            pred_idx = class_list.index(pred_class) if pred_class in class_list else 0
+            
+            # Extract the 14 feature contributions for this specific event and class
+            class_contribs = contribs[0, pred_idx, :len(feature_cols)]
+            top_indices = np.argsort(np.abs(class_contribs))[-3:]
+            
+            feature_importances = {}
+            for idx in reversed(top_indices):
+                feat_name = feature_cols[idx]
+                feature_importances[feat_name] = round(float(class_contribs[idx]), 4)
+            return feature_importances
+            
+        elif hasattr(xgb_model, 'feature_importances_'):
             imps = xgb_model.feature_importances_
             top_indices = np.argsort(imps)[-3:]
             feature_importances = {}

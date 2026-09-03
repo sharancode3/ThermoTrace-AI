@@ -52,9 +52,9 @@ export const GUIDE_GLOSSARY: GuideGlossaryTerm[] = [
   {
     term: "XGBoost Classifier",
     category: "Machine Learning",
-    shortDef: "Extreme Gradient Boosting decision-tree ensemble used for 6-class thermal source classification.",
+    shortDef: "Extreme Gradient Boosting decision-tree ensemble used for calibrated multi-class thermal emitter classification across 4 tactical categories.",
     technicalDetails: "Evaluates a 14-dimensional normalized feature vector with L2 regularization to output calibrated multi-class probability distributions.",
-    sourceRef: "thermo_xgb_v1.0.0.joblib / Chen & Guestrin (2016)"
+    sourceRef: "thermo_xgb_v1.1.0.joblib / Chen & Guestrin (2016)"
   },
   {
     term: "TreeSHAP",

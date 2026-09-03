@@ -35,19 +35,24 @@ def get_frp_variance(session: Session, event_id: str) -> float:
     frps = [float(row[0]) for row in res]
     return float(np.var(frps))
 
-def get_historical_stats(session: Session, centroid_wkt: str, current_first_utc) -> Tuple[int, float]:
+def get_historical_stats(session: Session, lat: float, lon: float, current_first_utc) -> Tuple[int, float]:
     query = text("""
-        SELECT COUNT(DISTINCT DATE(first_detected_utc)) as active_days, MAX(peak_frp_mw) as hist_peak
+        SELECT COUNT(DISTINCT DATE(first_detected_utc)) as active_days, COALESCE(MAX(peak_frp_mw), 0.0) as hist_peak
         FROM thermal_events
         WHERE first_detected_utc >= :lookback
         AND first_detected_utc < :current
-        AND ST_DWithin(centroid::geography, ST_GeomFromEWKB(decode(:wkt, 'hex'))::geography, 2000)
+        AND ST_DWithin(
+            centroid::geography,
+            ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
+            2500
+        )
     """)
-    lookback = current_first_utc - timedelta(days=90)
-    res = session.execute(query, {"lookback": lookback, "current": current_first_utc, "wkt": centroid_wkt}).fetchone()
-    if not res or res[0] == 0:
+    lookback = current_first_utc - timedelta(days=90) if current_first_utc else timedelta(days=90)
+    current = current_first_utc or func.now()
+    res = session.execute(query, {"lookback": lookback, "current": current, "lon": lon, "lat": lat}).fetchone()
+    if not res or res[0] is None or res[0] == 0:
         return 0, 0.0
-    return int(res[0]), float(res[1])
+    return int(res[0]), float(res[1] or 0.0)
     
 def calculate_convex_hull(session: Session, event_id: str) -> float:
     query = text("""
@@ -81,6 +86,9 @@ def get_thermal_trend(session: Session, event_id: str) -> str:
     timestamps = [row[0].timestamp() for row in res]
     frps = [float(row[1]) for row in res]
     
+    if len(set(timestamps)) < 2:
+        return "STABLE"
+        
     try:
         slope, _ = np.polyfit(timestamps, frps, 1)
         if slope > 0.003:
@@ -184,22 +192,21 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         if b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]:
             return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.10, "is_ind": 1}
 
-    # 3. Dense Forest & Hill Ranges (Western Ghats, Nilgiris, Anamalai, Eastern Ghats, Himalayas, Central Forests)
+    # 3. Dense Forest & National Parks (Western Ghats, Nilgiris Crest, Periyar, Himalayas, NE)
     is_forest_geo = (
-        (11.0 <= lat <= 12.2 and 76.2 <= lon <= 77.2) or # Nilgiris / Mudumalai
-        (10.0 <= lat <= 10.8 and 76.5 <= lon <= 77.5) or # Anamalai / Parambikulam
-        (8.3 <= lat <= 9.8 and 77.0 <= lon <= 77.8) or   # Agasthyamalai / Periyar
-        (11.3 <= lat <= 12.5 and 78.0 <= lon <= 79.0) or # Eastern Ghats (Shevaroy / Kolli / Kalrayan)
+        (11.35 <= lat <= 11.75 and 76.40 <= lon <= 76.85) or # Nilgiris Reserve Forest Crest
+        (10.15 <= lat <= 10.55 and 76.80 <= lon <= 77.25) or # Anamalai Tiger Reserve
+        (8.70 <= lat <= 9.50 and 77.10 <= lon <= 77.45) or   # Periyar / Agasthyamalai Reserve
+        (11.75 <= lat <= 12.05 and 78.20 <= lon <= 78.45) or # Shevaroy Hill Crest
         state in [
-            "Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Assam", 
-            "Meghalaya", "Manipur", "Mizoram", "Nagaland", "Tripura", "Sikkim", 
-            "Goa", "Andaman & Nicobar Islands"
+            "Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Meghalaya", 
+            "Mizoram", "Nagaland", "Sikkim", "Andaman & Nicobar Islands"
         ]
     )
     if is_forest_geo:
         return {"pct_urban": 0.05, "pct_cropland": 0.15, "pct_forest": 0.80, "is_ind": 0}
 
-    # 4. Urban Agglomerations
+    # 4. Urban Agglomerations (15km radius around major metro cores)
     urban_centers = [
         {"lat": 13.08, "lon": 80.27}, # Chennai
         {"lat": 11.01, "lon": 76.95}, # Coimbatore
@@ -216,7 +223,17 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         if d_km <= 15.0:
             return {"pct_urban": 0.85, "pct_cropland": 0.10, "pct_forest": 0.05, "is_ind": 0}
 
-    # 5. Cropland & Agrarian Plains (Pan-India Default for rural coordinates away from industrial zones)
+    # 5. Major Agricultural Basins (Indo-Gangetic, Punjab, Haryana, Cauvery Delta, Krishna-Godavari)
+    is_major_agri_basin = (
+        (28.0 <= lat <= 32.0 and 74.0 <= lon <= 77.5) or # Punjab & Haryana
+        (24.5 <= lat <= 28.5 and 77.5 <= lon <= 85.0) or # UP & Bihar Plains
+        (10.0 <= lat <= 11.8 and 78.5 <= lon <= 79.9) or # Cauvery Delta (Thanjavur, Tiruvarur, Nagapattinam)
+        (15.5 <= lat <= 17.5 and 80.0 <= lon <= 82.5)    # Krishna-Godavari Delta
+    )
+    if is_major_agri_basin:
+        return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
+
+    # 6. Rural Agrarian Plains & Farmland (Default for Indian rural landscape outside dense forests & facilities)
     return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
 
 
@@ -231,11 +248,10 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
     dn_ratio = get_day_night_ratio(session, str(event.id))
     frp_var = get_frp_variance(session, str(event.id))
     
-    wkt = str(event.centroid).split(";")[-1] if ";" in str(event.centroid) else str(event.centroid)
-    hist_days, hist_peak = get_historical_stats(session, wkt, event.first_detected_utc)
+    lat, lon = float(event.latitude), float(event.longitude)
+    hist_days, hist_peak = get_historical_stats(session, lat, lon, event.first_detected_utc)
     
     # Resolve geographic and land cover context
-    lat, lon = float(event.latitude), float(event.longitude)
     geo = resolve_indian_location(lat, lon, None, session=session)
     
     dist_to_fac = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 9999.0

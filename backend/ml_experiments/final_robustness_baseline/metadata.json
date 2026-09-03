@@ -1,0 +1,30 @@
+{
+  "frozen_timestamp": "2026-09-03T20:15:00Z",
+  "git_commit": "3af6a1c1de7d98f577488d2a2ad224384ac1a7ae",
+  "model_version": "v1.1.0",
+  "model_sha256": "75b346698c656152f37abcb5101c401d896fad5771f20a078d22b90847a6c603",
+  "classes_sha256": "007df28c07e30961542f0a75352effe73380803b26fe3070882bbbc4c04e2279",
+  "st_dbscan": {
+    "eps_spatial_m": 750.0,
+    "eps_temporal_hours": 12.0,
+    "min_pts": 1
+  },
+  "ood_abstention": {
+    "confidence_cutoff": 0.5,
+    "entropy_cutoff": 1.35
+  },
+  "anomaly_baseline": {
+    "primary": "Z-score (Gaussian)",
+    "robust": "Median / MAD",
+    "quarantine_z": 4.0,
+    "quarantine_frp_mw": 150.0
+  },
+  "test_suite_status": "78 passed in 19.23s",
+  "headline_regimes": {
+    "TEST_A_FACILITY_HOLDOUT": "Macro F1 = 0.9851 [0.9407, 1.0000]",
+    "TEST_B_SPATIAL_HOLDOUT": "Macro F1 = 0.9161 [0.8730, 0.9561]",
+    "TEST_C_TEMPORAL_HOLDOUT": "Macro F1 = 0.6784 [0.6386, 0.7086]",
+    "TEST_D_HARD_NEGATIVES": "Macro F1 = 0.3928 [0.3664, 0.5362] | Weighted F1 = 0.7999",
+    "TEST_E_OOD_ADVERSARIAL": "Macro F1 = 0.4744 [0.4429, 0.5035]"
+  }
+}

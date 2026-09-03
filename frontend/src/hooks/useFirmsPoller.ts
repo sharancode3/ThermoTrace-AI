@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 /**
  * Foreground-Triggered Polling Hook for NASA FIRMS Telemetry.
  * Active ONLY when the browser tab/window is active and visible.
- * Triggers poll strictly every 15 minutes (900,000ms).
+ * Triggers poll strictly every 10 minutes (600,000ms).
  */
 export function useFirmsPoller(onNewData?: () => void) {
   const isPollingRef = useRef<boolean>(false);
@@ -13,8 +13,8 @@ export function useFirmsPoller(onNewData?: () => void) {
 
   const executePoll = async (force: boolean = false) => {
     const now = Date.now();
-    // Guard: Prevent polling more than once per 15 minutes (900,000 ms) unless explicitly forced
-    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 900000) {
+    // Guard: Prevent polling more than once per 10 minutes (600,000 ms) unless explicitly forced
+    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 600000) {
       return;
     }
 
@@ -28,8 +28,13 @@ export function useFirmsPoller(onNewData?: () => void) {
       });
       if (resp.ok) {
         const result = await resp.json();
-        if (result.inserted_count > 0 && onNewData) {
-          onNewData();
+        if (result.inserted_count > 0 || result.new_events_formed > 0) {
+          if (onNewData) {
+            onNewData();
+          }
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("thermo-data-refreshed", { detail: result }));
+          }
         }
       }
     } catch (err) {
@@ -43,12 +48,12 @@ export function useFirmsPoller(onNewData?: () => void) {
     // 1. Initial check on mount
     executePoll();
 
-    // 2. Strict 15-minute foreground interval
+    // 2. Strict 10-minute foreground interval
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         executePoll();
       }
-    }, 900000);
+    }, 600000);
 
     return () => {
       clearInterval(interval);

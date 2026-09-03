@@ -4,6 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   X, Newspaper, Bell, Settings, Flame, BookOpen, Info, ShieldCheck,
   Factory, Sprout, HelpCircle, Layers, Cpu, Check,
+  Trees,
   CheckCircle2, MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon,
   Send, LoaderCircle, CheckCheck, Clock, Radio, AlertTriangle, AlertOctagon,
   BarChart2
@@ -153,6 +154,14 @@ export function OverlayManager() {
   };
 
   useEffect(() => { loadData(); }, [overlay]);
+
+  useEffect(() => {
+    const handleDataRefreshed = () => {
+      loadData();
+    };
+    window.addEventListener("thermo-data-refreshed", handleDataRefreshed);
+    return () => window.removeEventListener("thermo-data-refreshed", handleDataRefreshed);
+  }, [overlay]);
 
   const quickPrompts = useMemo(() => [
     "Show abnormal industrial flares in Gujarat",
@@ -641,7 +650,7 @@ export function OverlayManager() {
               </span>
             </div>
             <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
-              AUTONOMOUS 15M SYNC
+              AUTONOMOUS 10M SYNC
             </span>
           </div>
 
@@ -1071,22 +1080,27 @@ export function OverlayManager() {
 
             {/* Base Shapes */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">1. Base Icon Shapes (Classification)</span>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
-                  <Factory className="w-4 h-4 text-orange-600" />
-                  <span className="font-bold text-slate-800 text-[11px]">Industrial</span>
-                  <span className="text-[9px] text-slate-500">Flares, Routine, Fires</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">1. Base Tactical Icons (Classification)</span>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                  <Trees className="w-4 h-4 text-orange-600" />
+                  <span className="font-bold text-slate-800 text-[10px]">Wildfire</span>
+                  <span className="text-[8px] text-slate-500">Forest Blaze</span>
                 </div>
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
                   <Sprout className="w-4 h-4 text-emerald-600" />
-                  <span className="font-bold text-slate-800 text-[11px]">Vegetation</span>
-                  <span className="text-[9px] text-slate-500">Stubble, Forest Fire</span>
+                  <span className="font-bold text-slate-800 text-[10px]">Agri Crop</span>
+                  <span className="text-[8px] text-slate-500">Residue Stubble</span>
                 </div>
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                  <Factory className="w-4 h-4 text-sky-600" />
+                  <span className="font-bold text-slate-800 text-[10px]">Industrial</span>
+                  <span className="text-[8px] text-slate-500">Flares, Routine</span>
+                </div>
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
                   <HelpCircle className="w-4 h-4 text-slate-500" />
-                  <span className="font-bold text-slate-800 text-[11px]">Uncertain</span>
-                  <span className="text-[9px] text-slate-500">Unclassified / Sparse</span>
+                  <span className="font-bold text-slate-800 text-[10px]">Uncertain</span>
+                  <span className="text-[8px] text-slate-500">Crosshair Beacon</span>
                 </div>
               </div>
             </div>

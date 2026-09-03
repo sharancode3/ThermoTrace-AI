@@ -1,0 +1,19 @@
+{
+  "feature_count": 14,
+  "features": [
+    "dist_to_facility",
+    "facility_category_encoded",
+    "peak_frp_mw",
+    "mean_frp_mw",
+    "frp_variance",
+    "max_brightness_k",
+    "duration_hours",
+    "day_night_ratio",
+    "historical_active_days_90d",
+    "historical_peak_frp",
+    "pct_cropland",
+    "pct_forest",
+    "pct_urban",
+    "is_industrial_zone"
+  ]
+}

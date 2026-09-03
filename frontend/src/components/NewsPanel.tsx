@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Filter, MapPin, Newspaper, RefreshCw, Search, X } from "lucide-react";
+import { ArrowUpRight, Filter, MapPin, Newspaper, RefreshCw, Search, X, Radio } from "lucide-react";
 
 interface NewsItem {
   id: string;
@@ -31,6 +31,18 @@ function formatTime(value?: string) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatRelativeTime(value?: string) {
+  if (!value) return "Just now";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Just now";
+  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago (${formatTime(value)})`;
+  const diffHr = Math.floor(diffMin / 60);
+  return `${diffHr}h ago (${formatTime(value)})`;
+}
+
 export function NewsPanel({
   open = true,
   onClose,
@@ -43,6 +55,8 @@ export function NewsPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("ALL");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
+  const [recordsPulled, setRecordsPulled] = useState<number | null>(null);
 
   const handleSelectNewsEvent = (item: NewsItem) => {
     if (!item.event_id) return;
@@ -55,6 +69,10 @@ export function NewsPanel({
     window.dispatchEvent(new CustomEvent("thermo-fly-to-event", { detail }));
     window.dispatchEvent(new CustomEvent("thermo-open-event-drawer", { detail: { eventId: item.event_id } }));
     const url = new URL(window.location.href);
+    url.searchParams.delete("focus_lat");
+    url.searchParams.delete("focus_lon");
+    url.searchParams.delete("facility_id");
+    url.searchParams.delete("facility_name");
     url.searchParams.set("eventId", item.event_id);
     window.history.pushState({}, "", url.toString());
   };
@@ -62,10 +80,23 @@ export function NewsPanel({
   const loadNews = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/v1/news", { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to fetch news feed");
-      const data = await res.json();
+      const [newsRes, firmsRes] = await Promise.all([
+        fetch("/api/v1/news", { cache: "no-store" }),
+        fetch("/api/v1/firms/status", { cache: "no-store" }).catch(() => null)
+      ]);
+      if (!newsRes.ok) throw new Error("Failed to fetch news feed");
+      const data = await newsRes.json();
       setItems(normalizeNews(data));
+
+      if (firmsRes && firmsRes.ok) {
+        const fData = await firmsRes.json();
+        if (fData?.last_successful_firms_fetch_utc) {
+          setLastPolledAt(fData.last_successful_firms_fetch_utc);
+        }
+        if (typeof fData?.records_inserted === "number") {
+          setRecordsPulled(fData.records_inserted);
+        }
+      }
     } catch (err) {
       console.error("NewsPanel fetch failed:", err);
     } finally {
@@ -76,6 +107,20 @@ export function NewsPanel({
   useEffect(() => {
     if (!open) return;
     void loadNews();
+    const timer = setInterval(() => {
+      fetch("/api/v1/firms/status", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((fData) => {
+          if (fData?.last_successful_firms_fetch_utc) {
+            setLastPolledAt(fData.last_successful_firms_fetch_utc);
+          }
+          if (typeof fData?.records_inserted === "number") {
+            setRecordsPulled(fData.records_inserted);
+          }
+        })
+        .catch(() => {});
+    }, 30000);
+    return () => clearInterval(timer);
   }, [open]);
 
   useEffect(() => {
@@ -235,8 +280,26 @@ export function NewsPanel({
             <Newspaper className="w-5 h-5" />
           </div>
           <div>
-            <div>Thermo News Feed</div>
-            <div className="text-[11px] font-normal text-slate-500">Live Indian Thermal Intelligence</div>
+            <div className="flex items-center gap-2">
+              <span>Thermo News Feed</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-mono font-bold tracking-tight">10M SYNC</span>
+            </div>
+            <div className="text-[11px] font-normal text-slate-500 flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-medium text-slate-700">
+                {recordsPulled !== null ? (
+                  <span className="text-emerald-700 font-semibold bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
+                    Pulled {recordsPulled} records
+                  </span>
+                ) : (
+                  "NASA FIRMS Telemetry"
+                )}
+              </span>
+              <span>·</span>
+              <span className="font-mono text-slate-600 font-medium">
+                {lastPolledAt ? `Polled ${formatRelativeTime(lastPolledAt)}` : "10m Polling"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -256,6 +319,20 @@ export function NewsPanel({
             <X className="w-5 h-5" />
           </button>
         </div>
+      </div>
+
+      {/* 10-Minute NASA FIRMS Automated Polling Status Bar */}
+      <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 border-b border-orange-100 px-6 py-2 flex items-center justify-between text-xs shrink-0">
+        <div className="flex items-center gap-2">
+          <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+          <span className="text-slate-600 font-medium">Auto-Sync (every 10m):</span>
+          <span className="font-bold text-orange-800 font-mono">
+            {recordsPulled !== null ? `${recordsPulled} records pulled` : "Active"}
+          </span>
+        </div>
+        <span className="text-[11px] text-slate-500 font-mono">
+          {lastPolledAt ? formatRelativeTime(lastPolledAt) : "Running"}
+        </span>
       </div>
 
       <div className="p-4 border-b border-slate-100 bg-white space-y-3 shrink-0">

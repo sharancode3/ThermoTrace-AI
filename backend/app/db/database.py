@@ -24,18 +24,8 @@ POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 POSTGRES_DB = os.getenv("POSTGRES_DB", "thermo_db")
 
 def _resolve_postgres_host() -> str:
-    configured = os.getenv("POSTGRES_SERVER")
-    candidates = []
-    if configured:
-        candidates.append(configured)
-
-    try:
-        out = subprocess.check_output(["wsl", "-d", "Ubuntu", "-u", "root", "hostname", "-I"], text=True, timeout=2).strip()
-        candidates.extend(out.split())
-    except Exception:
-        pass
-
-    candidates.extend(["127.0.0.1", "localhost", "postgres", "172.24.28.203"])
+    configured = os.getenv("POSTGRES_SERVER", "127.0.0.1")
+    candidates = [configured, "127.0.0.1", "localhost", "postgres"]
 
     for host in candidates:
         try:

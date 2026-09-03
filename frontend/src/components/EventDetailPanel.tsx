@@ -521,9 +521,21 @@ export function EventDetailPanel({
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                           <BarChart3 className="w-4 h-4 text-emerald-500" /> 90-Day Baseline Curve
                         </span>
-                        <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
-                          +{data.anomaly_z_score?.toFixed(2)}σ
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {data.contributing_factors?.disaster_contamination_quarantine && (
+                            <span className="text-[10px] font-mono bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200">
+                              Quarantined
+                            </span>
+                          )}
+                          <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200" title="Parametric Gaussian Z-score">
+                            +{data.anomaly_z_score?.toFixed(2)}σ (Z)
+                          </span>
+                          {data.contributing_factors?.robust_mad_z_score !== undefined && (
+                            <span className="text-[10px] font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200" title="Robust Median/MAD Z-score">
+                              +{data.contributing_factors.robust_mad_z_score?.toFixed(2)}σ (MAD)
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {isInsufficient ? (
@@ -559,6 +571,14 @@ export function EventDetailPanel({
                             {data.baseline_mean_frp_mw !== null ? `${data.baseline_mean_frp_mw.toFixed(1)} MW` : "Regional Prior (150.0 MW)"}
                           </span>
                         </div>
+                        {data.contributing_factors?.baseline_median_mw !== undefined && (
+                          <div className="flex justify-between py-1 border-b border-slate-50">
+                            <span className="text-slate-500">Robust Median (MAD):</span>
+                            <span className="font-mono font-semibold text-blue-700">
+                              {data.contributing_factors.baseline_median_mw?.toFixed(1)} MW (±{data.contributing_factors.baseline_mad_mw?.toFixed(1)} MW)
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between py-1 border-b border-slate-50">
                           <span className="text-slate-500">Standard Deviation (σ):</span>
                           <span className="font-mono font-semibold text-slate-800">
@@ -656,6 +676,12 @@ export function EventDetailPanel({
                         <div className="text-xs font-semibold text-slate-600 mt-1">
                           {sourceSubtitle}
                         </div>
+                        {data.classification === "OTHER_UNCERTAIN" && (
+                          <div className="mt-2 text-[11px] font-medium bg-amber-50 text-amber-800 p-2 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Automated Abstention: High predictive entropy or out-of-distribution thermal signature.</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -794,8 +820,8 @@ export function EventDetailPanel({
                           <div className="font-bold text-slate-800">{data.max_brightness_k ? `${data.max_brightness_k.toFixed(1)} K` : "N/A"}</div>
                         </div>
                         <div className="p-2.5 bg-slate-50 rounded-lg">
-                          <div className="text-slate-400 text-[10px]">dist_to_facility</div>
-                          <div className="font-bold text-slate-800">{data.distance_to_facility_m !== null ? `${data.distance_to_facility_m.toFixed(1)} m` : "2500.0 m"}</div>
+                          <div className="text-slate-400 text-[10px]">pct_cropland</div>
+                          <div className="font-bold text-slate-800">{data.pct_cropland !== undefined ? `${(data.pct_cropland * 100).toFixed(0)}%` : "0%"}</div>
                         </div>
                         <div className="p-2.5 bg-slate-50 rounded-lg">
                           <div className="text-slate-400 text-[10px]">thermal_trend</div>
@@ -844,17 +870,31 @@ export function EventDetailPanel({
                 {activeTab === "baseline" && (
                   <div className="space-y-4">
                     <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-                      <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Statistical Baseline Deviation</div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Statistical Baseline Deviation</span>
+                        {data.contributing_factors?.disaster_contamination_quarantine && (
+                          <span className="text-[10px] font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200">
+                            Quarantined (Anti-Contamination)
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-baseline justify-between">
-                        <div className="text-2xl font-black text-slate-900 tracking-tight">
-                          +{data.anomaly_z_score?.toFixed(2)} <span className="text-sm font-semibold text-slate-500">sigma</span>
+                        <div className="flex items-baseline gap-3">
+                          <div className="text-2xl font-black text-slate-900 tracking-tight">
+                            +{data.anomaly_z_score?.toFixed(2)} <span className="text-sm font-semibold text-slate-500">σ (Z)</span>
+                          </div>
+                          {data.contributing_factors?.robust_mad_z_score !== undefined && (
+                            <div className="text-xl font-bold text-blue-700 tracking-tight" title="Robust Median/MAD Z-score">
+                              +{data.contributing_factors.robust_mad_z_score?.toFixed(2)} <span className="text-xs font-semibold text-blue-500">σ (MAD)</span>
+                            </div>
+                          )}
                         </div>
                         <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${isCritical ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
                           {data.anomaly_tier}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Calculated from the facility rolling 90-day emission distribution.
+                        Dual evaluation: Gaussian Parametric (Z) + Robust Non-Parametric (MAD) vs facility historical baseline.
                       </p>
                     </div>
 

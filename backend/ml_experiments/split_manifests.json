@@ -1,0 +1,53 @@
+{
+  "created_at": "2026-09-03T10:32:42.276213+00:00",
+  "total_dataset_rows": 954,
+  "split_e_strict_headline": {
+    "train_rows": 794,
+    "test_rows": 56,
+    "train_tiers": {
+      "TIER_A": 646,
+      "TIER_B": 96,
+      "TIER_C": 52
+    },
+    "test_tiers": {
+      "TIER_C": 32,
+      "TIER_B": 24
+    },
+    "train_labels": {
+      "AGRI_BURN": 157,
+      "WILDFIRE": 146,
+      "IND_ROUTINE": 129,
+      "OTHER_UNCERTAIN": 127,
+      "IND_FLARE": 123,
+      "IND_FIRE": 112
+    },
+    "test_labels": {
+      "IND_FLARE": 14,
+      "AGRI_BURN": 13,
+      "OTHER_UNCERTAIN": 10,
+      "IND_FIRE": 8,
+      "WILDFIRE": 7,
+      "IND_ROUTINE": 4
+    },
+    "test_facilities": [
+      "FAC-GUJ-HAZIRA-01",
+      "FAC-CHH-KORBA-01",
+      "FAC-TN-MANALI-01"
+    ],
+    "test_spatial_groups": [
+      "GRP_GUJ_02",
+      "GRP_CHH_01",
+      "GRP_TN_01",
+      "GRP_URBAN_NONFAC_01",
+      "GRP_RURAL_AGRI_02",
+      "GRP_RURAL_AGRI_04",
+      "GRP_FOREST_WILD_02",
+      "GRP_UNCERTAIN_02"
+    ],
+    "leakage_guarantees": [
+      "Zero facility overlap between train and test",
+      "Zero spatial group overlap between held-out test and train",
+      "Zero Tier A weak-rule samples in test set (100% circularity quarantine)"
+    ]
+  }
+}

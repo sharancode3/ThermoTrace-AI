@@ -39,7 +39,10 @@ htmlcov/
 data/raw/landcover/
 
 backend/data/reports/*.pdf
+backend/backend/
+*.pdf
 *.db
 scratch/
 test-results/
 .system_generated/
+

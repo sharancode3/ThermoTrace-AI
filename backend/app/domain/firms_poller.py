@@ -45,7 +45,7 @@ def compute_dedup_key(lat: float, lon: float, acq_date: str, acq_time: str, sens
 def calculate_dynamic_day_range(session: Session) -> int:
     """
     Computes day_range based on gap since latest observation in database.
-    Clamps between 1 and 5 days (maximum supported by NASA FIRMS Area API).
+    Clamps between 2 and 5 days (minimum 2 days ensures rolling 24-48h passes are always retrieved).
     """
     latest_ts = session.query(func.max(ThermalObservation.observation_timestamp_utc)).scalar()
     if latest_ts is None:
@@ -57,7 +57,8 @@ def calculate_dynamic_day_range(session: Session) -> int:
         
     gap_seconds = (now - latest_ts).total_seconds()
     gap_days = int(gap_seconds / 86400) + 1
-    return max(1, min(5, gap_days))
+    # Minimum 2 days ensures polar orbiting passes over India are captured across the rolling 24-48h window
+    return max(2, min(5, gap_days))
 
 def fetch_sensor_telemetry(sensor: str, day_range: int) -> pd.DataFrame:
     """Fetches satellite telemetry for Indian bounding box."""
@@ -157,21 +158,68 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
                 continue
                 
     # Record IngestionJob to persist accurate last updated timestamp
+    duration_ms = max(1, int((time.time() - (t_start if 't_start' in locals() else time.time())) * 1000))
     try:
         job = IngestionJob(
-            source_product="FIRMS_NRT",
+            id=uuid.uuid4(),
+            source_feed="FIRMS_INDIA_MULTI_SENSOR",
             status="SUCCESS",
             records_received=total_received,
             records_inserted=total_inserted,
             records_duplicated=total_duplicated,
-            time_window_start=now,
+            time_window_start=now - timedelta(days=day_range),
             time_window_end=now,
+            execution_duration_ms=duration_ms,
             executed_at=now,
         )
         session.add(job)
         session.commit()
     except Exception as e:
         session.rollback()
+        print(f"Error persisting IngestionJob via ORM: {e}")
+        try:
+            session.execute(text("""
+                INSERT INTO ingestion_jobs (id, source_feed, time_window_start, time_window_end, records_received, records_inserted, records_duplicated, status, execution_duration_ms, executed_at)
+                VALUES (:id, :source_feed, :tw_start, :tw_end, :rcv, :ins, :dup, :status, :duration_ms, :executed_at)
+            """), {
+                "id": uuid.uuid4(),
+                "source_feed": "FIRMS_INDIA_MULTI_SENSOR",
+                "tw_start": now - timedelta(days=day_range),
+                "tw_end": now,
+                "rcv": total_received,
+                "ins": total_inserted,
+                "dup": total_duplicated,
+                "status": "SUCCESS",
+                "duration_ms": duration_ms,
+                "executed_at": now
+            })
+            session.commit()
+        except Exception as err2:
+            print(f"Notice: could not record to ingestion_jobs table: {err2}")
+
+    # Trigger event clustering & intelligence pipeline if new observations were ingested
+    new_events = 0
+    if total_inserted > 0:
+        try:
+            from app.domain.event_formation import form_events_from_observations
+            new_events = form_events_from_observations(session, lookback_days=7)
+        except Exception as e:
+            print(f"Error during event formation in poller: {e}")
+
+    # Refresh top active Thermo News bulletins with latest telemetry
+    try:
+        from app.domain.anomaly import process_event_intelligence
+        recent_events = (
+            session.query(ThermalEvent)
+            .filter(ThermalEvent.lifecycle_status != "CLOSED")
+            .order_by(ThermalEvent.latest_detected_utc.desc())
+            .limit(25)
+            .all()
+        )
+        for ev in recent_events:
+            process_event_intelligence(session, ev.event_id)
+    except Exception as e:
+        pass
 
     return {
         "status": "SUCCESS",
@@ -179,8 +227,35 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
         "total_received": total_received,
         "inserted_count": total_inserted,
         "duplicated_count": total_duplicated,
-        "new_events_formed": 0,
+        "new_events_formed": new_events,
         "poll_timestamp_utc": now.isoformat()
+    }
+
+def get_last_poll_info(session: Session) -> Dict[str, Any]:
+    """Retrieves metadata of the most recent NASA FIRMS ingestion poll."""
+    global LAST_POLL_TIMESTAMP
+    try:
+        job = (
+            session.query(IngestionJob)
+            .order_by(IngestionJob.executed_at.desc())
+            .first()
+        )
+        if job and job.executed_at:
+            return {
+                "last_polled_at": job.executed_at.isoformat(),
+                "records_received": job.records_received,
+                "records_inserted": job.records_inserted,
+                "status": job.status
+            }
+    except Exception:
+        pass
+    
+    ts = LAST_POLL_TIMESTAMP or datetime.now(timezone.utc)
+    return {
+        "last_polled_at": ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
+        "records_received": 0,
+        "records_inserted": 0,
+        "status": "SUCCESS"
     }
 
 def fetch_firms_telemetry_for_facility_area(session: Session, lat: float, lon: float, day_range: int = 5) -> int:

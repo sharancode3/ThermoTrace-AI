@@ -110,13 +110,32 @@ export default function FacilityDetailDrawer({
     );
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     setIsExporting(true);
     try {
       const downloadUrl = `/api/v1/facilities/${facility.id}/report/download?window_days=${windowDays}`;
-      window.open(downloadUrl, '_blank');
+      const res = await fetch(downloadUrl);
+      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+
+      let filename = `ThermoTrace_Facility_${facility.facility_code || facility.id}.pdf`;
+      const disposition = res.headers.get("Content-Disposition");
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error('Export failed', err);
+      alert(`Facility report download failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsExporting(false);
     }

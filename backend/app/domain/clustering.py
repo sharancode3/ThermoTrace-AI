@@ -13,6 +13,16 @@ def haversine_distance_meters(lat1: float, lon1: float, lat2: float, lon2: float
     a = np.sin(dphi/2.0)**2 + np.cos(phi1) * np.cos(phi2) * np.sin(dlambda/2.0)**2
     return float(2 * R * np.arctan2(np.sqrt(a), np.sqrt(1 - a)))
 
+def haversine_vectorized(lat1: float, lon1: float, lats: np.ndarray, lons: np.ndarray) -> np.ndarray:
+    """Vectorized Haversine distance in meters across NumPy coordinate arrays."""
+    R = 6371000.0
+    phi1 = np.radians(lat1)
+    phi2 = np.radians(lats)
+    dphi = np.radians(lats - lat1)
+    dlambda = np.radians(lons - lon1)
+    a = np.sin(dphi / 2.0) ** 2 + np.cos(phi1) * np.cos(phi2) * np.sin(dlambda / 2.0) ** 2
+    return 2 * R * np.arctan2(np.sqrt(a), np.sqrt(np.maximum(0.0, 1.0 - a)))
+
 def run_st_dbscan(
     observations: List[Dict[str, Any]],
     eps_spatial_m: float = 750.0,
@@ -21,7 +31,7 @@ def run_st_dbscan(
 ) -> List[List[Dict[str, Any]]]:
     """
     ST-DBSCAN algorithm for Spatio-Temporal Event Formation.
-    Deterministic clustering based on spatial (750m) and temporal (12h) thresholds.
+    High-performance vectorized clustering based on spatial (750m) and temporal (12h) thresholds.
     """
     n = len(observations)
     if n == 0:
@@ -40,13 +50,13 @@ def run_st_dbscan(
             continue
 
         time_diffs = np.abs(times - times[i])
-        time_mask = time_diffs <= eps_temporal_sec
+        candidates = np.where(time_diffs <= eps_temporal_sec)[0]
 
-        neighbors = []
-        for j in np.where(time_mask)[0]:
-            dist = haversine_distance_meters(lats[i], lons[i], lats[j], lons[j])
-            if dist <= eps_spatial_m:
-                neighbors.append(j)
+        if len(candidates) == 0:
+            continue
+
+        dists = haversine_vectorized(lats[i], lons[i], lats[candidates], lons[candidates])
+        neighbors = candidates[dists <= eps_spatial_m].tolist()
 
         if len(neighbors) < min_pts:
             continue
@@ -60,17 +70,16 @@ def run_st_dbscan(
             if not visited[curr]:
                 visited[curr] = True
                 c_time_diffs = np.abs(times - times[curr])
-                c_time_mask = c_time_diffs <= eps_temporal_sec
-                c_neighbors = []
-                for k in np.where(c_time_mask)[0]:
-                    if haversine_distance_meters(lats[curr], lons[curr], lats[k], lons[k]) <= eps_spatial_m:
-                        c_neighbors.append(k)
+                c_candidates = np.where(c_time_diffs <= eps_temporal_sec)[0]
+                if len(c_candidates) > 0:
+                    c_dists = haversine_vectorized(lats[curr], lons[curr], lats[c_candidates], lons[c_candidates])
+                    c_neighbors = c_candidates[c_dists <= eps_spatial_m].tolist()
 
-                if len(c_neighbors) >= min_pts:
-                    for k in c_neighbors:
-                        if k not in cluster_indices:
-                            cluster_indices.add(k)
-                            queue.append(k)
+                    if len(c_neighbors) >= min_pts:
+                        for k in c_neighbors:
+                            if k not in cluster_indices:
+                                cluster_indices.add(k)
+                                queue.append(k)
 
         cluster_obs = [observations[idx] for idx in sorted(cluster_indices, key=lambda x: times[x])]
         clusters.append(cluster_obs)

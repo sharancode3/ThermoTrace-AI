@@ -609,17 +609,15 @@ export default function SystemGuidePage() {
 
             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm">
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                The classification subsystem uses a production <strong className="text-slate-900 dark:text-slate-100">XGBoost</strong> model (<code className="font-mono text-purple-600 bg-purple-50 dark:bg-purple-950 px-1 py-0.5 rounded">thermo_xgb_v1.0.0.joblib</code>) to attribute events to one of 6 canonical operational classes:
+                The classification subsystem uses a production <strong className="text-slate-900 dark:text-slate-100">XGBoost</strong> multi-class model (<code className="font-mono text-purple-600 bg-purple-50 dark:bg-purple-950 px-1 py-0.5 rounded">thermo_xgb_v1.1.0.joblib</code>) attributes events across 4 tactical emitter classes with unified 3-color level severity:
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                 {[
-                  { name: "IND_FIRE", color: "border-red-200 dark:border-red-900 bg-red-50/70 dark:bg-red-950/30 text-red-700 dark:text-red-300", meaning: "Uncontrolled industrial structural fire or catastrophic blast in plant perimeter." },
-                  { name: "IND_FLARE", color: "border-amber-200 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300", meaning: "Elevated process or safety stack flaring at petrochemical/gas refinery." },
-                  { name: "IND_ROUTINE", color: "border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300", meaning: "Permitted, nominal operating baseline emissions from blast furnaces/kilns." },
-                  { name: "AGRI_BURN", color: "border-yellow-200 dark:border-yellow-900 bg-yellow-50/70 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300", meaning: "Seasonal open-field post-harvest crop residue or stubble burning." },
-                  { name: "WILDFIRE", color: "border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300", meaning: "Forest fire or unmanaged grassland vegetation blaze." },
-                  { name: "OTHER_UNCERTAIN", color: "border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300", meaning: "Low-confidence or ambiguous signature where evidence is insufficient." }
+                  { name: "INDUSTRY (3-Color)", color: "border-amber-200 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200", meaning: "Factory stacks with 3-tier severity: Red (Critical fire/flare blast ≥50MW), Amber (Elevated flaring), Yellow (Nominal routine process)." },
+                  { name: "AGRI_BURN", color: "border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200", meaning: "Curved crop stalk icon: seasonal crop residue & stubble burning (Green = nominal, Amber = elevated, Red = severe)." },
+                  { name: "WILDFIRE", color: "border-red-200 dark:border-red-900 bg-red-50/70 dark:bg-red-950/30 text-red-800 dark:text-red-200", meaning: "Pine tree + flame icon: forest canopy & unmanaged vegetation wildfires (Flame Red / Orange by intensity)." },
+                  { name: "OTHER_UNCERTAIN", color: "border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300", meaning: "Tactical diamond crosshair: unassigned low-confidence or ambiguous signature preserving epistemic integrity." }
                 ].map((c, i) => (
                   <div key={i} className={`p-3.5 rounded-xl border ${c.color} space-y-1`}>
                     <div className="font-mono font-bold text-xs">{c.name}</div>

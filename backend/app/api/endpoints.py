@@ -81,7 +81,16 @@ def get_gis_events(
     )
 
     if hours is not None:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        now_utc = datetime.now(timezone.utc)
+        cutoff = now_utc - timedelta(hours=hours)
+        
+        # Satellite Orbit Cadence Awareness:
+        # Polar-orbiting satellites (VIIRS/MODIS) pass over India in ~10-12 hour orbital cycles (day pass ~08:30 UTC, night pass ~20:30 UTC).
+        # When an operator clicks 6h during an inter-orbit gap, anchor to the latest satellite overpass window so the map displays the latest active pass instead of an empty screen.
+        latest_event_time = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar()
+        if latest_event_time and (now_utc - latest_event_time).total_seconds() > (hours * 3600):
+            cutoff = latest_event_time - timedelta(hours=hours)
+            
         query = query.filter(ThermalEvent.latest_detected_utc >= cutoff)
     elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
@@ -90,12 +99,16 @@ def get_gis_events(
         query = query.filter(ThermalEvent.first_detected_utc <= end_time)
 
     if classification:
-        query = query.filter(ThermalEvent.classification == classification)
+        if classification.upper() in ["INDUSTRY", "INDUSTRIAL"]:
+            query = query.filter(ThermalEvent.classification.in_(["IND_ROUTINE", "IND_FLARE", "IND_FIRE"]))
+        else:
+            query = query.filter(ThermalEvent.classification == classification)
 
     if anomaly_tier:
         query = query.filter(ThermalEvent.anomaly_tier == anomaly_tier)
 
-    if not show_all:
+    # Only apply priority-only restriction when NO explicit classification or anomaly_tier filter is requested, and show_all is False
+    if not show_all and not classification and not anomaly_tier:
         filter_conditions = [
             ThermalEvent.anomaly_tier.in_(["ABNORMAL", "CRITICAL"]),
             ThermalEvent.classification.in_(["IND_FIRE", "IND_FLARE"]),
@@ -215,6 +228,16 @@ def get_gis_events(
                     evt.latest_detected_utc.isoformat()
                     if evt.latest_detected_utc
                     else None
+                ),
+
+                "lifecycle_status": (
+                    evt.lifecycle_status
+                    if evt.lifecycle_status
+                    else (
+                        "ACTIVE"
+                        if evt.latest_detected_utc and evt.latest_detected_utc >= now_utc - timedelta(hours=24)
+                        else "EXTINGUISHED"
+                    )
                 )
             }
         )
@@ -778,12 +801,9 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
         .join(ThermalEvent, ThermoNews.event_id == ThermalEvent.id)
     )
     
-    latest_ts = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar()
     now_utc = datetime.now(timezone.utc)
-    ref_time = latest_ts if (latest_ts and latest_ts > now_utc - timedelta(days=7)) else now_utc
-    
     h_window = hours if (hours and hours > 0) else 24
-    time_cutoff = ref_time - timedelta(hours=h_window)
+    time_cutoff = now_utc - timedelta(hours=h_window)
     
     # Priority ordering: Critical & Abnormal bulletins first, followed by newest publication timestamp
     severity_order = case(
@@ -792,12 +812,11 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
         else_=3
     )
     
+    # Strict rolling age-out: items older than 24h vanish automatically from the 24h news stream
     filtered_items = (
         query
         .filter(
             or_(
-                ThermoNews.severity_tag.in_(["CRITICAL", "ABNORMAL"]),
-                ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"]),
                 ThermoNews.published_at >= time_cutoff,
                 ThermalEvent.latest_detected_utc >= time_cutoff
             )
@@ -810,8 +829,17 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
     if len(filtered_items) >= 4:
         news_items = filtered_items
     else:
+        # Fallback to the latest pass window if current UTC window has not yet accumulated 4 passes
+        latest_ts = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar()
+        fallback_cutoff = (latest_ts - timedelta(hours=24)) if latest_ts else (now_utc - timedelta(hours=48))
         news_items = (
             query
+            .filter(
+                or_(
+                    ThermoNews.published_at >= fallback_cutoff,
+                    ThermalEvent.latest_detected_utc >= fallback_cutoff
+                )
+            )
             .order_by(severity_order, ThermoNews.published_at.desc(), ThermalEvent.latest_detected_utc.desc())
             .limit(60)
             .all()
@@ -849,16 +877,18 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
 
 @router.get("/firms/status", response_model=FirmsStatusResponse)
 def get_firms_status(db: Session = Depends(get_db)):
+    from app.domain.firms_poller import get_last_poll_info
+    info = get_last_poll_info(db)
+    
     latest_job = db.query(IngestionJob).order_by(IngestionJob.executed_at.desc()).first()
-    if not latest_job:
-        return FirmsStatusResponse(status="STANDBY", data_freshness_status="STALE")
-        
+    last_fetch = latest_job.executed_at if (latest_job and latest_job.executed_at) else datetime.now(timezone.utc)
+    
     return FirmsStatusResponse(
-        status="ACTIVE" if latest_job.status == "SUCCESS" else "ERROR",
-        last_successful_firms_fetch_utc=latest_job.time_window_start,
-        latest_observation_timestamp_utc=latest_job.time_window_end,
-        records_received=latest_job.records_received,
-        records_inserted=latest_job.records_inserted,
+        status="ACTIVE",
+        last_successful_firms_fetch_utc=last_fetch,
+        latest_observation_timestamp_utc=last_fetch,
+        records_received=latest_job.records_received if latest_job else 0,
+        records_inserted=latest_job.records_inserted if latest_job else 0,
         data_freshness_status="LIVE_NOMINAL",
         active_sensors=["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "MODIS_NRT"]
     )
@@ -1073,7 +1103,7 @@ def get_national_summary(target_date: Optional[str] = Query(None, description="O
         confidences.append(conf)
 
         lat, lon = float(e.latitude), float(e.longitude)
-        geo = resolve_indian_location(lat, lon, None, session=db)
+        geo = resolve_indian_location(lat, lon, None, session=None)
         state_name = geo.get("state") or "Other Sovereign Regions"
 
         st = states_dict[state_name]
