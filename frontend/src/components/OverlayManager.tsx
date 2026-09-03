@@ -112,14 +112,15 @@ export function OverlayManager() {
     if (!overlay) return;
     setLoading(true);
     if (overlay === "news") {
-      fetchNews()
-        .then((d) => {
-          // Sort strictly based on publishing time descending
+      Promise.all([
+        fetchNews().then((d) => {
           const sorted = Array.isArray(d) 
             ? [...d].sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
             : [];
           setNews(sorted);
-        })
+        }),
+        fetchFirmsStatus().then((d) => setFirmsStatus(d)).catch(() => null)
+      ])
         .catch(console.error)
         .finally(() => setLoading(false));
     } else if (overlay === "alerts") {
@@ -643,14 +644,12 @@ export function OverlayManager() {
               <span className="font-semibold text-slate-900">NASA FIRMS Telemetry:</span>
               <span className="text-orange-700 font-mono">
                 {firmsStatus?.last_successful_firms_fetch_utc
-                  ? `Last updated ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)}`
-                  : news.length > 0 && news[0]?.published_at
-                  ? `Last updated ${formatRelativeTime(news[0].published_at)}`
-                  : "Last updated Just now"}
+                  ? `Polled ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)} (${firmsStatus.records_inserted ?? 0} new)`
+                  : "Polled Just now (Active)"}
               </span>
             </div>
             <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
-              AUTONOMOUS 10M SYNC
+              AUTONOMOUS 5M SYNC
             </span>
           </div>
 

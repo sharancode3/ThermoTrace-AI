@@ -5,6 +5,8 @@ idempotent deduplication, and ingestion-time spatial filtering.
 """
 import os
 import sys
+import time
+import uuid
 import hashlib
 import requests
 import pandas as pd
