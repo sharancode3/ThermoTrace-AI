@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Flame, Building2, FileText, LayoutDashboard, Bell, 
-  Newspaper, BookOpen, BarChart2, PieChart, Radio, Sparkles
+  Newspaper, BookOpen, BarChart2, PieChart, Radio, Sparkles, User
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchNotifications } from "@/lib/apiClient";
@@ -162,10 +162,10 @@ export function Sidebar() {
           className={cn("flex items-center w-full p-2 rounded transition-colors justify-center lg:justify-start", currentOverlay === "settings" ? "bg-slate-100" : "hover:bg-slate-50")}
         >
           <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 border border-slate-200">
-            NT
+            <User className="w-4 h-4 text-slate-600" />
           </div>
           <div className="hidden lg:block ml-3 text-left">
-            <div className="text-sm font-medium text-slate-900">NTRO Operator</div>
+            <div className="text-sm font-medium text-slate-900">User Profile</div>
             <div className="text-xs text-slate-500">Settings</div>
           </div>
         </button>
