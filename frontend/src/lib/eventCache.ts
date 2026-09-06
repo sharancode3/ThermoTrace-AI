@@ -5,8 +5,8 @@
  */
 import { GeoCollection, GeoFeature, EventFilters, Viewport } from "./apiClient";
 
-const DB_NAME = "thermotrace_local_store";
-const DB_VERSION = 1;
+const DB_NAME = "thermotrace_local_store_v3";
+const DB_VERSION = 3;
 const EVENTS_STORE = "events";
 const META_STORE = "meta";
 
@@ -20,6 +20,12 @@ function getDb(): Promise<IDBDatabase | null> {
     return Promise.resolve(null);
   }
   if (!dbPromise) {
+    // Purge legacy stale databases from previous revisions
+    try {
+      indexedDB.deleteDatabase("thermotrace_local_store");
+      indexedDB.deleteDatabase("thermotrace_local_store_v2");
+    } catch {}
+
     dbPromise = new Promise((resolve) => {
       try {
         const req = indexedDB.open(DB_NAME, DB_VERSION);

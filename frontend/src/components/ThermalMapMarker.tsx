@@ -42,7 +42,7 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
 
   // Authoritative severity level: Critical (Red), Abnormal (Orange), Normal (Yellow for industry)
   const isCritical = normTier === "CRITICAL" || normClass === "IND_FIRE";
-  const isAbnormal = !isCritical && (normTier === "ABNORMAL" || normTier === "ELEVATED" || normClass === "IND_FLARE");
+  const isAbnormal = !isCritical && (normTier === "ABNORMAL" || normClass === "IND_FLARE");
   const isNormal = !isCritical && !isAbnormal;
 
   let fillColor = "#10B981";

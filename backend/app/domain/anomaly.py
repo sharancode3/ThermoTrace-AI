@@ -62,8 +62,6 @@ def evaluate_anomaly_tier(z_score: float, footprint_expansion_pct: float = 0.0) 
         return "CRITICAL"
     elif z_score >= 2.5:
         return "ABNORMAL"
-    elif z_score >= 1.5:
-        return "ELEVATED"
     return "NORMAL"
 
 def generate_humanized_news_bulletin(event: ThermalEvent, facility: Optional[IndustrialFacility], geo: Dict[str, Any], z_score: float) -> Tuple[str, str, str]:
@@ -162,17 +160,25 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
                 confidence = max(confidence, 0.90)
             else:
                 # 2. Non-Facility Rural / Forest Spatial Resolution:
+                # Pure ML inference with landcover gating:
                 pct_crop = float(features.get("pct_cropland", 0.0))
                 pct_for = float(features.get("pct_forest", 0.0))
-                if pct_for >= 0.40 or predicted_class == "WILDFIRE":
+                
+                if pct_for >= 0.45 or predicted_class == "WILDFIRE":
                     predicted_class = "WILDFIRE"
                     confidence = max(confidence, 0.85)
-                elif pct_crop >= 0.35 or predicted_class in ("AGRI_BURN", "IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
-                    # Open farmland far from facilities is agricultural crop residue burning
+                elif predicted_class == "AGRI_BURN" and pct_crop >= 0.35:
                     predicted_class = "AGRI_BURN"
                     confidence = max(confidence, 0.86)
-                else:
-                    if confidence < 0.50 or entropy > 1.35:
+                elif predicted_class == "OTHER_UNCERTAIN" or confidence < 0.55 or entropy > 1.25:
+                    predicted_class = "OTHER_UNCERTAIN"
+                elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                    # Unassociated remote hotspot with no industrial facility within 4km
+                    if pct_crop >= 0.50:
+                        predicted_class = "AGRI_BURN"
+                    elif pct_for >= 0.35:
+                        predicted_class = "WILDFIRE"
+                    else:
                         predicted_class = "OTHER_UNCERTAIN"
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
@@ -242,7 +248,7 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         # Operational Radiance Safety Gate: Severe industrial blast, major flare, or active fire is strictly CRITICAL
         if current_frp >= 50.0 or z_score >= 4.0 or z_mad >= 4.0 or event.classification == "IND_FIRE":
             tier = "CRITICAL"
-        elif (current_frp >= 25.0 or z_score >= 2.5 or event.classification == "IND_FLARE") and tier in ("NORMAL", "ELEVATED"):
+        elif current_frp >= 20.0 or z_score >= 2.5 or event.classification == "IND_FLARE":
             tier = "ABNORMAL"
         
         event.anomaly_z_score = round(float(z_score), 2)
@@ -274,9 +280,6 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         elif current_frp >= 20.0 or (event.max_brightness_k and event.max_brightness_k >= 340.0) or event.classification == "IND_FLARE":
             tier = "ABNORMAL"
             z_score = 2.8
-        elif current_frp >= 10.0:
-            tier = "ELEVATED"
-            z_score = 1.8
         else:
             tier = "NORMAL"
             z_score = 0.9

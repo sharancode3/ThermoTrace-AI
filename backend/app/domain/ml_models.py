@@ -45,3 +45,9 @@ class Float64XGBClassifier(BaseEstimator, ClassifierMixin):
     def predict(self, X):
         preds = self.model_.predict(np.asarray(X, dtype=np.float64))
         return np.asarray(preds, dtype=np.int64)
+
+    @property
+    def feature_importances_(self):
+        if self.model_ is not None and hasattr(self.model_, "feature_importances_"):
+            return self.model_.feature_importances_
+        return np.ones(14) / 14.0

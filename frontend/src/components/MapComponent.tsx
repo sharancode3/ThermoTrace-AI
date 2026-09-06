@@ -606,7 +606,13 @@ export default function MapComponent({
                   onClick={() => onEventClick(event_id)}
                 />
                 <div className="absolute left-1/2 -translate-x-1/2 -top-8 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-xl border border-slate-700 z-50 flex items-center gap-1.5 backdrop-blur-md">
-                  <span className="font-bold text-orange-400">{classification}</span>
+                  <span className={`font-bold ${
+                    classification === "IND_ROUTINE" ? "text-yellow-400" :
+                    classification === "IND_FLARE" ? "text-orange-400" :
+                    classification === "IND_FIRE" ? "text-red-400" :
+                    classification === "AGRI_BURN" ? "text-emerald-400" :
+                    classification === "WILDFIRE" ? "text-teal-400" : "text-slate-300"
+                  }`}>{classification}</span>
                   <span className="text-slate-500">·</span>
                   <span className="text-emerald-400 font-semibold">{Number(peak_frp_mw || 0).toFixed(1)} MW</span>
                   {max_brightness_k && (
@@ -628,17 +634,37 @@ export default function MapComponent({
         })}
 
         {/* Selected Highlight Marker */}
-        {selectedFeature && (
-          <Marker
-            longitude={selectedFeature.geometry.coordinates[0]}
-            latitude={selectedFeature.geometry.coordinates[1]}
-            anchor="center"
-          >
-            <div className="pointer-events-none">
-              <div className="w-12 h-12 rounded-full border-2 border-orange-500 animate-ping absolute -top-3 -left-3 opacity-60" />
-            </div>
-          </Marker>
-        )}
+        {selectedFeature && (() => {
+          const props = selectedFeature.properties || {};
+          const cls = (props.classification || "").toUpperCase();
+          const tier = (props.anomaly_tier || "").toUpperCase();
+          const isCritical = tier === "CRITICAL" || cls === "IND_FIRE";
+          const isAbnormal = !isCritical && (tier === "ABNORMAL" || cls === "IND_FLARE");
+          const isIndustry = cls.startsWith("IND_") || cls === "INDUSTRIAL";
+          const isAgri = cls === "AGRI_BURN" || cls === "AGRICULTURE";
+          const isWildfire = cls === "WILDFIRE" || cls === "FOREST_FIRE";
+
+          let ringColor = "border-slate-400";
+          if (isIndustry) {
+            ringColor = isCritical ? "border-red-500" : isAbnormal ? "border-orange-500" : "border-yellow-400";
+          } else if (isWildfire) {
+            ringColor = isCritical ? "border-red-500" : isAbnormal ? "border-orange-500" : "border-teal-400";
+          } else if (isAgri) {
+            ringColor = isCritical ? "border-red-500" : isAbnormal ? "border-orange-500" : "border-emerald-500";
+          }
+
+          return (
+            <Marker
+              longitude={selectedFeature.geometry.coordinates[0]}
+              latitude={selectedFeature.geometry.coordinates[1]}
+              anchor="center"
+            >
+              <div className="pointer-events-none">
+                <div className={`w-12 h-12 rounded-full border-2 ${ringColor} animate-ping absolute -top-3 -left-3 opacity-60`} />
+              </div>
+            </Marker>
+          );
+        })()}
 
         {/* Focused Target Facility Location Beacon */}
         {focusedFacility && (

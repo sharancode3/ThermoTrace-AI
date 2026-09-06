@@ -192,12 +192,16 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         if b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]:
             return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.10, "is_ind": 1}
 
-    # 3. Dense Forest & National Parks (Western Ghats, Nilgiris Crest, Periyar, Himalayas, NE)
+    # 3. Dense Forest & National Parks (Western Ghats, Nilgiris Crest, Periyar, Central India, Himalayas, NE)
     is_forest_geo = (
         (11.35 <= lat <= 11.75 and 76.40 <= lon <= 76.85) or # Nilgiris Reserve Forest Crest
         (10.15 <= lat <= 10.55 and 76.80 <= lon <= 77.25) or # Anamalai Tiger Reserve
         (8.70 <= lat <= 9.50 and 77.10 <= lon <= 77.45) or   # Periyar / Agasthyamalai Reserve
         (11.75 <= lat <= 12.05 and 78.20 <= lon <= 78.45) or # Shevaroy Hill Crest
+        (14.30 <= lat <= 15.60 and 74.20 <= lon <= 75.30) or # Dandeli / Uttara Kannada Forest
+        (21.50 <= lat <= 23.50 and 80.50 <= lon <= 84.50) or # Satpura, Kanha & Central Reserve Forests
+        (21.00 <= lat <= 22.50 and 85.00 <= lon <= 86.50) or # Simlipal & Odisha Forest Tracts
+        (18.50 <= lat <= 20.00 and 80.50 <= lon <= 82.50) or # Bastar / Dandakaranya Reserve
         state in [
             "Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Meghalaya", 
             "Mizoram", "Nagaland", "Sikkim", "Andaman & Nicobar Islands"
@@ -225,16 +229,24 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
 
     # 5. Major Agricultural Basins (Indo-Gangetic, Punjab, Haryana, Cauvery Delta, Krishna-Godavari)
     is_major_agri_basin = (
-        (28.0 <= lat <= 32.0 and 74.0 <= lon <= 77.5) or # Punjab & Haryana
-        (24.5 <= lat <= 28.5 and 77.5 <= lon <= 85.0) or # UP & Bihar Plains
-        (10.0 <= lat <= 11.8 and 78.5 <= lon <= 79.9) or # Cauvery Delta (Thanjavur, Tiruvarur, Nagapattinam)
-        (15.5 <= lat <= 17.5 and 80.0 <= lon <= 82.5)    # Krishna-Godavari Delta
+        (28.0 <= lat <= 32.0 and 74.0 <= lon <= 77.5) or # Punjab & Haryana Intensive Farming
+        (25.0 <= lat <= 28.5 and 78.0 <= lon <= 84.5) or # Central Indo-Gangetic Plains
+        (10.2 <= lat <= 11.5 and 78.8 <= lon <= 79.9) or # Cauvery Delta (Thanjavur core)
+        (16.0 <= lat <= 17.2 and 80.5 <= lon <= 82.2)    # Krishna-Godavari Delta Core
     )
     if is_major_agri_basin:
         return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
 
-    # 6. Rural Agrarian Plains & Farmland (Default for Indian rural landscape outside dense forests & facilities)
-    return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
+    # 6. Deccan Plateau & Semi-Arid Scrub (Maharashtra, Karnataka, Telangana, Rajasthan)
+    is_semi_arid_scrub = (
+        (15.0 <= lat <= 20.5 and 74.5 <= lon <= 78.5) or # Deccan Plateau Scrubland
+        (24.0 <= lat <= 28.0 and 70.0 <= lon <= 75.5)    # Western Arid Scrub
+    )
+    if is_semi_arid_scrub:
+        return {"pct_urban": 0.15, "pct_cropland": 0.30, "pct_forest": 0.15, "is_ind": 0}
+
+    # 7. Rural Open Plains / Mixed Terrain (Balanced Indian rural landscape)
+    return {"pct_urban": 0.10, "pct_cropland": 0.45, "pct_forest": 0.20, "is_ind": 0}
 
 
 def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
