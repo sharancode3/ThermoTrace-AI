@@ -61,6 +61,21 @@ ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "false").lower() in ("t
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Auto-initialize PostGIS & schema tables for new Supabase projects
+    try:
+        from app.db.database import engine, Base
+        from sqlalchemy import text
+        import app.db.models
+        with engine.begin() as conn:
+            try:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+            except Exception as ext_err:
+                print(f"[DATABASE] PostGIS extension check: {ext_err}")
+        Base.metadata.create_all(bind=engine)
+        print("[DATABASE] Schema tables verified and ready.")
+    except Exception as err:
+        print(f"[DATABASE INIT WARNING] {err}")
+
     poller_task = None
     if ENABLE_FIRMS_POLLING:
         print(f"[FIRMS DAEMON] Automated NASA FIRMS telemetry polling enabled ({POLL_INTERVAL_MINUTES}-minute cadence).")
