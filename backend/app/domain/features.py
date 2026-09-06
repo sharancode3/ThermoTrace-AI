@@ -133,11 +133,11 @@ def get_evidence_strength(obs_count: int, hist_days: int, has_facility: bool, fa
         return "LIMITED", f"{obs_text}, {fac_text}"
 
 
-def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_associated_fac: bool, state: str = "") -> Dict[str, Any]:
+def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_associated_fac: bool, state: str = "", dn_ratio: float = 0.5) -> Dict[str, Any]:
     """
     High-Precision Land-Cover, Industrial Geofence, and Terrain Resolver for Pan-India coordinates.
     Calibrates Cropland Agrarian Belts, Western/Eastern Ghats Reserves, Industrial Corridors,
-    and Peri-urban Agro-forestry terrain.
+    and Satellite Day/Night Overpass Telemetry.
     """
     # 1. Direct Industrial Proximity (within 3500m of a facility)
     if dist_to_fac <= 3500.0 or is_associated_fac:
@@ -227,26 +227,15 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         if d_km <= 15.0:
             return {"pct_urban": 0.85, "pct_cropland": 0.10, "pct_forest": 0.05, "is_ind": 0}
 
-    # 5. Major Agricultural Basins (Indo-Gangetic, Punjab, Haryana, Cauvery Delta, Krishna-Godavari)
-    is_major_agri_basin = (
-        (28.0 <= lat <= 32.0 and 74.0 <= lon <= 77.5) or # Punjab & Haryana Intensive Farming
-        (25.0 <= lat <= 28.5 and 78.0 <= lon <= 84.5) or # Central Indo-Gangetic Plains
-        (10.2 <= lat <= 11.5 and 78.8 <= lon <= 79.9) or # Cauvery Delta (Thanjavur core)
-        (16.0 <= lat <= 17.2 and 80.5 <= lon <= 82.2)    # Krishna-Godavari Delta Core
-    )
-    if is_major_agri_basin:
+    # 5. Daytime Agricultural Stubble / Biomass Burning:
+    # Farmers across Indian agricultural belts burn crop residues during daytime overpasses.
+    # When confirmed daytime overpass (dn_ratio >= 0.65) in rural non-forest terrain:
+    if dn_ratio >= 0.65:
         return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
 
-    # 6. Deccan Plateau & Semi-Arid Scrub (Maharashtra, Karnataka, Telangana, Rajasthan)
-    is_semi_arid_scrub = (
-        (15.0 <= lat <= 20.5 and 74.5 <= lon <= 78.5) or # Deccan Plateau Scrubland
-        (24.0 <= lat <= 28.0 and 70.0 <= lon <= 75.5)    # Western Arid Scrub
-    )
-    if is_semi_arid_scrub:
-        return {"pct_urban": 0.15, "pct_cropland": 0.30, "pct_forest": 0.15, "is_ind": 0}
-
-    # 7. Rural Open Plains / Mixed Terrain (Balanced Indian rural landscape)
-    return {"pct_urban": 0.10, "pct_cropland": 0.45, "pct_forest": 0.20, "is_ind": 0}
+    # 6. Nighttime / Unverified Rural Hotspots (True Uncertain Signals):
+    # Nocturnal single-pass thermal anomalies far from facilities with ambiguous land-use context:
+    return {"pct_urban": 0.10, "pct_cropland": 0.25, "pct_forest": 0.15, "is_ind": 0}
 
 
 def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
@@ -273,7 +262,7 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
 
     state = geo.get("state", "")
     is_fac = bool(event.associated_facility_id) and (dist_to_fac <= 3500.0)
-    lc = resolve_refined_landcover(lat, lon, dist_to_fac, is_fac, state=state)
+    lc = resolve_refined_landcover(lat, lon, dist_to_fac, is_fac, state=state, dn_ratio=dn_ratio)
     pct_urban = lc["pct_urban"]
     pct_cropland = lc["pct_cropland"]
     pct_forest = lc["pct_forest"]

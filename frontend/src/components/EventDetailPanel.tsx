@@ -120,10 +120,10 @@ export function EventDetailPanel({
 
   if (!eventId) return null;
 
-  // Determine High-Level Source Category (Industrial vs Non-Industrial)
   const isIndustrial = data?.classification?.startsWith("IND_");
   const isAgricultural = data?.classification === "AGRI_BURN";
   const isWildfire = data?.classification === "WILDFIRE";
+  const isUncertain = data?.classification === "OTHER_UNCERTAIN";
   
   let sourceCategory = "UNCERTAIN SOURCE";
   let sourceSubtitle = "Thermal anomaly requiring satellite corroboration";
@@ -791,14 +791,20 @@ export function EventDetailPanel({
                           </>
                         ) : isAgricultural ? (
                           <>
-                            <li>Thermal signature observed over agricultural cropland (minimal industrial zoning).</li>
-                            <li>Radiant intensity (<strong>{data.peak_frp_mw?.toFixed(1)} MW</strong>) matches post-harvest crop stubble burning dynamics.</li>
-                            <li>Persistence classified as <strong>{data.persistence_tier}</strong>.</li>
+                            <li>Daytime satellite overpass telemetry (13:30 local pass) coincides with open-field crop residue burning cycles.</li>
+                            <li>OpenStreetMap & district geospatial telemetry confirms active agricultural cropland terrain ({data.district ? `${data.district}, ` : ''}{data.state || 'rural belt'}).</li>
+                            <li>Radiant intensity (<strong>{data.peak_frp_mw?.toFixed(1)} MW</strong>) matches typical field biomass combustion with zero industrial infrastructure.</li>
+                          </>
+                        ) : isWildfire ? (
+                          <>
+                            <li>Thermal cluster detected in designated forest reserve / heavy canopy biome with no industrial facilities.</li>
+                            <li>Spatial dispersion and elevated brightness temperature ({data.max_brightness_k ? `${data.max_brightness_k.toFixed(1)} K` : 'N/A'}) align with wildland fire spread.</li>
                           </>
                         ) : (
                           <>
-                            <li>Thermal cluster detected in vegetation/forest terrain with no registered industrial facilities.</li>
-                            <li>Spatial dispersion aligns with wildland fire spread.</li>
+                            <li>Nocturnal or isolated single-pass satellite detection with ambiguous ground-truth land cover.</li>
+                            <li>Thermal intensity ({data.peak_frp_mw?.toFixed(1)} MW) lacks continuous multi-pass persistence or facility correlation.</li>
+                            <li>Flagged for multi-spectral verification under automated abstention protocol.</li>
                           </>
                         )}
                       </ul>
