@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const rawBackend = process.env.INTERNAL_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "https://thermotrace-ai-5tao.onrender.com/api/v1";
+const ACTIVE_BACKEND = "https://thermotrace-ai-5tao.onrender.com/api/v1";
+let rawBackend = process.env.INTERNAL_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || ACTIVE_BACKEND;
+
+// Automatically override old suspended or localhost URLs
+if (!rawBackend || !rawBackend.includes("5tao")) {
+  rawBackend = ACTIVE_BACKEND;
+}
+
 const BACKEND_BASE = rawBackend.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "") + "/api/v1";
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> | { path?: string[] } }) {
