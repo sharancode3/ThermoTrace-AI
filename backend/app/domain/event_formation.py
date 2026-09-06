@@ -83,20 +83,28 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
             else:
                 primary_land_use = "Cropland" if c_lat > 24.0 else "Regional Hotspot"
 
-        # Check if an existing event covers this cluster (same centroid proximity < 500m)
-        existing_event = session.query(ThermalEvent).filter(
-            text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 500)")
-        ).params(lon=c_lon, lat=c_lat).first()
+        # Check if an existing event covers this cluster:
+        # 1. By facility association (strict priority: update existing event for this plant)
+        # 2. By centroid spatial proximity (within 1500m)
+        existing_event = None
+        if associated_fac_id:
+            existing_event = session.query(ThermalEvent).filter(
+                ThermalEvent.associated_facility_id == associated_fac_id
+            ).order_by(ThermalEvent.latest_detected_utc.desc()).first()
+
+        if not existing_event:
+            existing_event = session.query(ThermalEvent).filter(
+                text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 1500)")
+            ).params(lon=c_lon, lat=c_lat).order_by(ThermalEvent.latest_detected_utc.desc()).first()
 
         if existing_event:
             existing_event.peak_frp_mw = max(float(existing_event.peak_frp_mw or 0.0), peak_frp)
             existing_event.mean_frp_mw = (float(existing_event.mean_frp_mw or 0.0) + mean_frp) / 2.0
             existing_event.aggregate_frp_mw = max(float(existing_event.aggregate_frp_mw or 0.0), total_frp)
             existing_event.max_brightness_k = max(float(existing_event.max_brightness_k or 0.0), max_k)
-            existing_event.observation_count = obs_count
-            existing_event.latest_detected_utc = latest_utc
+            existing_event.latest_detected_utc = max(existing_event.latest_detected_utc, latest_utc) if existing_event.latest_detected_utc else latest_utc
             existing_event.distance_to_facility_m = dist_to_fac
-            if associated_fac_id and not existing_event.associated_facility_id:
+            if associated_fac_id:
                 existing_event.associated_facility_id = associated_fac_id
                 existing_event.primary_land_use = primary_land_use
             target_event = existing_event
@@ -139,6 +147,10 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
                 )
                 session.add(link)
 
+        session.flush()
+        target_event.observation_count = session.query(EventObservation).filter(
+            EventObservation.event_id == target_event.id
+        ).count()
         session.commit()
 
         # Trigger ML intelligence & Anomaly scoring

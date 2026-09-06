@@ -61,8 +61,8 @@ def calculate_dynamic_day_range(session: Session) -> int:
         
     gap_seconds = (now - latest_ts).total_seconds()
     gap_days = int(gap_seconds / 86400) + 1
-    # Minimum 2 days ensures polar orbiting passes over India are captured across the rolling 24-48h window
-    return max(2, min(5, gap_days))
+    # Dynamic day range clamped strictly to 1-2 days to preserve Render bandwidth & Supabase quota
+    return max(1, min(2, gap_days))
 
 def fetch_sensor_telemetry(sensor: str, day_range: int) -> pd.DataFrame:
     """Fetches satellite telemetry for Indian bounding box."""
@@ -78,18 +78,18 @@ def fetch_sensor_telemetry(sensor: str, day_range: int) -> pd.DataFrame:
 
 def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[str, Any]:
     """
-    Executes a foreground-triggered polling cycle.
-    Rate-limited to 90 seconds unless forced.
+    Executes an optimized 30-minute cadence polling cycle.
+    Rate-limited to 30 minutes (1800s) to protect Render & Supabase network and database quotas.
     """
     global LAST_POLL_TIMESTAMP
     now = datetime.now(timezone.utc)
     
     if not force and LAST_POLL_TIMESTAMP is not None:
         elapsed = (now - LAST_POLL_TIMESTAMP).total_seconds()
-        if elapsed < 90:
+        if elapsed < 1800:
             return {
                 "status": "THROTTLED",
-                "message": f"Polar satellite overpass interval active ({int(elapsed)}s since last poll). Min cadence: 90s.",
+                "message": f"30-minute polling cadence active ({int(elapsed)}s elapsed since last poll). Next poll in {int(1800 - elapsed)}s.",
                 "inserted_count": 0,
                 "duplicated_count": 0
             }

@@ -180,8 +180,18 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
 
     event.classification = predicted_class
     event.classification_confidence = round(confidence, 4)
-    event.persistence_tier = evaluate_persistence_tier(int(features.get("historical_active_days_90d", 0)))
-    event.lifecycle_status = get_thermal_trend(session, str(event.id))
+    # Ensure lifecycle_status remains compliant with ACTIVE / COOLING / EXTINGUISHED lifecycle
+    now_utc = datetime.now(timezone.utc)
+    if event.latest_detected_utc:
+        lat_t = event.latest_detected_utc if event.latest_detected_utc.tzinfo else event.latest_detected_utc.replace(tzinfo=timezone.utc)
+        if (now_utc - lat_t).total_seconds() < 86400:
+            event.lifecycle_status = "ACTIVE"
+        elif (now_utc - lat_t).total_seconds() < 259200:
+            event.lifecycle_status = "COOLING"
+        else:
+            event.lifecycle_status = "EXTINGUISHED"
+    else:
+        event.lifecycle_status = "ACTIVE"
     
     # 3. Industrial Facility Association & Baseline
     facility = session.query(IndustrialFacility).filter(IndustrialFacility.id == event.associated_facility_id).first() if event.associated_facility_id else None

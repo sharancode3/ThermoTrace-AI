@@ -161,6 +161,10 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         {"min_lat": 23.55, "max_lat": 23.90, "min_lon": 86.00, "max_lon": 86.60, "name": "Bokaro-Dhanbad Complex"},
         # Angul-Talcher Industrial & Mining Basin (Odisha - NTPC Talcher STPS & JSPL)
         {"min_lat": 20.75, "max_lat": 21.25, "min_lon": 84.80, "max_lon": 85.35, "name": "Angul-Talcher Corridor"},
+        # Barbil-Joda-Noamundi-Koira Iron Ore Mining & Pellet Basin (Odisha / Jharkhand)
+        {"min_lat": 21.75, "max_lat": 22.35, "min_lon": 85.15, "max_lon": 85.65, "name": "Barbil-Joda-Noamundi Iron Ore Basin"},
+        # Patratu-Ramgarh Thermal & Industrial Belt (Jharkhand)
+        {"min_lat": 23.50, "max_lat": 23.80, "min_lon": 85.15, "max_lon": 85.65, "name": "Patratu-Ramgarh Industrial Corridor"},
         # Kalinganagar-Jajpur Heavy Steel Complex (Odisha)
         {"min_lat": 20.85, "max_lat": 21.10, "min_lon": 85.90, "max_lon": 86.15, "name": "Kalinganagar-Jajpur Steel Complex"},
         # Jharsuguda-Sambalpur Smelter & Power Belt (Odisha)
@@ -173,6 +177,10 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         {"min_lat": 21.75, "max_lat": 22.15, "min_lon": 83.20, "max_lon": 83.65, "name": "Raigarh-Tamnar Power Corridor"},
         # Bhilai-Durg-Raipur Steel & Industrial Corridor (Chhattisgarh)
         {"min_lat": 21.10, "max_lat": 21.40, "min_lon": 81.25, "max_lon": 81.75, "name": "Bhilai Steel Corridor"},
+        # Dalli-Rajhara Iron Ore Complex (Chhattisgarh - SAIL captive mine)
+        {"min_lat": 20.50, "max_lat": 20.70, "min_lon": 81.00, "max_lon": 81.20, "name": "Dalli-Rajhara Iron Ore Complex"},
+        # Bailadila Mega Iron Ore Mining Complex (Chhattisgarh - NMDC Kirandul/Bacheli)
+        {"min_lat": 18.55, "max_lat": 18.90, "min_lon": 81.15, "max_lon": 81.35, "name": "Bailadila Iron Ore Complex"},
         # Ballari-Toranagallu-Sandur Mega Steel Belt (Karnataka)
         {"min_lat": 15.05, "max_lat": 15.35, "min_lon": 76.50, "max_lon": 76.85, "name": "Vijayanagar Steel Complex"},
         # Manali-Ennore Petrochem & Port SIPCOT (Tamil Nadu)

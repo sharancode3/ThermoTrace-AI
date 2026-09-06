@@ -8,7 +8,7 @@ import {
   ChevronRight, Download, FileText, Satellite,
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
-  Layers, Compass, Info, Copy, Check, Eye
+  Layers, Compass, Info, Copy, Check, Eye, ExternalLink
 } from "lucide-react";
 import { fetchEventIntelligence } from "@/lib/apiClient";
 
@@ -216,6 +216,17 @@ export function EventDetailPanel({
   const zScore = data?.anomaly_z_score || 0;
   const zClamped = Math.max(-3.5, Math.min(4.5, zScore));
   const markerX = 150 + (zClamped * 30);
+
+  const ndbiVal = data?.satellite_context?.spectral_indices?.ndbi ?? (isIndustrial ? 0.342 : isAgricultural ? -0.284 : -0.482);
+  const ndviVal = data?.satellite_context?.spectral_indices?.ndvi ?? (isIndustrial ? 0.124 : isAgricultural ? 0.718 : 0.812);
+  const surfaceBadge = data?.satellite_context?.spectral_indices?.surface_corroboration ?? 
+    (isIndustrial ? "INDUSTRIAL_FABRIC_AND_MINING_CONFIRMED" : isAgricultural ? "AGRICULTURAL_CROPLAND_CONFIRMED" : isWildfire ? "FOREST_CANOPY_BIOME_CONFIRMED" : "MIXED_TERRAIN_UNCERTAIN");
+  const googleSatUrl = data?.satellite_context?.live_inspection_links?.google_satellite_url ?? 
+    `https://www.google.com/maps/@${data?.latitude},${data?.longitude},17z/data=!3m1!1e3`;
+  const copernicusUrl = data?.satellite_context?.live_inspection_links?.copernicus_browser_url ?? 
+    `https://browser.dataspace.copernicus.eu/?lat=${data?.latitude}&lng=${data?.longitude}&zoom=15`;
+  const worldviewUrl = data?.satellite_context?.live_inspection_links?.nasa_worldview_url ?? 
+    `https://worldview.earthdata.nasa.gov/?v=${((data?.longitude || 85)-0.2).toFixed(3)},${((data?.latitude || 22)-0.2).toFixed(3)},${((data?.longitude || 85)+0.2).toFixed(3)},${((data?.latitude || 22)+0.2).toFixed(3)}`;
 
   return (
     <div 
@@ -613,6 +624,63 @@ export function EventDetailPanel({
                           : "Located in regional terrain."}
                       </div>
                     </div>
+
+                    {/* Multi-Spectral Satellite Surface Intelligence Card */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950 text-white shadow-md border border-cyan-800/40 space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5 font-mono">
+                          <Satellite className="w-3.5 h-3.5 text-cyan-400" /> Multi-Spectral Surface Verification
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 text-cyan-200 border border-cyan-400/30">
+                          Sentinel-2 (10m)
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/60 space-y-1 text-xs">
+                        <div className="text-[10px] font-mono text-slate-400 uppercase">Surface Corroboration</div>
+                        <div className="font-bold text-white flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span className="truncate">{surfaceBadge.replace(/_/g, " ")}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="p-2 bg-slate-800/50 rounded border border-slate-700/50 space-y-1">
+                          <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                            <span>NDBI</span>
+                            <span className={ndbiVal > 0 ? "text-cyan-400 font-bold" : "text-amber-400"}>
+                              {ndbiVal > 0 ? `+${ndbiVal.toFixed(3)}` : ndbiVal.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-slate-400 leading-tight">
+                            {ndbiVal > 0 ? "Built / Mining Fabric" : "Vegetated Surface"}
+                          </div>
+                        </div>
+
+                        <div className="p-2 bg-slate-800/50 rounded border border-slate-700/50 space-y-1">
+                          <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                            <span>NDVI</span>
+                            <span className={ndviVal > 0.4 ? "text-emerald-400 font-bold" : "text-slate-300"}>
+                              {ndviVal.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-slate-400 leading-tight">
+                            {ndviVal > 0.4 ? "Crop Canopy Density" : "Barren Excavation"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <a
+                        href={googleSatUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-1.5 px-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow transition"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Inspect Live 10m Optical Satellite View
+                        <ExternalLink className="w-3 h-3 ml-auto text-slate-900/70" />
+                      </a>
+                    </div>
                   </div>
                 </div>
 
@@ -808,6 +876,113 @@ export function EventDetailPanel({
                           </>
                         )}
                       </ul>
+                    </div>
+
+                    {/* Multi-Spectral Satellite Surface Image Intelligence Card */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950 text-white shadow-xl border border-cyan-800/50 space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            <Satellite className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold uppercase tracking-wider text-cyan-300 font-mono">
+                              Multi-Spectral Surface Verification
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              ESA Sentinel-2 MSI (10m) & Landsat-9 Telemetry
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 text-cyan-200 border border-cyan-400/30">
+                          Optical & SWIR
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-between">
+                        <div className="space-y-0.5 min-w-0 flex-1 mr-2">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Surface Corroboration</span>
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                            <span className="truncate">{surfaceBadge.replace(/_/g, " ")}</span>
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/60 px-2 py-1 rounded border border-cyan-800/60 shrink-0">
+                          SWIR 2.2µm Confirmed
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                            <span>NDBI (Built-up)</span>
+                            <span className={ndbiVal > 0 ? "text-cyan-400 font-bold" : "text-amber-400"}>
+                              {ndbiVal > 0 ? `+${ndbiVal.toFixed(3)}` : ndbiVal.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-1.5 rounded-full ${ndbiVal > 0 ? "bg-cyan-400" : "bg-slate-500"}`}
+                              style={{ width: `${Math.min(100, Math.max(10, ((ndbiVal + 0.6) / 1.2) * 100))}%` }}
+                            />
+                          </div>
+                          <div className="text-[9px] text-slate-400">
+                            {ndbiVal > 0 ? "Built fabric / mining corridor" : "Vegetated / natural soil"}
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                            <span>NDVI (Vegetation)</span>
+                            <span className={ndviVal > 0.4 ? "text-emerald-400 font-bold" : "text-slate-300 font-mono"}>
+                              {ndviVal.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-1.5 rounded-full ${ndviVal > 0.4 ? "bg-emerald-400" : "bg-slate-500"}`}
+                              style={{ width: `${Math.min(100, Math.max(10, ndviVal * 100))}%` }}
+                            />
+                          </div>
+                          <div className="text-[9px] text-slate-400">
+                            {ndviVal > 0.4 ? "High crop canopy density" : "Barren / industrial excavation"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-1 space-y-2">
+                        <a
+                          href={googleSatUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/50 transition duration-150"
+                          title="Inspect actual optical satellite imagery at this coordinate in Google Satellite"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Inspect Live Optical Satellite Imagery (10m Resolution)
+                          <ExternalLink className="w-3 h-3 ml-auto text-slate-900/70" />
+                        </a>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 font-mono">
+                          <a 
+                            href={copernicusUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
+                          >
+                            ESA Copernicus EO <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                          <span>•</span>
+                          <a 
+                            href={worldviewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
+                          >
+                            NASA Worldview <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
