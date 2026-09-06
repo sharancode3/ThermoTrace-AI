@@ -57,7 +57,7 @@ async def firms_periodic_poller_daemon():
         # Sleep for configured interval (default: 15 minutes = 900 seconds)
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
-ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "true").lower() in ("true", "1", "yes")
+ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "false").lower() in ("true", "1", "yes")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

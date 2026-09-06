@@ -13,14 +13,24 @@ export function useFirmsPoller(onNewData?: () => void) {
 
   const executePoll = async (force: boolean = false) => {
     const now = Date.now();
-    // Guard: Prevent polling more than once per 5 minutes (300,000 ms) unless explicitly forced
-    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 300000) {
+    // Guard: Prevent polling more than once per 15 minutes (900,000 ms) across all tabs unless explicitly forced
+    if (typeof window !== "undefined") {
+      const storedLast = window.localStorage.getItem("thermo_last_firms_poll_time");
+      if (!force && storedLast && (now - parseInt(storedLast, 10)) < 900000) {
+        return;
+      }
+    }
+
+    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 900000) {
       return;
     }
 
     if (isPollingRef.current) return;
     isPollingRef.current = true;
     lastPollTimeRef.current = now;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("thermo_last_firms_poll_time", String(now));
+    }
 
     try {
       const resp = await fetch(`/api/v1/ingest/poll${force ? '?force=true' : ''}`, {
@@ -45,15 +55,15 @@ export function useFirmsPoller(onNewData?: () => void) {
   };
 
   useEffect(() => {
-    // 1. Initial check on mount
+    // 1. Initial check on mount respects 15-min cooldown
     executePoll();
 
-    // 2. Strict 5-minute foreground interval
+    // 2. Strict 15-minute foreground interval
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         executePoll();
       }
-    }, 300000);
+    }, 900000);
 
     return () => {
       clearInterval(interval);

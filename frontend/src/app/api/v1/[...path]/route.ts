@@ -18,13 +18,14 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
       }
     });
 
+    const isGet = request.method === "GET" || request.method === "HEAD";
     const init: RequestInit = {
       method: request.method,
       headers,
-      cache: "no-store",
+      cache: isGet ? "default" : "no-store",
     };
 
-    if (request.method !== "GET" && request.method !== "HEAD") {
+    if (!isGet) {
       init.body = await request.arrayBuffer();
     }
 
@@ -35,6 +36,11 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
     backendRes.headers.forEach((val, key) => {
       responseHeaders.set(key, val);
     });
+
+    if (isGet && backendRes.ok) {
+      // Allow browser and edge proxy to cache responses for 2 minutes to conserve egress
+      responseHeaders.set("Cache-Control", "public, max-age=120, stale-while-revalidate=300");
+    }
 
     return new NextResponse(body, {
       status: backendRes.status,
