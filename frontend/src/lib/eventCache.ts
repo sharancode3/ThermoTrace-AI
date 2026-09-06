@@ -126,11 +126,46 @@ export async function getAllCachedFeatures(): Promise<GeoFeature[]> {
   });
 }
 
+export async function deleteFeaturesFromCache(eventIds: string[]): Promise<void> {
+  if (!eventIds || eventIds.length === 0) return;
+  eventIds.forEach((id) => memoryStore.delete(id));
+
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const tx = db.transaction(EVENTS_STORE, "readwrite");
+    const store = tx.objectStore(EVENTS_STORE);
+    eventIds.forEach((id) => store.delete(id));
+  } catch (err) {
+    console.warn("[DeltaCache] Failed to delete features from IndexedDB:", err);
+  }
+}
+
+export async function pruneStaleFeatures(retentionDays: number = 30): Promise<number> {
+  const cutoff = Date.now() - retentionDays * 24 * 3600 * 1000;
+  const idsToDelete: string[] = [];
+
+  memoryStore.forEach((feature, id) => {
+    const ts = feature.properties?.latest_detected_utc;
+    if (ts && new Date(ts).getTime() < cutoff) {
+      idsToDelete.push(id);
+    }
+  });
+
+  if (idsToDelete.length > 0) {
+    await deleteFeaturesFromCache(idsToDelete);
+  }
+
+  return idsToDelete.length;
+}
+
 export async function saveFeaturesToCache(features: GeoFeature[]): Promise<void> {
   if (!features || features.length === 0) return;
 
   let newestTs = memoryLastSyncUtc;
 
+  // 1. Update / Insert features in memory store
   features.forEach((f) => {
     const id = f.properties?.event_id || (f as any).id || `${f.geometry.coordinates[0]}_${f.geometry.coordinates[1]}`;
     memoryStore.set(id, f);
@@ -156,6 +191,9 @@ export async function saveFeaturesToCache(features: GeoFeature[]): Promise<void>
   } catch (err) {
     console.warn("[DeltaCache] Failed to save features to IndexedDB:", err);
   }
+
+  // 2. Automatically prune old events outside the 30-day active application retention window
+  void pruneStaleFeatures(30);
 }
 
 export async function clearEventCache(): Promise<void> {

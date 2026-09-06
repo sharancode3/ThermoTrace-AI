@@ -441,8 +441,8 @@ export function OverlayManager() {
                 {analyticsData?.pan_india_breakdown?.map((row: any) => {
                   const badgeStyles: Record<string, { bg: string; text: string; bar: string }> = {
                     AGRI_BURN: { bg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800", text: "AGRI_BURN", bar: "bg-emerald-500" },
-                    IND_ROUTINE: { bg: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800", text: "IND_ROUTINE", bar: "bg-blue-500" },
-                    IND_FLARE: { bg: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", text: "IND_FLARE", bar: "bg-amber-500" },
+                    IND_ROUTINE: { bg: "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700", text: "IND_ROUTINE", bar: "bg-yellow-400" },
+                    IND_FLARE: { bg: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800", text: "IND_FLARE", bar: "bg-orange-500" },
                     IND_FIRE: { bg: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800", text: "IND_FIRE", bar: "bg-red-600" },
                     WILDFIRE: { bg: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800", text: "WILDFIRE", bar: "bg-teal-500" },
                     OTHER_UNCERTAIN: { bg: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700", text: "OTHER_UNCERTAIN", bar: "bg-slate-400" },
@@ -591,8 +591,8 @@ export function OverlayManager() {
                       {st.classifications?.map((c: any) => {
                         const badgeStyles: Record<string, { bg: string; bar: string }> = {
                           AGRI_BURN: { bg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800", bar: "bg-emerald-500" },
-                          IND_ROUTINE: { bg: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800", bar: "bg-blue-500" },
-                          IND_FLARE: { bg: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", bar: "bg-amber-500" },
+                          IND_ROUTINE: { bg: "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700", bar: "bg-yellow-400" },
+                          IND_FLARE: { bg: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800", bar: "bg-orange-500" },
                           IND_FIRE: { bg: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800", bar: "bg-red-600" },
                           WILDFIRE: { bg: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800", bar: "bg-teal-500" },
                           OTHER_UNCERTAIN: { bg: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700", bar: "bg-slate-400" },

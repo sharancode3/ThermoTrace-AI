@@ -222,8 +222,23 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
         )
         for ev in recent_events:
             process_event_intelligence(session, ev.event_id)
-    except Exception as e:
-        pass
+    # Database Optimization: Maintain only data visible & necessary in the application
+    try:
+        session.execute(text("""
+            DELETE FROM thermal_observations
+            WHERE id NOT IN (SELECT observation_id FROM event_observations)
+              AND observation_timestamp_utc < NOW() - INTERVAL '14 days';
+        """))
+        session.execute(text("""
+            DELETE FROM ingestion_jobs
+            WHERE id NOT IN (
+                SELECT id FROM ingestion_jobs ORDER BY executed_at DESC LIMIT 50
+            );
+        """))
+        session.commit()
+    except Exception as cleanup_err:
+        session.rollback()
+        print(f"[CLEANUP NOTICE] {cleanup_err}")
 
     return {
         "status": "SUCCESS",

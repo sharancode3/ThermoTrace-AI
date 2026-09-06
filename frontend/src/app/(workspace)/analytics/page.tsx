@@ -201,21 +201,21 @@ export default function AnalyticsPage() {
         };
       case "IND_FLARE":
         return { 
-          badgeBg: "bg-cyan-50 text-cyan-800 border-cyan-200", 
-          bar: "bg-cyan-500",
-          dot: "bg-cyan-500"
+          badgeBg: "bg-orange-50 text-orange-800 border-orange-200", 
+          bar: "bg-orange-500",
+          dot: "bg-orange-500"
         };
       case "IND_ROUTINE":
         return { 
-          badgeBg: "bg-blue-50 text-blue-800 border-blue-200", 
-          bar: "bg-blue-500",
-          dot: "bg-blue-500"
+          badgeBg: "bg-yellow-50 text-yellow-800 border-yellow-300", 
+          bar: "bg-yellow-400",
+          dot: "bg-yellow-400"
         };
       case "IND_FIRE":
         return { 
-          badgeBg: "bg-rose-50 text-rose-800 border-rose-200", 
-          bar: "bg-rose-500",
-          dot: "bg-rose-500"
+          badgeBg: "bg-red-50 text-red-800 border-red-200", 
+          bar: "bg-red-600",
+          dot: "bg-red-600"
         };
       default:
         return { 

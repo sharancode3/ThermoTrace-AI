@@ -134,11 +134,19 @@ export function EventDetailPanel({
   if (isIndustrial) {
     sourceCategory = "INDUSTRIAL SOURCE";
     SourceIcon = Factory;
-    sourceBadgeStyle = "bg-blue-50 text-blue-800 border-blue-200";
-    sourcePillStyle = "bg-blue-600 text-white border-blue-700";
-    if (data?.classification === "IND_FLARE") sourceSubtitle = "Industrial Gas Flaring Emission";
-    else if (data?.classification === "IND_FIRE") sourceSubtitle = "Critical Industrial Fire Incident";
-    else sourceSubtitle = "Operational Facility High-Heat Process";
+    if (data?.classification === "IND_FIRE" || data?.anomaly_tier === "CRITICAL") {
+      sourceBadgeStyle = "bg-red-50 text-red-800 border-red-200";
+      sourcePillStyle = "bg-red-600 text-white border-red-700";
+      sourceSubtitle = "Critical Industrial Fire Incident";
+    } else if (data?.classification === "IND_FLARE" || data?.anomaly_tier === "ABNORMAL" || data?.anomaly_tier === "ELEVATED") {
+      sourceBadgeStyle = "bg-orange-50 text-orange-800 border-orange-200";
+      sourcePillStyle = "bg-orange-600 text-white border-orange-700";
+      sourceSubtitle = "Industrial Gas Flaring Emission";
+    } else {
+      sourceBadgeStyle = "bg-yellow-50 text-yellow-900 border-yellow-300";
+      sourcePillStyle = "bg-yellow-400 text-slate-950 font-bold border-yellow-500";
+      sourceSubtitle = "Operational Facility High-Heat Process";
+    }
   } else if (isAgricultural) {
     sourceCategory = "NON-INDUSTRIAL (AGRICULTURE)";
     SourceIcon = Wheat;
@@ -161,7 +169,7 @@ export function EventDetailPanel({
 
   let anomalyHeadline = "NORMAL BEHAVIOR";
   let anomalyDesc = "Thermal radiance matches expected baseline operations.";
-  let anomalyStyle = "bg-emerald-50 border-emerald-200 text-emerald-800";
+  let anomalyStyle = "bg-yellow-50/70 border-yellow-300 text-yellow-900";
   let AnomalyIcon = CheckCircle2;
 
   if (isInsufficient) {

@@ -6,9 +6,11 @@ import {
   saveFeaturesToCache,
   filterCachedFeatures,
   clearEventCache,
+  deleteFeaturesFromCache,
+  pruneStaleFeatures,
 } from "./eventCache";
 
-export { clearEventCache };
+export { clearEventCache, deleteFeaturesFromCache, pruneStaleFeatures };
 
 const API_BASE_URL = "/api/v1";
 

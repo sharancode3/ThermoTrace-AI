@@ -901,18 +901,22 @@ export default function MapComponent({
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pt-1">
                 2. Industry 3-Color Critical Levels
               </div>
-              <div className="space-y-1 text-[11px]">
+              <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-red-600 border border-red-400 shrink-0" />
-                  <span className="text-slate-300 font-medium">Red: <span className="text-slate-400 font-normal">Emergency Fire / Critical Anomaly (FRP &ge; 50MW)</span></span>
+                  <span className="w-3 h-3 rounded-full bg-red-600 border border-red-400 shrink-0 shadow-xs shadow-red-500/50" />
+                  <span className="text-slate-300 font-medium">Red: <span className="text-slate-400 font-normal">Emergency Fire / Critical Anomaly (Critical)</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-400 shrink-0" />
-                  <span className="text-slate-300 font-medium">Amber: <span className="text-slate-400 font-normal">Elevated Flare / Abnormal Radiance</span></span>
+                  <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-400 shrink-0 shadow-xs shadow-orange-500/50" />
+                  <span className="text-slate-300 font-medium">Orange: <span className="text-slate-400 font-normal">Elevated Flare / Abnormal Radiance (Abnormal)</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-400 border border-amber-300 shrink-0" />
-                  <span className="text-slate-300 font-medium">Yellow: <span className="text-slate-400 font-normal">Nominal Routine Industrial Process</span></span>
+                  <span className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-300 shrink-0 shadow-xs shadow-yellow-400/50" />
+                  <span className="text-slate-300 font-medium">Yellow: <span className="text-slate-400 font-normal">Nominal Routine Industrial Process (Normal)</span></span>
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
+                  <span className="w-3 h-3 rounded-full bg-yellow-300/40 border border-dashed border-yellow-400 shrink-0" />
+                  <span className="text-slate-300 font-medium">Faded: <span className="text-slate-400 font-normal">Cooled / Extinguished Event (Faded with respective color)</span></span>
                 </div>
               </div>
             </div>
