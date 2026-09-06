@@ -527,7 +527,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500 font-medium">FIRMS Ingestion Poller:</span>
-                  <span className="text-orange-700 font-mono font-semibold">Every 10 Minutes Autonomous</span>
+                  <span className="text-orange-700 font-mono font-semibold">Every 30 Minutes Autonomous (Storage-Optimized)</span>
                 </div>
               </div>
 

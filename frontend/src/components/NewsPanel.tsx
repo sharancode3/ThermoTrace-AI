@@ -282,7 +282,7 @@ export function NewsPanel({
           <div>
             <div className="flex items-center gap-2">
               <span>Thermo News Feed</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-mono font-bold tracking-tight">5M SYNC</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-mono font-bold tracking-tight">30M CADENCE</span>
             </div>
             <div className="text-[11px] font-normal text-slate-500 flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -297,7 +297,7 @@ export function NewsPanel({
               </span>
               <span>·</span>
               <span className="font-mono text-slate-600 font-medium">
-                {lastPolledAt ? `Polled ${formatRelativeTime(lastPolledAt)}` : "5m Polling"}
+                {lastPolledAt ? `Polled ${formatRelativeTime(lastPolledAt)}` : "30m Cadence"}
               </span>
             </div>
           </div>
@@ -321,18 +321,23 @@ export function NewsPanel({
         </div>
       </div>
 
-      {/* 5-Minute NASA FIRMS Automated Polling Status Bar */}
-      <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 border-b border-orange-100 px-6 py-2 flex items-center justify-between text-xs shrink-0">
-        <div className="flex items-center gap-2">
-          <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
-          <span className="text-slate-600 font-medium">Auto-Sync (every 5m):</span>
-          <span className="font-bold text-orange-800 font-mono">
-            {recordsPulled !== null ? `${recordsPulled} records pulled` : "Active"}
+      {/* 30-Minute NASA FIRMS Automated Polling Status Bar */}
+      <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 border-b border-orange-100 px-6 py-2 flex flex-col gap-1 text-xs shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+            <span className="text-slate-600 font-medium">Auto-Sync (30m cadence):</span>
+            <span className="font-bold text-orange-800 font-mono">
+              {recordsPulled !== null ? `${recordsPulled} records pulled` : "Active"}
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-500 font-mono">
+            {lastPolledAt ? formatRelativeTime(lastPolledAt) : "30m Loop"}
           </span>
         </div>
-        <span className="text-[11px] text-slate-500 font-mono">
-          {lastPolledAt ? formatRelativeTime(lastPolledAt) : "Running"}
-        </span>
+        <p className="text-[10px] text-amber-900/90 leading-tight">
+          Notice: Due to live deployment and cloud storage constraints, NASA FIRMS satellite telemetry is refreshed on an optimized 30-minute cadence.
+        </p>
       </div>
 
       <div className="p-4 border-b border-slate-100 bg-white space-y-3 shrink-0">

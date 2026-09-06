@@ -742,6 +742,14 @@ export default function MapComponent({
               </div>
             </div>
 
+            {/* 30-Minute Storage-Optimized Telemetry Cadence Notice */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-tight">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <span>
+                <strong className="font-semibold text-amber-200">Notice:</strong> Due to live deployment and cloud storage constraints, NASA FIRMS satellite telemetry is refreshed on an optimized 30-minute cadence.
+              </span>
+            </div>
+
             {/* View Mode + Filters + Layer Checkboxes */}
             <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-800 text-xs">
               {/* Priority vs All Hotspots Toggle */}

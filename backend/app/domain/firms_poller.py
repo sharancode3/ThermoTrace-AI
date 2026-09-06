@@ -25,7 +25,9 @@ from app.domain.clustering import run_st_dbscan
 from app.domain.anomaly import process_event_intelligence
 from app.domain.sovereign_geofencing import is_within_sovereign_india
 
-FIRMS_API_KEY = os.getenv("FIRMS_MAP_KEY", "5ee48ea9900661577c1dc26dfcc70550").strip('"')
+FIRMS_API_KEY = (os.getenv("FIRMS_MAP_KEY") or "").strip().strip('"')
+if not FIRMS_API_KEY:
+    FIRMS_API_KEY = "5ee48ea9900661577c1dc26dfcc70550"
 INDIA_BBOX = "68,6,97,37"
 
 SUPPORTED_SENSORS = [

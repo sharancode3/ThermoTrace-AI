@@ -638,19 +638,24 @@ export function OverlayManager() {
       {overlay === "news" && (
         <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
           {/* Live Ingestion Cadence Notice with Dynamic Last Updated Timestamp */}
-          <div className="flex items-center justify-between px-2.5 py-1.5 bg-orange-50/90 border border-orange-200 rounded-lg text-[10px] text-orange-900 font-medium shadow-xs">
-            <div className="flex items-center gap-1.5 truncate">
-              <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
-              <span className="font-semibold text-slate-900">NASA FIRMS Telemetry:</span>
-              <span className="text-orange-700 font-mono">
-                {firmsStatus?.last_successful_firms_fetch_utc
-                  ? `Polled ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)} (${firmsStatus.records_inserted ?? 0} new)`
-                  : "Polled Just now (Active)"}
+          <div className="flex flex-col gap-1.5 px-2.5 py-2 bg-orange-50/90 border border-orange-200 rounded-lg text-[10px] text-orange-900 font-medium shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 truncate">
+                <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+                <span className="font-semibold text-slate-900">NASA FIRMS Telemetry:</span>
+                <span className="text-orange-700 font-mono">
+                  {firmsStatus?.last_successful_firms_fetch_utc
+                    ? `Polled ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)} (${firmsStatus.records_inserted ?? 0} new)`
+                    : "Polled Just now (Active)"}
+                </span>
+              </div>
+              <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
+                30M CADENCE
               </span>
             </div>
-            <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
-              AUTONOMOUS 5M SYNC
-            </span>
+            <p className="text-[10px] text-orange-800/90 leading-tight border-t border-orange-200/60 pt-1">
+              Notice: Due to live deployment and cloud storage constraints, NASA FIRMS satellite telemetry is refreshed on an optimized 30-minute cadence.
+            </p>
           </div>
 
           <div className="relative">

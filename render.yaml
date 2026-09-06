@@ -9,11 +9,11 @@ services:
       - key: PORT
         value: 8000
       - key: ENABLE_FIRMS_POLLING
-        value: "false"
+        value: "true"
       - key: FIRMS_POLL_INTERVAL_MINUTES
-        value: "15"
+        value: "30"
       - key: FIRMS_MAP_KEY
-        sync: false
+        value: "5ee48ea9900661577c1dc26dfcc70550"
       - key: DATABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_URL
