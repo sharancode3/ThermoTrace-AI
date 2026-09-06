@@ -654,7 +654,7 @@ export function OverlayManager() {
               </span>
             </div>
             <p className="text-[10px] text-orange-800/90 leading-tight border-t border-orange-200/60 pt-1">
-              Notice: Due to live deployment and cloud storage constraints, NASA FIRMS satellite telemetry is refreshed on an optimized 30-minute cadence.
+              Notice: NASA FIRMS satellite telemetry is polled on an optimized 30-minute cadence. A curated prototype dataset is active for live deployment & cloud storage constraints; the full nationwide telemetry stream will be continuously ingested during the hackathon evaluation.
             </p>
           </div>
 

@@ -772,7 +772,7 @@ export default function MapComponent({
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-tight">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
               <span>
-                <strong className="font-semibold text-amber-200">Notice:</strong> Due to live deployment and cloud storage constraints, NASA FIRMS satellite telemetry is refreshed on an optimized 30-minute cadence.
+                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry is polled on an optimized 30-minute cadence. A curated prototype dataset is active for live deployment & cloud storage constraints; the full nationwide telemetry stream will be continuously ingested during the hackathon evaluation.
               </span>
             </div>
 

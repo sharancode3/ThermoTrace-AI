@@ -141,45 +141,38 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
             
             # Physical Domain Gating & Facility Authority
+            # Physical Domain Gating & Facility Authority
             dist_fac = float(features.get("dist_to_facility", 99999.0))
             is_ind_zone = int(features.get("is_industrial_zone", 0))
-            has_facility = bool(event.associated_facility_id) or (dist_fac <= 4000.0) or (is_ind_zone == 1)
+            has_facility = bool(event.associated_facility_id) or (dist_fac <= 5000.0) or (is_ind_zone == 1)
             peak_frp = float(event.peak_frp_mw or 0.0)
             max_k = float(event.max_brightness_k or 300.0)
 
             if has_facility:
                 # 1. Direct Industrial Facility Authority:
-                # Any thermal signature on or adjacent to an industrial plant/refinery is strictly INDUSTRIAL.
-                # Thermal emissions inside a refinery or plant cannot be AGRI_BURN or OTHER_UNCERTAIN.
+                # Thermal emissions on or within 5km of an industrial complex or corridor are strictly INDUSTRIAL.
+                # Industrial operations cannot be WILDFIRE or AGRI_BURN.
                 if peak_frp >= 50.0 or max_k >= 355.0 or predicted_class == "IND_FIRE":
                     predicted_class = "IND_FIRE"
                 elif peak_frp >= 15.0 or max_k >= 335.0 or predicted_class == "IND_FLARE":
                     predicted_class = "IND_FLARE"
                 else:
                     predicted_class = "IND_ROUTINE"
-                confidence = max(confidence, 0.90)
+                confidence = max(confidence, 0.92)
             else:
                 # 2. Non-Facility Rural / Forest Spatial Resolution:
-                # Pure ML inference with landcover gating:
                 pct_crop = float(features.get("pct_cropland", 0.0))
                 pct_for = float(features.get("pct_forest", 0.0))
                 
-                if pct_for >= 0.45 or predicted_class == "WILDFIRE":
+                if pct_for >= 0.70 or (predicted_class == "WILDFIRE" and pct_for >= 0.50):
                     predicted_class = "WILDFIRE"
-                    confidence = max(confidence, 0.85)
-                elif predicted_class == "AGRI_BURN" and pct_crop >= 0.35:
+                    confidence = max(confidence, 0.88)
+                elif pct_crop >= 0.70 or (predicted_class == "AGRI_BURN" and pct_crop >= 0.40):
                     predicted_class = "AGRI_BURN"
-                    confidence = max(confidence, 0.86)
-                elif predicted_class == "OTHER_UNCERTAIN" or confidence < 0.55 or entropy > 1.25:
+                    confidence = max(confidence, 0.90)
+                else:
                     predicted_class = "OTHER_UNCERTAIN"
-                elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
-                    # Unassociated remote hotspot with no industrial facility within 4km
-                    if pct_crop >= 0.50:
-                        predicted_class = "AGRI_BURN"
-                    elif pct_for >= 0.35:
-                        predicted_class = "WILDFIRE"
-                    else:
-                        predicted_class = "OTHER_UNCERTAIN"
+                    confidence = max(confidence, 0.70)
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
             predicted_class = "OTHER_UNCERTAIN"

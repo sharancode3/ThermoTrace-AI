@@ -13,7 +13,7 @@ def _run_sync_poller_cycle():
     """Worker executed in background worker thread to prevent event loop blocking."""
     try:
         session = SessionLocal()
-        print("[FIRMS DAEMON] Executing 15-minute automated NASA FIRMS multi-sensor polling & ML hardening...")
+        print("[FIRMS DAEMON] Executing 30-minute automated NASA FIRMS multi-sensor polling & ML hardening...")
         res = poll_firms_foreground_cycle(session, force=False)
         inserted = res.get("inserted_count", 0)
         print(f"[FIRMS DAEMON] Telemetry check completed. New observations inserted: {inserted}")
