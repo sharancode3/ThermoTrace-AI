@@ -1,3 +1,15 @@
+import {
+  getAllCachedFeatures,
+  getLastSyncUtc,
+  getLastSyncTime,
+  setLastSyncMeta,
+  saveFeaturesToCache,
+  filterCachedFeatures,
+  clearEventCache,
+} from "./eventCache";
+
+export { clearEventCache };
+
 const API_BASE_URL = "/api/v1";
 
 export type Viewport = {
@@ -150,15 +162,57 @@ export async function fetchHealth() {
   return get<any>("/health");
 }
 
-export function fetchGisEvents(
+export async function fetchGisEvents(
   viewport: Viewport = DEFAULT_VIEWPORT,
-  filters: EventFilters = {}
-) {
-  return get<GeoCollection>("/gis/events", {
-    show_all: true,
-    ...viewport,
-    ...filters,
-  });
+  filters: EventFilters = {},
+  forceRefresh: boolean = false
+): Promise<GeoCollection> {
+  const now = Date.now();
+  const cachedFeatures = await getAllCachedFeatures();
+  const lastSyncUtc = await getLastSyncUtc();
+  const lastSyncTime = await getLastSyncTime();
+
+  // 1. If we already have cached features and synced recently (within 45s),
+  // return filtered cached features directly with 0 network transfer!
+  if (!forceRefresh && cachedFeatures.length > 0 && (now - lastSyncTime) < 45000) {
+    return filterCachedFeatures(cachedFeatures, viewport, filters);
+  }
+
+  // 2. Incremental Delta Sync: If we already have a baseline, only request events detected AFTER lastSyncUtc
+  try {
+    const params: Record<string, any> = {
+      show_all: true,
+      ...viewport,
+      ...filters,
+    };
+
+    if (lastSyncUtc && !forceRefresh) {
+      params.since_utc = lastSyncUtc;
+    }
+
+    const resp = await get<GeoCollection>("/gis/events", params, forceRefresh);
+
+    if (resp.features && resp.features.length > 0) {
+      // Merge new delta events into persistent IndexedDB store
+      await saveFeaturesToCache(resp.features);
+    } else {
+      // No new events detected on server: update sync timestamp
+      await setLastSyncMeta(null, now);
+    }
+
+    const updatedFeatures = await getAllCachedFeatures();
+    return filterCachedFeatures(
+      updatedFeatures.length > 0 ? updatedFeatures : (resp.features || []),
+      viewport,
+      filters
+    );
+  } catch (err) {
+    console.warn("[DeltaSync] Background sync failed, serving cached dataset:", err);
+    if (cachedFeatures.length > 0) {
+      return filterCachedFeatures(cachedFeatures, viewport, filters);
+    }
+    throw err;
+  }
 }
 
 export function fetchGisFacilities(viewport: Viewport = DEFAULT_VIEWPORT) {

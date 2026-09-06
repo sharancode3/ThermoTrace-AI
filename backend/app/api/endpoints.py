@@ -54,6 +54,7 @@ def get_gis_events(
     zoom: float = Query(5.0, ge=0, le=22),
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
+    since_utc: Optional[datetime] = Query(None, description="Incremental delta sync: only return events detected after this UTC timestamp"),
     classification: Optional[str] = None,
     anomaly_tier: Optional[str] = None,
     include_closed: bool = Query(False),
@@ -80,7 +81,9 @@ def get_gis_events(
         ThermalEvent.latitude <= north,
     )
 
-    if hours is not None:
+    if since_utc is not None:
+        query = query.filter(ThermalEvent.latest_detected_utc > since_utc)
+    elif hours is not None:
         now_utc = datetime.now(timezone.utc)
         cutoff = now_utc - timedelta(hours=hours)
         
