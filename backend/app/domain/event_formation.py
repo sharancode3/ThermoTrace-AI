@@ -77,7 +77,7 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
 
         if fac_res and fac_res[5] is not None:
             dist_to_fac = float(fac_res[5])
-            if dist_to_fac <= 3500.0:  # Within 3.5km industrial boundary
+            if dist_to_fac <= 5000.0:  # Within 5.0km industrial boundary
                 associated_fac_id = fac_res[0]
                 primary_land_use = fac_res[2] or "Industrial"
             else:
