@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: thermotrace-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ENABLE_FIRMS_POLLING
+        value: "true"
+      - key: FIRMS_POLL_INTERVAL_MINUTES
+        value: "30"
+      - key: FIRMS_MAP_KEY
+        value: "5ee48ea9900661577c1dc26dfcc70550"
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

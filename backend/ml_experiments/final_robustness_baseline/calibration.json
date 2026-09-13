@@ -1,0 +1,62 @@
+{
+  "TEST_A_FACILITY_HOLDOUT": {
+    "brier_score": 0.03,
+    "brier_score_95ci": [
+      0.0172,
+      0.0517
+    ],
+    "ece_pct": 9.85,
+    "ece_pct_95ci": [
+      8.55,
+      11.41
+    ]
+  },
+  "TEST_B_SPATIAL_HOLDOUT": {
+    "brier_score": 0.1725,
+    "brier_score_95ci": [
+      0.0989,
+      0.2485
+    ],
+    "ece_pct": 13.54,
+    "ece_pct_95ci": [
+      9.85,
+      17.25
+    ]
+  },
+  "TEST_C_TEMPORAL_HOLDOUT": {
+    "brier_score": 0.4978,
+    "brier_score_95ci": [
+      0.4282,
+      0.5713
+    ],
+    "ece_pct": 23.52,
+    "ece_pct_95ci": [
+      19.64,
+      27.66
+    ]
+  },
+  "TEST_D_HARD_NEGATIVES": {
+    "brier_score": 0.3088,
+    "brier_score_95ci": [
+      0.2618,
+      0.3629
+    ],
+    "ece_pct": 13.16,
+    "ece_pct_95ci": [
+      10.67,
+      18.13
+    ]
+  },
+  "TEST_E_OOD_ADVERSARIAL": {
+    "brier_score": 1.0084,
+    "brier_score_95ci": [
+      0.8794,
+      1.1277
+    ],
+    "ece_pct": 47.9,
+    "ece_pct_95ci": [
+      41.28,
+      54.35
+    ]
+  }
+}

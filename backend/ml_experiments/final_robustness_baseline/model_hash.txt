@@ -1,0 +1,4 @@
+model_path: backend/data/models/thermo_xgb_v1.1.0.joblib
+model_sha256: 75b346698c656152f37abcb5101c401d896fad5771f20a078d22b90847a6c603
+classes_path: backend/data/models/classes.npy
+classes_sha256: 007df28c07e30961542f0a75352effe73380803b26fe3070882bbbc4c04e2279

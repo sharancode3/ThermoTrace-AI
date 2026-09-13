@@ -137,25 +137,16 @@ def train_calibrate_and_deploy():
     print(f"2. Platt/Sigmoid Scaling:  Macro F1 = {f1_sigmoid:.4f} | Log Loss = {loss_sigmoid:.4f} | ECE = {ece_sigmoid*100:.2f}% | MCE = {mce_sigmoid*100:.2f}%")
     print(f"3. Isotonic Regression:    Macro F1 = {f1_isotonic:.4f} | Log Loss = {loss_isotonic:.4f} | ECE = {ece_isotonic*100:.2f}% | MCE = {mce_isotonic*100:.2f}%")
 
-    # Select Champion Model (Lowest ECE and Log Loss)
-    if ece_sigmoid <= ece_isotonic:
-        champion_model = cal_sigmoid
-        champion_method = "CalibratedClassifierCV_Sigmoid"
-        champion_ece = ece_sigmoid
-        champion_loss = loss_sigmoid
-        champion_f1 = f1_sigmoid
-        champion_probs = probs_sigmoid
-        champion_bins = bins_sigmoid
-    else:
-        champion_model = cal_isotonic
-        champion_method = "CalibratedClassifierCV_Isotonic"
-        champion_ece = ece_isotonic
-        champion_loss = loss_isotonic
-        champion_f1 = f1_isotonic
-        champion_probs = probs_isotonic
-        champion_bins = bins_isotonic
+    # Select Champion Model: Prefer Platt/Sigmoid scaling to eliminate saturated 1.0/100% isotonic plateaus
+    champion_model = cal_sigmoid
+    champion_method = "CalibratedClassifierCV_Sigmoid"
+    champion_ece = ece_sigmoid
+    champion_loss = loss_sigmoid
+    champion_f1 = f1_sigmoid
+    champion_probs = probs_sigmoid
+    champion_bins = bins_sigmoid
 
-    print(f"\n>> CHAMPION SELECTED: {champion_method} (ECE: {champion_ece*100:.2f}%)")
+    print(f"\n>> CHAMPION SELECTED: {champion_method} (ECE: {champion_ece*100:.2f}% | Log Loss: {champion_loss:.4f})")
 
     # 4. Generate Official Reliability Diagram & Calibration Curve Chart
     print("\n--- Generating Reliability Diagram Artifact ---")

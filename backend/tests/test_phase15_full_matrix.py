@@ -30,7 +30,7 @@ client = TestClient(app)
 def test_matrix_calibration_artifacts_and_evidence():
     # 1. Reliability diagram exists
     report_path = "/app/data/models/calibration_report_v1.1.0.png"
-    assert os.path.exists(report_path) or os.path.exists("backend/data/models/calibration_report_v1.1.0.png"), "Calibration report diagram must be saved."
+    assert os.path.exists(report_path) or os.path.exists("backend/data/models/calibration_report_v1.1.0.png") or os.path.exists("data/models/calibration_report_v1.1.0.png"), "Calibration report diagram must be saved."
 
     # 2. Evidence strength tag format & derivation
     tag_strong, rat_strong = get_evidence_strength(5, 78, True, "Jamnagar Refinery")

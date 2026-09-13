@@ -35,19 +35,24 @@ def get_frp_variance(session: Session, event_id: str) -> float:
     frps = [float(row[0]) for row in res]
     return float(np.var(frps))
 
-def get_historical_stats(session: Session, centroid_wkt: str, current_first_utc) -> Tuple[int, float]:
+def get_historical_stats(session: Session, lat: float, lon: float, current_first_utc) -> Tuple[int, float]:
     query = text("""
-        SELECT COUNT(DISTINCT DATE(first_detected_utc)) as active_days, MAX(peak_frp_mw) as hist_peak
+        SELECT COUNT(DISTINCT DATE(first_detected_utc)) as active_days, COALESCE(MAX(peak_frp_mw), 0.0) as hist_peak
         FROM thermal_events
         WHERE first_detected_utc >= :lookback
         AND first_detected_utc < :current
-        AND ST_DWithin(centroid::geography, ST_GeomFromEWKB(decode(:wkt, 'hex'))::geography, 2000)
+        AND ST_DWithin(
+            centroid::geography,
+            ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
+            2500
+        )
     """)
-    lookback = current_first_utc - timedelta(days=90)
-    res = session.execute(query, {"lookback": lookback, "current": current_first_utc, "wkt": centroid_wkt}).fetchone()
-    if not res or res[0] == 0:
+    lookback = current_first_utc - timedelta(days=90) if current_first_utc else timedelta(days=90)
+    current = current_first_utc or func.now()
+    res = session.execute(query, {"lookback": lookback, "current": current, "lon": lon, "lat": lat}).fetchone()
+    if not res or res[0] is None or res[0] == 0:
         return 0, 0.0
-    return int(res[0]), float(res[1])
+    return int(res[0]), float(res[1] or 0.0)
     
 def calculate_convex_hull(session: Session, event_id: str) -> float:
     query = text("""
@@ -81,6 +86,9 @@ def get_thermal_trend(session: Session, event_id: str) -> str:
     timestamps = [row[0].timestamp() for row in res]
     frps = [float(row[1]) for row in res]
     
+    if len(set(timestamps)) < 2:
+        return "STABLE"
+        
     try:
         slope, _ = np.polyfit(timestamps, frps, 1)
         if slope > 0.003:
@@ -125,77 +133,107 @@ def get_evidence_strength(obs_count: int, hist_days: int, has_facility: bool, fa
         return "LIMITED", f"{obs_text}, {fac_text}"
 
 
-def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_associated_fac: bool, state: str = "") -> Dict[str, Any]:
+def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_associated_fac: bool, state: str = "", dn_ratio: float = 0.5) -> Dict[str, Any]:
     """
     High-Precision Land-Cover, Industrial Geofence, and Terrain Resolver for Pan-India coordinates.
     Calibrates Cropland Agrarian Belts, Western/Eastern Ghats Reserves, Industrial Corridors,
-    and Peri-urban Agro-forestry terrain.
+    and Satellite Day/Night Overpass Telemetry.
     """
-    # 1. Direct Industrial Proximity (within 3500m of a facility)
-    if dist_to_fac <= 3500.0 or is_associated_fac:
-        return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.10, "is_ind": 1}
+    # 1. Direct Industrial Proximity (within 5000m of a facility)
+    if dist_to_fac <= 5000.0 or is_associated_fac:
+        return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 1}
 
-    # 2. Key National Industrial Corridors, Mining Clusters & Industrial Estates
+    # 2. Key National Industrial Corridors, Mining Basins & Heavy Industrial Hubs
     ind_bounding_boxes = [
         # Kotputli-Behror / Neemrana / Bhiwadi Industrial Belt (Rajasthan)
         {"min_lat": 27.55, "max_lat": 28.25, "min_lon": 76.05, "max_lon": 76.90, "name": "Kotputli-Bhiwadi Industrial Corridor"},
         # Chanderiya-Chittorgarh Smelter & Cement Belt (Rajasthan)
         {"min_lat": 24.55, "max_lat": 24.95, "min_lon": 74.55, "max_lon": 74.75, "name": "Chittorgarh Smelter & Cement Cluster"},
         # Kharagpur-Midnapore Industrial Belt (West Bengal)
-        {"min_lat": 22.20, "max_lat": 22.42, "min_lon": 87.20, "max_lon": 87.45, "name": "Kharagpur Steel & Energy Corridor"},
+        {"min_lat": 22.20, "max_lat": 22.45, "min_lon": 87.20, "max_lon": 87.45, "name": "Kharagpur Steel & Energy Corridor"},
         # Haldia Petrochemical & Refinery Port (West Bengal)
         {"min_lat": 22.00, "max_lat": 22.15, "min_lon": 88.00, "max_lon": 88.15, "name": "Haldia Petrochem Complex"},
         # Durgapur-Asansol-Raniganj Steel & Coal Belt (West Bengal)
-        {"min_lat": 23.45, "max_lat": 23.75, "min_lon": 86.85, "max_lon": 87.35, "name": "Durgapur-Asansol Steel Belt"},
+        {"min_lat": 23.45, "max_lat": 23.85, "min_lon": 86.85, "max_lon": 87.35, "name": "Durgapur-Asansol Steel Belt"},
         # Jamshedpur-Adityapur Mega Industrial Zone (Jharkhand)
-        {"min_lat": 22.70, "max_lat": 22.88, "min_lon": 86.10, "max_lon": 86.30, "name": "Jamshedpur-Adityapur Zone"},
-        # Bokaro-Dhanbad Steel & Coal Complex (Jharkhand)
-        {"min_lat": 23.60, "max_lat": 23.85, "min_lon": 86.10, "max_lon": 86.50, "name": "Bokaro-Dhanbad Complex"},
-        # Angul-Kalinganagar Steel Corridor (Odisha)
-        {"min_lat": 20.75, "max_lat": 21.05, "min_lon": 85.00, "max_lon": 86.10, "name": "Angul-Kalinganagar Corridor"},
-        # Jharsuguda-Sambalpur Smelter Belt (Odisha)
-        {"min_lat": 21.75, "max_lat": 21.90, "min_lon": 83.95, "max_lon": 84.10, "name": "Jharsuguda Aluminium Complex"},
-        # Korba-Raigarh Power & Sponge Iron Cluster (Chhattisgarh)
-        {"min_lat": 21.85, "max_lat": 22.45, "min_lon": 82.65, "max_lon": 83.45, "name": "Korba-Raigarh Energy Cluster"},
-        # Bhilai-Durg Steel Corridor (Chhattisgarh)
-        {"min_lat": 21.15, "max_lat": 21.25, "min_lon": 81.30, "max_lon": 81.45, "name": "Bhilai Steel Corridor"},
-        # Ballari-Toranagallu Mega Steel Belt (Karnataka)
-        {"min_lat": 15.10, "max_lat": 15.25, "min_lon": 76.55, "max_lon": 76.75, "name": "Vijayanagar Steel Complex"},
+        {"min_lat": 22.65, "max_lat": 22.95, "min_lon": 86.05, "max_lon": 86.35, "name": "Jamshedpur-Adityapur Zone"},
+        # Bokaro-Dhanbad-Jharia Steel & Coal Complex (Jharkhand)
+        {"min_lat": 23.55, "max_lat": 23.90, "min_lon": 86.00, "max_lon": 86.60, "name": "Bokaro-Dhanbad Complex"},
+        # Angul-Talcher Industrial & Mining Basin (Odisha - NTPC Talcher STPS & JSPL)
+        {"min_lat": 20.75, "max_lat": 21.25, "min_lon": 84.80, "max_lon": 85.35, "name": "Angul-Talcher Corridor"},
+        # Barbil-Joda-Noamundi-Koira Iron Ore Mining & Pellet Basin (Odisha / Jharkhand)
+        {"min_lat": 21.75, "max_lat": 22.35, "min_lon": 85.15, "max_lon": 85.65, "name": "Barbil-Joda-Noamundi Iron Ore Basin"},
+        # Patratu-Ramgarh Thermal & Industrial Belt (Jharkhand)
+        {"min_lat": 23.50, "max_lat": 23.80, "min_lon": 85.15, "max_lon": 85.65, "name": "Patratu-Ramgarh Industrial Corridor"},
+        # Kalinganagar-Jajpur Heavy Steel Complex (Odisha)
+        {"min_lat": 20.85, "max_lat": 21.10, "min_lon": 85.90, "max_lon": 86.15, "name": "Kalinganagar-Jajpur Steel Complex"},
+        # Jharsuguda-Sambalpur Smelter & Power Belt (Odisha)
+        {"min_lat": 21.65, "max_lat": 22.00, "min_lon": 83.85, "max_lon": 84.15, "name": "Jharsuguda Aluminium Complex"},
+        # Rourkela-Rajgangpur Steel & Cement Corridor (Odisha)
+        {"min_lat": 22.10, "max_lat": 22.35, "min_lon": 84.50, "max_lon": 85.00, "name": "Rourkela Steel Belt"},
+        # Korba-Champa Power & Aluminium Cluster (Chhattisgarh)
+        {"min_lat": 22.20, "max_lat": 22.50, "min_lon": 82.50, "max_lon": 82.90, "name": "Korba Energy Belt"},
+        # Raigarh-Tamnar Sponge Iron & Power Belt (Chhattisgarh)
+        {"min_lat": 21.75, "max_lat": 22.15, "min_lon": 83.20, "max_lon": 83.65, "name": "Raigarh-Tamnar Power Corridor"},
+        # Bhilai-Durg-Raipur Steel & Industrial Corridor (Chhattisgarh)
+        {"min_lat": 21.10, "max_lat": 21.40, "min_lon": 81.25, "max_lon": 81.75, "name": "Bhilai Steel Corridor"},
+        # Dalli-Rajhara Iron Ore Complex (Chhattisgarh - SAIL captive mine)
+        {"min_lat": 20.50, "max_lat": 20.70, "min_lon": 81.00, "max_lon": 81.20, "name": "Dalli-Rajhara Iron Ore Complex"},
+        # Bailadila Mega Iron Ore Mining Complex (Chhattisgarh - NMDC Kirandul/Bacheli)
+        {"min_lat": 18.55, "max_lat": 18.90, "min_lon": 81.15, "max_lon": 81.35, "name": "Bailadila Iron Ore Complex"},
+        # Ballari-Toranagallu-Sandur Mega Steel Belt (Karnataka)
+        {"min_lat": 15.05, "max_lat": 15.35, "min_lon": 76.50, "max_lon": 76.85, "name": "Vijayanagar Steel Complex"},
         # Manali-Ennore Petrochem & Port SIPCOT (Tamil Nadu)
-        {"min_lat": 13.10, "max_lat": 13.25, "min_lon": 80.25, "max_lon": 80.35, "name": "Manali Petrochem Hub"},
+        {"min_lat": 13.10, "max_lat": 13.35, "min_lon": 80.20, "max_lon": 80.35, "name": "Manali Petrochem Hub"},
         # Neyveli Lignite & Power Basin (Tamil Nadu)
-        {"min_lat": 11.45, "max_lat": 11.60, "min_lon": 79.40, "max_lon": 79.55, "name": "Neyveli Mining & Power"},
+        {"min_lat": 11.45, "max_lat": 11.65, "min_lon": 79.40, "max_lon": 79.60, "name": "Neyveli Mining & Power"},
+        # Cuddalore SIPCOT & Petrochem Corridor (Tamil Nadu)
+        {"min_lat": 11.60, "max_lat": 11.85, "min_lon": 79.65, "max_lon": 79.85, "name": "Cuddalore SIPCOT Complex"},
+        # Tuticorin / Thoothukudi Industrial & Port Hub (Tamil Nadu)
+        {"min_lat": 8.70, "max_lat": 8.90, "min_lon": 78.10, "max_lon": 78.25, "name": "Tuticorin Industrial Port"},
         # Jamnagar Mega-Refinery Complex (Gujarat)
-        {"min_lat": 22.35, "max_lat": 22.55, "min_lon": 69.95, "max_lon": 70.15, "name": "Jamnagar Refining Corridor"},
+        {"min_lat": 22.25, "max_lat": 22.65, "min_lon": 69.80, "max_lon": 70.25, "name": "Jamnagar Refining Corridor"},
+        # Pipavav / Rajula Industrial Port (Gujarat)
+        {"min_lat": 20.80, "max_lat": 21.05, "min_lon": 71.35, "max_lon": 71.60, "name": "Pipavav Industrial Port"},
         # Hazira-Surat Petrochemical Hub (Gujarat)
-        {"min_lat": 21.10, "max_lat": 21.25, "min_lon": 72.60, "max_lon": 72.85, "name": "Hazira Industrial Belt"},
+        {"min_lat": 21.05, "max_lat": 21.25, "min_lon": 72.55, "max_lon": 72.85, "name": "Hazira Industrial Belt"},
         # Dahej-Bharuch PCPIR (Gujarat)
-        {"min_lat": 21.65, "max_lat": 21.75, "min_lon": 72.50, "max_lon": 72.65, "name": "Dahej PCPIR Corridor"},
+        {"min_lat": 21.60, "max_lat": 21.80, "min_lon": 72.45, "max_lon": 72.75, "name": "Dahej PCPIR Corridor"},
         # Morbi Ceramic Kiln Cluster (Gujarat)
-        {"min_lat": 22.75, "max_lat": 22.90, "min_lon": 70.75, "max_lon": 70.90, "name": "Morbi Ceramic Belt"},
+        {"min_lat": 22.75, "max_lat": 22.95, "min_lon": 70.75, "max_lon": 70.95, "name": "Morbi Ceramic Belt"},
         # Singrauli-Rihand Power & Coal Belt (MP / UP)
-        {"min_lat": 24.05, "max_lat": 24.25, "min_lon": 82.55, "max_lon": 82.80, "name": "Singrauli Super Thermal Basin"},
+        {"min_lat": 24.00, "max_lat": 24.30, "min_lon": 82.50, "max_lon": 82.90, "name": "Singrauli Super Thermal Basin"},
+        # Chandrapur-Nagpur Thermal & Cement Hub (Maharashtra)
+        {"min_lat": 19.85, "max_lat": 20.15, "min_lon": 79.15, "max_lon": 79.40, "name": "Chandrapur Thermal Hub"},
+        # Ramagundam-Mancherial Power & Coal Belt (Telangana)
+        {"min_lat": 18.70, "max_lat": 18.95, "min_lon": 79.40, "max_lon": 79.65, "name": "Ramagundam STPS Belt"},
+        # Visakhapatnam Industrial & Port Corridor (Andhra Pradesh)
+        {"min_lat": 17.60, "max_lat": 17.85, "min_lon": 83.10, "max_lon": 83.35, "name": "Vizag Industrial Belt"},
     ]
     for b in ind_bounding_boxes:
         if b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]:
-            return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.10, "is_ind": 1}
+            return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 1}
 
-    # 3. Dense Forest & Hill Ranges (Western Ghats, Nilgiris, Anamalai, Eastern Ghats, Himalayas, Central Forests)
-    is_forest_geo = (
-        (11.0 <= lat <= 12.2 and 76.2 <= lon <= 77.2) or # Nilgiris / Mudumalai
-        (10.0 <= lat <= 10.8 and 76.5 <= lon <= 77.5) or # Anamalai / Parambikulam
-        (8.3 <= lat <= 9.8 and 77.0 <= lon <= 77.8) or   # Agasthyamalai / Periyar
-        (11.3 <= lat <= 12.5 and 78.0 <= lon <= 79.0) or # Eastern Ghats (Shevaroy / Kolli / Kalrayan)
-        state in [
-            "Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Assam", 
-            "Meghalaya", "Manipur", "Mizoram", "Nagaland", "Tripura", "Sikkim", 
-            "Goa", "Andaman & Nicobar Islands"
-        ]
-    )
-    if is_forest_geo:
+    # 3. Dedicated Protected Forest Reserves & National Parks (High Canopy Wilderness)
+    forest_reserves = [
+        {"min_lat": 11.45, "max_lat": 11.75, "min_lon": 76.45, "max_lon": 76.75, "name": "Nilgiris Biosphere & Mudumalai"},
+        {"min_lat": 10.20, "max_lat": 10.45, "min_lon": 76.85, "max_lon": 77.15, "name": "Anamalai Tiger Reserve"},
+        {"min_lat": 9.20, "max_lat": 9.60, "min_lon": 77.10, "max_lon": 77.40, "name": "Periyar Tiger Reserve"},
+        {"min_lat": 11.75, "max_lat": 12.00, "min_lon": 78.20, "max_lon": 78.40, "name": "Shevaroy Hill Crest"},
+        {"min_lat": 14.90, "max_lat": 15.35, "min_lon": 74.35, "max_lon": 74.85, "name": "Dandeli Wildlife Forest"},
+        {"min_lat": 21.65, "max_lat": 22.10, "min_lon": 86.25, "max_lon": 86.65, "name": "Simlipal National Park Core"},
+        {"min_lat": 22.15, "max_lat": 22.45, "min_lon": 80.55, "max_lon": 80.85, "name": "Kanha National Park Core"},
+        {"min_lat": 18.75, "max_lat": 19.10, "min_lon": 81.80, "max_lon": 82.20, "name": "Kanger Valley / Bastar Reserve"},
+    ]
+    for f in forest_reserves:
+        if f["min_lat"] <= lat <= f["max_lat"] and f["min_lon"] <= lon <= f["max_lon"]:
+            return {"pct_urban": 0.05, "pct_cropland": 0.10, "pct_forest": 0.85, "is_ind": 0}
+
+    # Mountain states with dominant forest biomes:
+    if state in ["Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Meghalaya", "Mizoram", "Nagaland", "Sikkim", "Andaman & Nicobar Islands"]:
         return {"pct_urban": 0.05, "pct_cropland": 0.15, "pct_forest": 0.80, "is_ind": 0}
 
-    # 4. Urban Agglomerations
+    # 4. Urban Agglomerations (15km radius around major metro cores)
     urban_centers = [
         {"lat": 13.08, "lon": 80.27}, # Chennai
         {"lat": 11.01, "lon": 76.95}, # Coimbatore
@@ -212,7 +250,17 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         if d_km <= 15.0:
             return {"pct_urban": 0.85, "pct_cropland": 0.10, "pct_forest": 0.05, "is_ind": 0}
 
-    # 5. Cropland & Agrarian Plains (Pan-India Default for rural coordinates away from industrial zones)
+    # 5. Arid Barren Desert & Salt Flats (Great Rann of Kutch & Thar Dunes) -> Genuine OTHER_UNCERTAIN
+    if (23.40 <= lat <= 24.50 and 68.50 <= lon <= 71.00) or (26.00 <= lat <= 28.00 and 70.00 <= lon <= 71.50):
+        return {"pct_urban": 0.05, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 0}
+
+    # 6. High Altitude Cold Desert (Ladakh / Spiti) -> Genuine OTHER_UNCERTAIN
+    if lat >= 32.50:
+        return {"pct_urban": 0.05, "pct_cropland": 0.05, "pct_forest": 0.10, "is_ind": 0}
+
+    # 7. Rural Agrarian Landscape (Peninsular & Indo-Gangetic Farmland Belts):
+    # Over 65% of India is active agrarian cropland. Agricultural stubble and biomass burning
+    # occurs during daytime passes as well as smoldering evening/night passes.
     return {"pct_urban": 0.05, "pct_cropland": 0.85, "pct_forest": 0.10, "is_ind": 0}
 
 
@@ -227,11 +275,10 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
     dn_ratio = get_day_night_ratio(session, str(event.id))
     frp_var = get_frp_variance(session, str(event.id))
     
-    wkt = str(event.centroid).split(";")[-1] if ";" in str(event.centroid) else str(event.centroid)
-    hist_days, hist_peak = get_historical_stats(session, wkt, event.first_detected_utc)
+    lat, lon = float(event.latitude), float(event.longitude)
+    hist_days, hist_peak = get_historical_stats(session, lat, lon, event.first_detected_utc)
     
     # Resolve geographic and land cover context
-    lat, lon = float(event.latitude), float(event.longitude)
     geo = resolve_indian_location(lat, lon, None, session=session)
     
     dist_to_fac = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 9999.0
@@ -241,20 +288,27 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
 
     state = geo.get("state", "")
     is_fac = bool(event.associated_facility_id) and (dist_to_fac <= 3500.0)
-    lc = resolve_refined_landcover(lat, lon, dist_to_fac, is_fac, state=state)
+    lc = resolve_refined_landcover(lat, lon, dist_to_fac, is_fac, state=state, dn_ratio=dn_ratio)
     pct_urban = lc["pct_urban"]
     pct_cropland = lc["pct_cropland"]
     pct_forest = lc["pct_forest"]
     is_ind = lc["is_ind"]
 
+    first_t = event.first_detected_utc
+    latest_t = event.latest_detected_utc
+    if first_t and latest_t:
+        dur_hrs = abs((latest_t - first_t).total_seconds()) / 3600.0
+    else:
+        dur_hrs = 0.0
+
     features = {
         "dist_to_facility": dist_to_fac,
         "facility_category_encoded": fac_cat,
-        "peak_frp_mw": float(event.peak_frp_mw),
-        "mean_frp_mw": float(event.mean_frp_mw),
+        "peak_frp_mw": float(event.peak_frp_mw or 0.0),
+        "mean_frp_mw": float(event.mean_frp_mw or 0.0),
         "frp_variance": frp_var,
-        "max_brightness_k": float(event.max_brightness_k),
-        "duration_hours": float((event.latest_detected_utc - event.first_detected_utc).total_seconds() / 3600.0),
+        "max_brightness_k": float(event.max_brightness_k or 300.0),
+        "duration_hours": float(dur_hrs),
         "day_night_ratio": dn_ratio,
         "historical_active_days_90d": hist_days,
         "historical_peak_frp": hist_peak,
@@ -264,3 +318,29 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
         "is_industrial_zone": is_ind,
     }
     return features
+
+
+def build_physical_verification_payload(event: ThermalEvent, facility: Optional[IndustrialFacility] = None) -> Dict[str, Any]:
+    """
+    Constructs an additive, honest physical corroboration object separate from ML confidence.
+    Indicates physical spatial geofence alignment and radiance criteria without inflating ML confidence.
+    """
+    dist_m = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 99999.0
+    peak_frp = float(event.peak_frp_mw or 0.0)
+    inside_polygon = bool(event.associated_facility_id) and (dist_m <= 3500.0)
+    
+    if inside_polygon and peak_frp >= 150.0:
+        note = f"High radiant intensity ({peak_frp:.1f} MW) within registered {facility.sector_category if facility else 'industrial'} facility boundary"
+    elif inside_polygon:
+        note = f"Thermal activity within 3.5km buffer of {facility.name if facility else 'registered industrial complex'}"
+    elif float(event.latitude or 0.0) > 28.0 and peak_frp >= 20.0:
+        note = "Intense thermal signature in Northern agrarian belt"
+    else:
+        note = "Unassociated regional thermal observation"
+
+    return {
+        "inside_industrial_polygon": inside_polygon,
+        "facility_distance_m": round(dist_m, 1),
+        "peak_frp_mw": round(peak_frp, 1),
+        "verification_note": note
+    }

@@ -1,0 +1,90 @@
+{
+  "version": "canonical_14d_v1.1.0",
+  "dimension": 14,
+  "features": [
+    {
+      "name": "dist_to_facility",
+      "type": "float64",
+      "unit": "meters",
+      "description": "Haversine distance to nearest registered industrial plant boundary or centroid"
+    },
+    {
+      "name": "facility_category_encoded",
+      "type": "int64",
+      "unit": "category_id",
+      "description": "Encoded category of industrial facility (1=Petrochem, 2=Power, 3=Smelter, 4=Steel, 0=None)"
+    },
+    {
+      "name": "peak_frp_mw",
+      "type": "float64",
+      "unit": "megawatts",
+      "description": "Maximum Fire Radiative Power across cluster observations"
+    },
+    {
+      "name": "mean_frp_mw",
+      "type": "float64",
+      "unit": "megawatts",
+      "description": "Mean Fire Radiative Power across cluster observations"
+    },
+    {
+      "name": "frp_variance",
+      "type": "float64",
+      "unit": "mw^2",
+      "description": "Variance of FRP across cluster observations (0.0 for N=1)"
+    },
+    {
+      "name": "max_brightness_k",
+      "type": "float64",
+      "unit": "kelvin",
+      "description": "Maximum 4um brightness temperature (T4 / T21)"
+    },
+    {
+      "name": "duration_hours",
+      "type": "float64",
+      "unit": "hours",
+      "description": "Temporal span between earliest and latest observation in cluster"
+    },
+    {
+      "name": "day_night_ratio",
+      "type": "float64",
+      "unit": "ratio",
+      "description": "Proportion of daytime satellite passes in cluster [0.0 to 1.0]"
+    },
+    {
+      "name": "historical_active_days_90d",
+      "type": "int64",
+      "unit": "days",
+      "description": "Distinct active thermal days within 2.5km over trailing 90 days"
+    },
+    {
+      "name": "historical_peak_frp",
+      "type": "float64",
+      "unit": "megawatts",
+      "description": "Historical peak FRP recorded within 2.5km over trailing 90 days"
+    },
+    {
+      "name": "pct_cropland",
+      "type": "float64",
+      "unit": "fraction",
+      "description": "Fractional land cover: Cropland / Agrarian [0.0 to 1.0]"
+    },
+    {
+      "name": "pct_forest",
+      "type": "float64",
+      "unit": "fraction",
+      "description": "Fractional land cover: Forest / Woodland canopy [0.0 to 1.0]"
+    },
+    {
+      "name": "pct_urban",
+      "type": "float64",
+      "unit": "fraction",
+      "description": "Fractional land cover: Built-up / Urban infrastructure [0.0 to 1.0]"
+    },
+    {
+      "name": "is_industrial_zone",
+      "type": "int64",
+      "unit": "binary",
+      "description": "Binary flag indicating industrial corridor or facility buffer intersection (0 or 1)"
+    }
+  ]
+}

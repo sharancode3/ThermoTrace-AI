@@ -6,6 +6,7 @@ import sys
 import pytest
 
 # Ensure root paths are in sys.path
+os.environ["ENABLE_FIRMS_POLLING"] = "false"
 sys.path.insert(0, '/app')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))

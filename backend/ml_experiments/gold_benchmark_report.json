@@ -1,0 +1,179 @@
+{
+  "benchmark_name": "FINAL_GOLD_INDEPENDENT_BENCHMARK",
+  "evaluation_timestamp": "2026-09-03T15:11:38Z",
+  "total_samples": 300,
+  "point_estimates": {
+    "macro_f1": 0.647,
+    "weighted_f1": 0.5947,
+    "macro_precision": 0.8148,
+    "macro_recall": 0.6828,
+    "brier_score": 0.5669,
+    "ece_pct": 20.98
+  },
+  "confidence_intervals_95": {
+    "macro_f1_95ci": [
+      0.5996,
+      0.6877
+    ],
+    "weighted_f1_95ci": [
+      0.5305,
+      0.6538
+    ],
+    "brier_score_95ci": [
+      0.4836,
+      0.6559
+    ],
+    "ece_pct_95ci": [
+      16.16,
+      26.44
+    ],
+    "per_class_f1_95ci": {
+      "AGRI_BURN": [
+        0.6505,
+        0.7783
+      ],
+      "IND_FIRE": [
+        1.0,
+        1.0
+      ],
+      "IND_FLARE": [
+        0.4878,
+        0.8387
+      ],
+      "IND_ROUTINE": [
+        0.6024,
+        0.8148
+      ],
+      "OTHER_UNCERTAIN": [
+        0.641,
+        0.7979
+      ],
+      "WILDFIRE": [
+        0.0,
+        0.1034
+      ]
+    }
+  },
+  "selective_prediction": {
+    "coverage_pct": 67.67,
+    "selective_risk_pct": 30.05,
+    "selective_accuracy_pct": 69.95,
+    "abstention_rate_pct": 32.33,
+    "total_abstained_events": 97,
+    "spatial_rejected_events": 0,
+    "agri_disambiguated_events": 0
+  },
+  "per_class_performance": {
+    "AGRI_BURN": {
+      "precision": 0.648,
+      "recall": 0.81,
+      "f1_score": 0.72,
+      "support": 100,
+      "f1_95ci": [
+        0.6505,
+        0.7783
+      ]
+    },
+    "IND_FIRE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 15,
+      "f1_95ci": [
+        1.0,
+        1.0
+      ]
+    },
+    "IND_FLARE": {
+      "precision": 1.0,
+      "recall": 0.52,
+      "f1_score": 0.6842,
+      "support": 25,
+      "f1_95ci": [
+        0.4878,
+        0.8387
+      ]
+    },
+    "IND_ROUTINE": {
+      "precision": 0.6531,
+      "recall": 0.8,
+      "f1_score": 0.7191,
+      "support": 40,
+      "f1_95ci": [
+        0.6024,
+        0.8148
+      ]
+    },
+    "OTHER_UNCERTAIN": {
+      "precision": 0.5876,
+      "recall": 0.95,
+      "f1_score": 0.7261,
+      "support": 60,
+      "f1_95ci": [
+        0.641,
+        0.7979
+      ]
+    },
+    "WILDFIRE": {
+      "precision": 1.0,
+      "recall": 0.0167,
+      "f1_score": 0.0328,
+      "support": 60,
+      "f1_95ci": [
+        0.0,
+        0.1034
+      ]
+    }
+  },
+  "confusion_matrix": [
+    [
+      81,
+      0,
+      0,
+      3,
+      16,
+      0
+    ],
+    [
+      0,
+      15,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      13,
+      11,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      32,
+      8,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      3,
+      57,
+      0
+    ],
+    [
+      44,
+      0,
+      0,
+      0,
+      15,
+      1
+    ]
+  ],
+  "latency_ms_per_event": 0.08
+}

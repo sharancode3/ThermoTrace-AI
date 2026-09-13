@@ -1,0 +1,73 @@
+[
+  {
+    "regime": "TEST_C_TEMPORAL_HOLDOUT",
+    "sample_count": 411,
+    "error_count": 130,
+    "macro_f1": 0.6784168260339652,
+    "weighted_f1": 0.6316116059813796,
+    "top_confusions": [
+      [
+        "OTHER_UNCERTAIN -> IND_ROUTINE",
+        80
+      ],
+      [
+        "OTHER_UNCERTAIN -> AGRI_BURN",
+        20
+      ],
+      [
+        "AGRI_BURN -> OTHER_UNCERTAIN",
+        16
+      ],
+      [
+        "WILDFIRE -> IND_FLARE",
+        9
+      ],
+      [
+        "AGRI_BURN -> IND_FLARE",
+        4
+      ]
+    ]
+  },
+  {
+    "regime": "TEST_D_HARD_NEGATIVES",
+    "sample_count": 216,
+    "error_count": 68,
+    "macro_f1": 0.26189496777732074,
+    "weighted_f1": 0.7999451528863294,
+    "top_confusions": [
+      [
+        "OTHER_UNCERTAIN -> IND_ROUTINE",
+        49
+      ],
+      [
+        "AGRI_BURN -> IND_ROUTINE",
+        17
+      ],
+      [
+        "AGRI_BURN -> IND_FLARE",
+        2
+      ]
+    ]
+  },
+  {
+    "regime": "TEST_E_OOD_ADVERSARIAL",
+    "sample_count": 208,
+    "error_count": 110,
+    "macro_f1": 0.4743909685086156,
+    "weighted_f1": 0.5100095982448923,
+    "top_confusions": [
+      [
+        "OTHER_UNCERTAIN -> IND_ROUTINE",
+        80
+      ],
+      [
+        "OTHER_UNCERTAIN -> AGRI_BURN",
+        20
+      ],
+      [
+        "WILDFIRE -> IND_FLARE",
+        10
+      ]
+    ]
+  }
+]

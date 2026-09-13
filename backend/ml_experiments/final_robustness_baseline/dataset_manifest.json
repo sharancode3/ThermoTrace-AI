@@ -1,0 +1,18 @@
+{
+  "dataset_path": "backend/data/processed/hardened_training_dataset.csv",
+  "sha256": "4e3c45ca6bb15574c24d3d4a4184910a907fb99706c5e867b1fd26d79364d7a3",
+  "total_rows": 2132,
+  "tier_distribution": {
+    "Tier_A_RuleDerived": 1706,
+    "Tier_B_HardNegative": 216,
+    "Tier_C_HandVerified": 210
+  },
+  "label_distribution": {
+    "AGRI_BURN": 1549,
+    "IND_ROUTINE": 236,
+    "WILDFIRE": 124,
+    "OTHER_UNCERTAIN": 121,
+    "IND_FLARE": 62,
+    "IND_FIRE": 40
+  }
+}

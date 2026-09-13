@@ -54,7 +54,7 @@ def build_three_tier_dataset():
             "event_id": f"TA-INDFIRE-{i:03d}",
             "facility_id": fac["id"],
             "spatial_group": fac["group"],
-            "dist_to_facility": random.uniform(15.0, 450.0),
+            "dist_to_facility": random.uniform(15.0, 1800.0),
             "facility_category_encoded": fac["category"],
             "peak_frp_mw": random.uniform(85.0, 950.0),
             "mean_frp_mw": random.uniform(45.0, 650.0),
@@ -62,16 +62,16 @@ def build_three_tier_dataset():
             "max_brightness_k": random.uniform(365.0, 510.0),
             "duration_hours": random.uniform(3.0, 48.0),
             "day_night_ratio": random.uniform(0.30, 0.70),
-            "historical_active_days_90d": random.randint(0, 5),
-            "historical_peak_frp": random.uniform(5.0, 35.0),
+            "historical_active_days_90d": random.randint(0, 10),
+            "historical_peak_frp": random.uniform(5.0, 50.0),
             "pct_cropland": random.uniform(0.0, 0.10),
             "pct_forest": random.uniform(0.0, 0.08),
-            "pct_urban": random.uniform(0.65, 0.95),
+            "pct_urban": random.uniform(0.70, 0.95),
             "is_industrial_zone": 1,
             "label": "IND_FIRE",
             "tier": "TIER_A",
             "label_source": "weak_rule",
-            "label_confidence": 0.82
+            "label_confidence": 0.88
         })
 
     # A2. IND_FLARE (Bulk Rule-Derived: 130 records)
@@ -81,24 +81,24 @@ def build_three_tier_dataset():
             "event_id": f"TA-INDFLARE-{i:03d}",
             "facility_id": fac["id"],
             "spatial_group": fac["group"],
-            "dist_to_facility": random.uniform(10.0, 320.0),
+            "dist_to_facility": random.uniform(10.0, 1500.0),
             "facility_category_encoded": fac["category"],
             "peak_frp_mw": random.uniform(4.0, 240.0),
             "mean_frp_mw": random.uniform(3.0, 160.0),
             "frp_variance": random.uniform(1.5, 65.0),
             "max_brightness_k": random.uniform(330.0, 425.0),
-            "duration_hours": random.uniform(48.0, 1500.0),
+            "duration_hours": random.uniform(12.0, 1500.0),
             "day_night_ratio": random.uniform(0.35, 0.65),
-            "historical_active_days_90d": random.randint(18, 90),
-            "historical_peak_frp": random.uniform(12.0, 210.0),
+            "historical_active_days_90d": random.randint(0, 90), # Realistic: spans cold-start 0-day to 90-day baseline
+            "historical_peak_frp": random.uniform(5.0, 210.0),
             "pct_cropland": random.uniform(0.0, 0.15),
             "pct_forest": random.uniform(0.0, 0.05),
-            "pct_urban": random.uniform(0.60, 0.95),
+            "pct_urban": random.uniform(0.65, 0.95),
             "is_industrial_zone": 1,
             "label": "IND_FLARE",
             "tier": "TIER_A",
             "label_source": "weak_rule",
-            "label_confidence": 0.85
+            "label_confidence": 0.88
         })
 
     # A3. IND_ROUTINE (Bulk Rule-Derived: 130 records)
@@ -108,24 +108,24 @@ def build_three_tier_dataset():
             "event_id": f"TA-INDROUTINE-{i:03d}",
             "facility_id": fac["id"],
             "spatial_group": fac["group"],
-            "dist_to_facility": random.uniform(10.0, 280.0),
+            "dist_to_facility": random.uniform(10.0, 1800.0),
             "facility_category_encoded": fac["category"],
             "peak_frp_mw": random.uniform(0.8, 55.0),
             "mean_frp_mw": random.uniform(0.5, 38.0),
             "frp_variance": random.uniform(0.05, 12.0),
             "max_brightness_k": random.uniform(315.0, 355.0),
-            "duration_hours": random.uniform(72.0, 2000.0),
-            "day_night_ratio": random.uniform(0.42, 0.58),
-            "historical_active_days_90d": random.randint(35, 90),
+            "duration_hours": random.uniform(12.0, 2000.0),
+            "day_night_ratio": random.uniform(0.40, 0.60),
+            "historical_active_days_90d": random.randint(0, 90), # Realistic: spans cold-start to established
             "historical_peak_frp": random.uniform(2.0, 60.0),
             "pct_cropland": random.uniform(0.0, 0.15),
             "pct_forest": random.uniform(0.0, 0.10),
-            "pct_urban": random.uniform(0.60, 0.90),
+            "pct_urban": random.uniform(0.65, 0.95),
             "is_industrial_zone": 1,
             "label": "IND_ROUTINE",
             "tier": "TIER_A",
             "label_source": "weak_rule",
-            "label_confidence": 0.84
+            "label_confidence": 0.88
         })
 
     # A4. AGRI_BURN (Bulk Rule-Derived: 140 records)
@@ -135,24 +135,24 @@ def build_three_tier_dataset():
             "event_id": f"TA-AGRI-{i:03d}",
             "facility_id": "NONE",
             "spatial_group": r_grp,
-            "dist_to_facility": random.uniform(3500.0, 45000.0),
+            "dist_to_facility": random.uniform(3500.0, 65000.0),
             "facility_category_encoded": 0,
             "peak_frp_mw": random.uniform(0.3, 40.0),
             "mean_frp_mw": random.uniform(0.2, 22.0),
             "frp_variance": random.uniform(0.01, 8.5),
             "max_brightness_k": random.uniform(310.0, 362.0),
             "duration_hours": random.uniform(0.5, 9.0),
-            "day_night_ratio": random.uniform(0.85, 1.0),
+            "day_night_ratio": random.uniform(0.80, 1.0),
             "historical_active_days_90d": random.randint(0, 3),
             "historical_peak_frp": random.uniform(0.5, 25.0),
-            "pct_cropland": random.uniform(0.72, 0.98),
+            "pct_cropland": random.uniform(0.70, 0.98),
             "pct_forest": random.uniform(0.0, 0.12),
             "pct_urban": random.uniform(0.0, 0.10),
             "is_industrial_zone": 0,
             "label": "AGRI_BURN",
             "tier": "TIER_A",
             "label_source": "weak_rule",
-            "label_confidence": 0.80
+            "label_confidence": 0.85
         })
 
     # A5. WILDFIRE (Bulk Rule-Derived: 120 records)
@@ -162,24 +162,24 @@ def build_three_tier_dataset():
             "event_id": f"TA-WILD-{i:03d}",
             "facility_id": "NONE",
             "spatial_group": f_grp,
-            "dist_to_facility": -1.0,
+            "dist_to_facility": random.uniform(5000.0, 95000.0),
             "facility_category_encoded": 0,
             "peak_frp_mw": random.uniform(8.0, 750.0),
             "mean_frp_mw": random.uniform(5.0, 380.0),
             "frp_variance": random.uniform(15.0, 600.0),
             "max_brightness_k": random.uniform(328.0, 465.0),
             "duration_hours": random.uniform(14.0, 220.0),
-            "day_night_ratio": random.uniform(0.40, 0.80),
-            "historical_active_days_90d": random.randint(0, 2),
+            "day_night_ratio": random.uniform(0.35, 0.75),
+            "historical_active_days_90d": random.randint(0, 3),
             "historical_peak_frp": random.uniform(1.0, 80.0),
             "pct_cropland": random.uniform(0.0, 0.18),
-            "pct_forest": random.uniform(0.72, 0.98),
+            "pct_forest": random.uniform(0.65, 0.98),
             "pct_urban": 0.0,
             "is_industrial_zone": 0,
             "label": "WILDFIRE",
             "tier": "TIER_A",
             "label_source": "weak_rule",
-            "label_confidence": 0.82
+            "label_confidence": 0.88
         })
 
     # A6. OTHER_UNCERTAIN (Bulk Rule-Derived: 110 records)
@@ -188,10 +188,10 @@ def build_three_tier_dataset():
             "event_id": f"TA-UNCERTAIN-{i:03d}",
             "facility_id": "NONE",
             "spatial_group": f"GRP_UNCERTAIN_{i%10:02d}",
-            "dist_to_facility": -1.0,
+            "dist_to_facility": random.uniform(4500.0, 85000.0),
             "facility_category_encoded": 0,
-            "peak_frp_mw": random.uniform(0.15, 2.8),
-            "mean_frp_mw": random.uniform(0.12, 2.2),
+            "peak_frp_mw": random.uniform(0.15, 2.5),
+            "mean_frp_mw": random.uniform(0.12, 1.8),
             "frp_variance": 0.0,
             "max_brightness_k": random.uniform(298.0, 316.0),
             "duration_hours": 0.0,
@@ -205,7 +205,7 @@ def build_three_tier_dataset():
             "label": "OTHER_UNCERTAIN",
             "tier": "TIER_A",
             "label_source": "weak_rule",
-            "label_confidence": 0.70
+            "label_confidence": 0.80
         })
 
     # =========================================================================
@@ -245,7 +245,7 @@ def build_three_tier_dataset():
             "event_id": f"TB-HN-URBAN-NONFAC-{i:03d}",
             "facility_id": "NONE",
             "spatial_group": f"GRP_URBAN_NONFAC_{i%5:02d}",
-            "dist_to_facility": -1.0,
+            "dist_to_facility": random.uniform(6000.0, 45000.0),
             "facility_category_encoded": 0,
             "peak_frp_mw": random.uniform(0.5, 4.5),
             "mean_frp_mw": random.uniform(0.4, 3.2),
@@ -307,7 +307,7 @@ def build_three_tier_dataset():
             "max_brightness_k": random.uniform(335.0, 385.0),
             "duration_hours": random.uniform(120.0, 1800.0), # Extremely long duration!
             "day_night_ratio": random.uniform(0.40, 0.60), # Detected at 2 AM and 2 PM equally!
-            "historical_active_days_90d": random.randint(45, 90), # High persistence!
+            "historical_active_days_90d": random.randint(0, 90), # Spans cold-start to high persistence!
             "historical_peak_frp": random.uniform(5.0, 25.0),
             "pct_cropland": 0.05,
             "pct_forest": 0.05,
@@ -345,12 +345,12 @@ def build_three_tier_dataset():
         ("EVT-VER-HAR-KARNAL-PADDY", "NONE", "GRP_RURAL_AGRI_03", 9400.0, 0, 15.0, 9.8, 2.9, 330.0, 2.5, 1.0, 1, 12.0, 0.95, 0.01, 0.04, 0, "AGRI_BURN"),
         ("EVT-VER-MP-SEHORE-WHEAT", "NONE", "GRP_RURAL_AGRI_04", 12000.0, 0, 12.5, 7.5, 2.1, 326.0, 2.0, 1.0, 1, 10.0, 0.91, 0.04, 0.05, 0, "AGRI_BURN"),
 
-        ("EVT-VER-ODI-SIMLIPAL-FOREST", "NONE", "GRP_FOREST_WILD_01", -1.0, 0, 145.0, 78.0, 180.0, 395.0, 48.0, 0.58, 1, 45.0, 0.02, 0.94, 0.01, 0, "WILDFIRE"),
-        ("EVT-VER-KAR-BANDIPUR-BLAZE", "NONE", "GRP_FOREST_WILD_02", -1.0, 0, 180.0, 95.0, 240.0, 410.0, 62.0, 0.62, 2, 60.0, 0.01, 0.96, 0.01, 0, "WILDFIRE"),
-        ("EVT-VER-UK-ALMORA-PINES", "NONE", "GRP_FOREST_WILD_03", -1.0, 0, 110.0, 62.0, 130.0, 385.0, 36.0, 0.55, 1, 35.0, 0.03, 0.93, 0.01, 0, "WILDFIRE"),
+        ("EVT-VER-ODI-SIMLIPAL-FOREST", "NONE", "GRP_FOREST_WILD_01", 18500.0, 0, 145.0, 78.0, 180.0, 395.0, 48.0, 0.58, 1, 45.0, 0.02, 0.94, 0.01, 0, "WILDFIRE"),
+        ("EVT-VER-KAR-BANDIPUR-BLAZE", "NONE", "GRP_FOREST_WILD_02", 14200.0, 0, 180.0, 95.0, 240.0, 410.0, 62.0, 0.62, 2, 60.0, 0.01, 0.96, 0.01, 0, "WILDFIRE"),
+        ("EVT-VER-UK-ALMORA-PINES", "NONE", "GRP_FOREST_WILD_03", 22000.0, 0, 110.0, 62.0, 130.0, 385.0, 36.0, 0.55, 1, 35.0, 0.03, 0.93, 0.01, 0, "WILDFIRE"),
 
-        ("EVT-VER-RAJ-THAR-NOISE", "NONE", "GRP_UNCERTAIN_01", -1.0, 0, 0.85, 0.65, 0.0, 308.0, 0.0, 1.0, 0, 0.0, 0.15, 0.05, 0.10, 0, "OTHER_UNCERTAIN"),
-        ("EVT-VER-GUJ-RANN-GLARE", "NONE", "GRP_UNCERTAIN_02", -1.0, 0, 0.92, 0.70, 0.0, 310.0, 0.0, 1.0, 0, 0.0, 0.05, 0.02, 0.08, 0, "OTHER_UNCERTAIN"),
+        ("EVT-VER-RAJ-THAR-NOISE", "NONE", "GRP_UNCERTAIN_01", 28000.0, 0, 0.85, 0.65, 0.0, 308.0, 0.0, 1.0, 0, 0.0, 0.15, 0.05, 0.10, 0, "OTHER_UNCERTAIN"),
+        ("EVT-VER-GUJ-RANN-GLARE", "NONE", "GRP_UNCERTAIN_02", 34000.0, 0, 0.92, 0.70, 0.0, 310.0, 0.0, 1.0, 0, 0.0, 0.05, 0.02, 0.08, 0, "OTHER_UNCERTAIN"),
     ]
 
     # Replicate verified patterns with slight natural sensor noise to form 80 robust Tier C evaluation benchmarks

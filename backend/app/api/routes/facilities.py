@@ -12,7 +12,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, desc, case
 
@@ -222,7 +223,15 @@ def get_facility_intelligence(
             detail=f"Facility with ID {facility_id} not found",
         )
 
-        # 2. Fetch baseline profile or compute dynamically from historical telemetry
+    # If facility has zero recorded events, perform an on-demand real-time NASA FIRMS perimeter pull
+    if (facility.historical_event_count or 0) == 0 and facility.latitude and facility.longitude:
+        try:
+            from app.domain.firms_poller import fetch_firms_telemetry_for_facility_area
+            fetch_firms_telemetry_for_facility_area(db, float(facility.latitude), float(facility.longitude), day_range=5)
+        except Exception:
+            pass
+
+    # 2. Fetch baseline profile or compute dynamically from historical telemetry
     baseline = db.query(FacilityBaseline).filter(FacilityBaseline.facility_id == facility_id).first()
     baseline_profile = None
     if baseline:
@@ -239,7 +248,11 @@ def get_facility_intelligence(
         )
 
     # 3. Query historical events within window (Phase 5 & 6)
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=window_days)
+    try:
+        w_days = int(getattr(window_days, 'default', window_days))
+    except Exception:
+        w_days = 30
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=w_days)
     events = (
         db.query(ThermalEvent)
         .filter(
@@ -722,7 +735,12 @@ def download_facility_report(
     if not facility:
         raise HTTPException(status_code=404, detail="Facility not found")
 
-    intel = get_facility_intelligence(facility_id, window_days, db)
+    try:
+        w_days = int(getattr(window_days, 'default', window_days))
+    except Exception:
+        w_days = 30
+
+    intel = get_facility_intelligence(facility_id, w_days, db)
     pdf_bytes = _generate_facility_pdf_bytes(intel.dict())
     
     # Save to immutable storage and register in reports table
@@ -754,7 +772,7 @@ def download_facility_report(
                 title=f"Strategic Dossier: {facility.name} ({facility.facility_code})",
                 included_sections=["facility_overview", "baseline_audit", "historical_events", "epistemic_brief"],
                 storage_path=str(pdf_path),
-                download_url=f"/api/v1/facilities/{facility.id}/report/download?window_days={window_days}",
+                download_url=f"/api/v1/facilities/{facility.id}/report/download?window_days={w_days}",
                 sha256_hash=sha256_val,
                 generation_status="COMPLETED",
                 generated_at=datetime.now(timezone.utc),
@@ -766,7 +784,7 @@ def download_facility_report(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="{filename}"',
+            "Content-Disposition": f'attachment; filename="{filename}"',
             "X-Report-SHA256": sha256_val,
         },
     )

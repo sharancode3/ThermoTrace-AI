@@ -4,6 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   X, Newspaper, Bell, Settings, Flame, BookOpen, Info, ShieldCheck,
   Factory, Sprout, HelpCircle, Layers, Cpu, Check,
+  Trees,
   CheckCircle2, MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon,
   Send, LoaderCircle, CheckCheck, Clock, Radio, AlertTriangle, AlertOctagon,
   BarChart2
@@ -111,14 +112,15 @@ export function OverlayManager() {
     if (!overlay) return;
     setLoading(true);
     if (overlay === "news") {
-      fetchNews()
-        .then((d) => {
-          // Sort strictly based on publishing time descending
+      Promise.all([
+        fetchNews().then((d) => {
           const sorted = Array.isArray(d) 
             ? [...d].sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
             : [];
           setNews(sorted);
-        })
+        }),
+        fetchFirmsStatus().then((d) => setFirmsStatus(d)).catch(() => null)
+      ])
         .catch(console.error)
         .finally(() => setLoading(false));
     } else if (overlay === "alerts") {
@@ -153,6 +155,14 @@ export function OverlayManager() {
   };
 
   useEffect(() => { loadData(); }, [overlay]);
+
+  useEffect(() => {
+    const handleDataRefreshed = () => {
+      loadData();
+    };
+    window.addEventListener("thermo-data-refreshed", handleDataRefreshed);
+    return () => window.removeEventListener("thermo-data-refreshed", handleDataRefreshed);
+  }, [overlay]);
 
   const quickPrompts = useMemo(() => [
     "Show abnormal industrial flares in Gujarat",
@@ -323,7 +333,7 @@ export function OverlayManager() {
             </div>
             <div className="text-[11px] text-slate-500">
               {overlay === "news" && "Time-Ordered NASA FIRMS Bulletins"}
-              {overlay === "alerts" && `${unreadAlertCount} Unacknowledged • Max 100 Recent`}
+              {overlay === "alerts" && `${unreadAlertCount} Unacknowledged • Max 250 Recent`}
               {overlay === "chat" && "PostGIS Grounded Assistant"}
               {overlay === "analytics" && "Real-Time Pan-India Telemetry & Leaderboard"}
               {overlay === "settings" && "Appearance & NASA FIRMS"}
@@ -431,8 +441,8 @@ export function OverlayManager() {
                 {analyticsData?.pan_india_breakdown?.map((row: any) => {
                   const badgeStyles: Record<string, { bg: string; text: string; bar: string }> = {
                     AGRI_BURN: { bg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800", text: "AGRI_BURN", bar: "bg-emerald-500" },
-                    IND_ROUTINE: { bg: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800", text: "IND_ROUTINE", bar: "bg-blue-500" },
-                    IND_FLARE: { bg: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", text: "IND_FLARE", bar: "bg-amber-500" },
+                    IND_ROUTINE: { bg: "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700", text: "IND_ROUTINE", bar: "bg-yellow-400" },
+                    IND_FLARE: { bg: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800", text: "IND_FLARE", bar: "bg-orange-500" },
                     IND_FIRE: { bg: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800", text: "IND_FIRE", bar: "bg-red-600" },
                     WILDFIRE: { bg: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800", text: "WILDFIRE", bar: "bg-teal-500" },
                     OTHER_UNCERTAIN: { bg: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700", text: "OTHER_UNCERTAIN", bar: "bg-slate-400" },
@@ -581,8 +591,8 @@ export function OverlayManager() {
                       {st.classifications?.map((c: any) => {
                         const badgeStyles: Record<string, { bg: string; bar: string }> = {
                           AGRI_BURN: { bg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800", bar: "bg-emerald-500" },
-                          IND_ROUTINE: { bg: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800", bar: "bg-blue-500" },
-                          IND_FLARE: { bg: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", bar: "bg-amber-500" },
+                          IND_ROUTINE: { bg: "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700", bar: "bg-yellow-400" },
+                          IND_FLARE: { bg: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800", bar: "bg-orange-500" },
                           IND_FIRE: { bg: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800", bar: "bg-red-600" },
                           WILDFIRE: { bg: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800", bar: "bg-teal-500" },
                           OTHER_UNCERTAIN: { bg: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700", bar: "bg-slate-400" },
@@ -624,16 +634,28 @@ export function OverlayManager() {
           )}
         </div>
       )}
-{/* News Filter Toolbar & 24h Live Stream Banner */}
+      {/* News Filter Toolbar & 24h Live Stream Banner */}
       {overlay === "news" && (
         <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
-          {/* Live Ingestion Cadence Notice */}
-          <div className="flex items-center justify-between px-2.5 py-1 bg-orange-50/80 border border-orange-200/80 rounded-lg text-[10px] text-orange-800 font-medium">
-            <div className="flex items-center gap-1.5">
-              <Radio className="w-3 h-3 text-orange-600 animate-pulse" />
-              <span>NASA FIRMS Telemetry (15-min Polling)</span>
+          {/* Live Ingestion Cadence Notice with Dynamic Last Updated Timestamp */}
+          <div className="flex flex-col gap-1.5 px-2.5 py-2 bg-orange-50/90 border border-orange-200 rounded-lg text-[10px] text-orange-900 font-medium shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 truncate">
+                <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+                <span className="font-semibold text-slate-900">NASA FIRMS Telemetry:</span>
+                <span className="text-orange-700 font-mono">
+                  {firmsStatus?.last_successful_firms_fetch_utc
+                    ? `Polled ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)} (${firmsStatus.records_inserted ?? 0} new)`
+                    : "Polled Just now (Active)"}
+                </span>
+              </div>
+              <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
+                30M CADENCE
+              </span>
             </div>
-            <span className="font-mono font-bold bg-orange-200/70 px-1.5 py-0.2 rounded text-[9px]">PAST 24H</span>
+            <p className="text-[10px] text-orange-800/90 leading-tight border-t border-orange-200/60 pt-1">
+              Notice: NASA FIRMS satellite telemetry is polled on an optimized 30-minute cadence. A curated prototype dataset is active for live deployment & cloud storage constraints; the full nationwide telemetry stream will be continuously ingested during the hackathon evaluation.
+            </p>
           </div>
 
           <div className="relative">
@@ -668,7 +690,7 @@ export function OverlayManager() {
         </div>
       )}
 
-      {/* Alerts Filter Toolbar & 100-Alert Cap */}
+      {/* Alerts Filter Toolbar & 250-Alert Cap */}
       {overlay === "alerts" && (
         <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
           {/* Alert Filter Policy Banner */}
@@ -677,7 +699,7 @@ export function OverlayManager() {
               <AlertTriangle className="w-3 h-3 text-amber-600" />
               Critical, Abnormal & Industrial Alarms Only
             </span>
-            <span className="font-mono text-slate-500">Max 100 Recent</span>
+            <span className="font-mono text-slate-500">Max 250 Recent</span>
           </div>
 
           <div className="flex items-center justify-between gap-2">
@@ -1062,22 +1084,27 @@ export function OverlayManager() {
 
             {/* Base Shapes */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">1. Base Icon Shapes (Classification)</span>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
-                  <Factory className="w-4 h-4 text-orange-600" />
-                  <span className="font-bold text-slate-800 text-[11px]">Industrial</span>
-                  <span className="text-[9px] text-slate-500">Flares, Routine, Fires</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">1. Base Tactical Icons (Classification)</span>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                  <Trees className="w-4 h-4 text-orange-600" />
+                  <span className="font-bold text-slate-800 text-[10px]">Wildfire</span>
+                  <span className="text-[8px] text-slate-500">Forest Blaze</span>
                 </div>
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
                   <Sprout className="w-4 h-4 text-emerald-600" />
-                  <span className="font-bold text-slate-800 text-[11px]">Vegetation</span>
-                  <span className="text-[9px] text-slate-500">Stubble, Forest Fire</span>
+                  <span className="font-bold text-slate-800 text-[10px]">Agri Crop</span>
+                  <span className="text-[8px] text-slate-500">Residue Stubble</span>
                 </div>
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
+                  <Factory className="w-4 h-4 text-sky-600" />
+                  <span className="font-bold text-slate-800 text-[10px]">Industrial</span>
+                  <span className="text-[8px] text-slate-500">Flares, Routine</span>
+                </div>
+                <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center gap-1 text-center">
                   <HelpCircle className="w-4 h-4 text-slate-500" />
-                  <span className="font-bold text-slate-800 text-[11px]">Uncertain</span>
-                  <span className="text-[9px] text-slate-500">Unclassified / Sparse</span>
+                  <span className="font-bold text-slate-800 text-[10px]">Uncertain</span>
+                  <span className="text-[8px] text-slate-500">Crosshair Beacon</span>
                 </div>
               </div>
             </div>
@@ -1240,7 +1267,17 @@ export function OverlayManager() {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Polling Interval:</span>
-                  <span className="text-slate-900 font-semibold font-mono">Every 15 min</span>
+                  <div className="text-right">
+                    <span className="text-slate-900 font-semibold font-mono">Autonomous (Every 15 min)</span>
+                  </div>
+                </div>
+                <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-lg text-[10px] text-blue-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1 text-blue-950">
+                    ℹ️ Polar Orbit Telemetry Cadence
+                  </div>
+                  <p className="leading-relaxed text-blue-800">
+                    Our daemon synchronizes with NASA FIRMS servers every 15 minutes. However, VIIRS and MODIS are <strong>polar-orbiting sun-synchronous satellites</strong> that overpass India ~every 1.5–3 hours (typically ~10:30–13:30 IST daytime and ~01:30–03:30 IST nighttime). When no satellite passes overhead in a 15-min cycle, the daemon confirms nominal synchronization with zero new overpasses.
+                  </p>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Coverage:</span>

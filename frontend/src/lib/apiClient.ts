@@ -1,3 +1,17 @@
+import {
+  getAllCachedFeatures,
+  getLastSyncUtc,
+  getLastSyncTime,
+  setLastSyncMeta,
+  saveFeaturesToCache,
+  filterCachedFeatures,
+  clearEventCache,
+  deleteFeaturesFromCache,
+  pruneStaleFeatures,
+} from "./eventCache";
+
+export { clearEventCache, deleteFeaturesFromCache, pruneStaleFeatures };
+
 const API_BASE_URL = "/api/v1";
 
 export type Viewport = {
@@ -37,6 +51,7 @@ export type EventFilters = {
   anomaly_tier?: string;
   show_all?: boolean;
   focus_event_id?: string;
+  hours?: number;
 };
 
 function query(
@@ -53,11 +68,84 @@ function query(
   return values.toString();
 }
 
+// Client-Side Cache with sessionStorage + memory fallback (10-minute TTL)
+interface CacheEntry<T> {
+  timestamp: number;
+  data: T;
+}
+
+const memoryCache = new Map<string, CacheEntry<any>>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export function clearClientCache(): void {
+  memoryCache.clear();
+  if (typeof window !== "undefined") {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const k = window.sessionStorage.key(i);
+        if (k && k.startsWith("thermo_cache_")) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => window.sessionStorage.removeItem(k));
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function getCached<T>(key: string): T | null {
+  const now = Date.now();
+  const mem = memoryCache.get(key);
+  if (mem && now - mem.timestamp < CACHE_TTL_MS) {
+    return mem.data;
+  }
+  if (typeof window !== "undefined") {
+    try {
+      const raw = window.sessionStorage.getItem(`thermo_cache_${key}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CacheEntry<T>;
+        if (now - parsed.timestamp < CACHE_TTL_MS) {
+          memoryCache.set(key, parsed);
+          return parsed.data;
+        } else {
+          window.sessionStorage.removeItem(`thermo_cache_${key}`);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+function setCached<T>(key: string, data: T): void {
+  const entry: CacheEntry<T> = { timestamp: Date.now(), data };
+  memoryCache.set(key, entry);
+  if (typeof window !== "undefined") {
+    try {
+      window.sessionStorage.setItem(`thermo_cache_${key}`, JSON.stringify(entry));
+    } catch {
+      // ignore storage quota errors
+    }
+  }
+}
+
 async function get<T>(
   path: string,
-  params: Record<string, string | number | boolean | undefined> = {}
+  params: Record<string, string | number | boolean | undefined> = {},
+  forceRefresh: boolean = false
 ): Promise<T> {
   const suffix = query(params);
+  const cacheKey = `${path}?${suffix}`;
+
+  if (!forceRefresh) {
+    const cached = getCached<T>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
 
   const response = await fetch(
     `${API_BASE_URL}${path}${suffix ? `?${suffix}` : ""}`
@@ -67,22 +155,66 @@ async function get<T>(
     throw new Error(`Request failed (${response.status})`);
   }
 
-  return response.json();
+  const result = await response.json();
+  setCached<T>(cacheKey, result);
+  return result;
 }
 
 export async function fetchHealth() {
   return get<any>("/health");
 }
 
-export function fetchGisEvents(
+export async function fetchGisEvents(
   viewport: Viewport = DEFAULT_VIEWPORT,
-  filters: EventFilters = {}
-) {
-  return get<GeoCollection>("/gis/events", {
-    show_all: true,
-    ...viewport,
-    ...filters,
-  });
+  filters: EventFilters = {},
+  forceRefresh: boolean = false
+): Promise<GeoCollection> {
+  const now = Date.now();
+  const cachedFeatures = await getAllCachedFeatures();
+  const lastSyncUtc = await getLastSyncUtc();
+  const lastSyncTime = await getLastSyncTime();
+
+  // 1. If we already have cached features and synced recently (within 45s),
+  // return filtered cached features directly with 0 network transfer!
+  if (!forceRefresh && cachedFeatures.length > 0 && (now - lastSyncTime) < 45000) {
+    return filterCachedFeatures(cachedFeatures, viewport, filters);
+  }
+
+  // 2. Incremental Delta Sync: If we already have a baseline, only request events detected AFTER lastSyncUtc
+  try {
+    const params: Record<string, any> = {
+      show_all: true,
+      ...viewport,
+      ...filters,
+    };
+
+    if (lastSyncUtc && !forceRefresh) {
+      params.since_utc = lastSyncUtc;
+    }
+
+    const resp = await get<GeoCollection>("/gis/events", params, forceRefresh);
+
+    if (resp.features && resp.features.length > 0) {
+      // Merge new delta events into persistent IndexedDB store
+      await saveFeaturesToCache(resp.features);
+    } else {
+      // No new events detected on server: update sync timestamp
+      await setLastSyncMeta(null, now);
+    }
+
+    const updatedFeatures = await getAllCachedFeatures();
+    return filterCachedFeatures(
+      updatedFeatures.length > 0 ? updatedFeatures : (resp.features || []),
+      viewport,
+      filters
+    );
+  } catch (err) {
+    console.warn("[DeltaSync] Background sync failed, serving cached dataset:", err);
+    if (cachedFeatures.length > 0) {
+      return filterCachedFeatures(cachedFeatures, viewport, filters);
+    }
+    throw err;
+  }
 }
 
 export function fetchGisFacilities(viewport: Viewport = DEFAULT_VIEWPORT) {

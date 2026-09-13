@@ -1,0 +1,133 @@
+{
+  "experiment_id": "EXP-003",
+  "model_name": "Challenger_RandomForest",
+  "model_type": "RandomForest",
+  "hyperparameters": {
+    "n_estimators": 150,
+    "max_depth": 8,
+    "min_samples_split": 3,
+    "random_state": 42
+  },
+  "uncalibrated": {
+    "macro_f1": 1.0,
+    "brier_score": 0.0085,
+    "ece_pct": 3.96,
+    "mce_pct": 16.61
+  },
+  "calibrated": {
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "brier_score": 0.0025,
+    "log_loss": 0.0435,
+    "ece_pct": 4.25,
+    "mce_pct": 4.25,
+    "confusion_matrix": [
+      [
+        13,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        8,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        14,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        4,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        10,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        7
+      ]
+    ]
+  },
+  "operational_metrics": {
+    "train_time_ms": 1476.44,
+    "single_sample_inference_latency_ms": 164.415,
+    "model_size_kb": 2813.08
+  },
+  "classification_report": {
+    "AGRI_BURN": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 13.0
+    },
+    "IND_FIRE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 8.0
+    },
+    "IND_FLARE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 14.0
+    },
+    "IND_ROUTINE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4.0
+    },
+    "OTHER_UNCERTAIN": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 10.0
+    },
+    "WILDFIRE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 7.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 56.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 56.0
+    }
+  }
+}

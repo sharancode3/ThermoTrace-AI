@@ -58,11 +58,15 @@ class GenerateReportRequest(BaseModel):
 
 @router.get("", response_model=List[dict])
 def list_reports(db: Session = Depends(get_db)):
-    """List all generated thermal intelligence reports."""
-    reports = db.query(Report).order_by(Report.generated_at.desc()).all()
+    """List all generated thermal intelligence reports with eager join."""
+    reports_with_events = (
+        db.query(Report, ThermalEvent)
+        .outerjoin(ThermalEvent, Report.event_id == ThermalEvent.id)
+        .order_by(Report.generated_at.desc())
+        .all()
+    )
     results = []
-    for r in reports:
-        evt = db.query(ThermalEvent).filter(ThermalEvent.id == r.event_id).first()
+    for r, evt in reports_with_events:
         results.append({
             "id": str(r.id),
             "report_id": r.report_id,
@@ -169,7 +173,7 @@ def download_national_report(target_date: Optional[str] = None, db: Session = De
 
 @router.get("/{report_id}/download")
 def download_report(report_id: str, db: Session = Depends(get_db)):
-    """Download a generated PDF dossier directly (always refreshed with latest vector graphics)."""
+    """Download a generated PDF dossier directly with fast disk streaming."""
     report = db.query(Report).filter(Report.report_id == report_id).first()
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
@@ -178,19 +182,31 @@ def download_report(report_id: str, db: Session = Depends(get_db)):
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Associated thermal event not found")
 
+    pdf_path = Path(report.storage_path) if report.storage_path else None
+    
+    download_filename = _build_report_filename(
+        classification=event.classification,
+        location_name=None,
+        event_id=event.event_id,
+    )
+
+    # Fast path: Serve already compiled PDF instantly
+    if pdf_path and pdf_path.exists() and pdf_path.stat().st_size > 0:
+        return FileResponse(
+            path=pdf_path,
+            media_type="application/pdf",
+            filename=download_filename,
+        )
+
+    # Fallback path: render if not cached on disk
     report_vm = ReportService.get_report_view_model(db, event.event_id)
     if not report_vm:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not build report view model")
 
-    pdf_path = Path(report.storage_path)
-    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    output_dir = Path(os.getenv("REPORTS_DIR", "backend/data/reports"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = output_dir / f"{report.report_id}.pdf"
     saved_path = PDFRenderer.render_and_save(report_vm, pdf_path)
-
-    download_filename = _build_report_filename(
-        classification=report_vm.get("classification") or event.classification,
-        location_name=report_vm.get("facility_district") or report_vm.get("facility_state"),
-        event_id=report_vm.get("event_id") or event.event_id,
-    )
 
     return FileResponse(
         path=saved_path,

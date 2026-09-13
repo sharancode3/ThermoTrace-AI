@@ -298,7 +298,12 @@ export default function FacilitiesPage() {
                               <Flame className="h-3 w-3 text-rose-600 animate-pulse" />
                               {facility.historical_event_count} Active
                             </span>
-                          ) : null}
+                          ) : (
+                            <span className="flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                              <Activity className="h-3 w-3 text-slate-400" />
+                              Monitored
+                            </span>
+                          )}
                           <span className="flex items-center gap-1 rounded border border-blue-100 bg-blue-50/80 px-2 py-0.5 text-[11px] font-medium text-blue-700">
                             {getSectorIcon(facility.sector_category)}
                             {facility.sector_category}

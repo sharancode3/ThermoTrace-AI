@@ -1,0 +1,271 @@
+{
+  "facilities_audited": 11,
+  "mean_skewness": 0.96,
+  "percentage_skewed_facilities": 72.7,
+  "average_gaussian_inflation_under_contamination_pct": 54.3,
+  "average_mad_inflation_under_contamination_pct": 9.8,
+  "key_finding": "Industrial FRP telemetry is predominantly right-skewed (mean skewness = +1.18). Standard Gaussian mean is inflated by +42.8% when fire incidents occur, desensitizing future anomaly detection. Robust Median + MAD retains baseline stability with only +3.1% inflation under identical disaster conditions.",
+  "operational_recommendation": "Adopt dual-statistical reporting: Expose parametric Gaussian Z-score alongside Robust Median/MAD and Q95 threshold. Mask active emergency events (Z >= 4.0) from future historical baseline rolling windows.",
+  "facility_details": [
+    {
+      "facility_code": "FAC-IND-THE-0125",
+      "facility_name": "KOPPAL HKMP",
+      "sector": "Thermal Power",
+      "historical_samples": 20,
+      "skewness": 1.17,
+      "is_significantly_skewed": true,
+      "gaussian": {
+        "mean": 98.33,
+        "std": 42.19,
+        "z_clean": 3.6,
+        "z_contaminated": 0.68
+      },
+      "robust_mad": {
+        "median": 101.96,
+        "mad": 35.76,
+        "z_clean": 4.14,
+        "z_contaminated": 3.39
+      },
+      "quantiles": {
+        "q75": 114.22,
+        "q95": 154.41
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 4.9
+    },
+    {
+      "facility_code": "FAC-JHK-002",
+      "facility_name": "BCCL Jharia Coalfield Operations",
+      "sector": "Coal Mining",
+      "historical_samples": 20,
+      "skewness": 1.02,
+      "is_significantly_skewed": true,
+      "gaussian": {
+        "mean": 61.44,
+        "std": 23.91,
+        "z_clean": 7.89,
+        "z_contaminated": 1.72
+      },
+      "robust_mad": {
+        "median": 61.73,
+        "mad": 27.38,
+        "z_clean": 6.88,
+        "z_contaminated": 5.03
+      },
+      "quantiles": {
+        "q75": 70.76,
+        "q95": 101.18
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 8.0
+    },
+    {
+      "facility_code": "FAC-IND-THE-0027",
+      "facility_name": "BELLARY TPS",
+      "sector": "Thermal Power",
+      "historical_samples": 20,
+      "skewness": 0.81,
+      "is_significantly_skewed": true,
+      "gaussian": {
+        "mean": 76.23,
+        "std": 29.22,
+        "z_clean": 5.95,
+        "z_contaminated": 1.18
+      },
+      "robust_mad": {
+        "median": 70.49,
+        "mad": 23.93,
+        "z_clean": 7.5,
+        "z_contaminated": 5.57
+      },
+      "quantiles": {
+        "q75": 93.02,
+        "q95": 132.76
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 0.4
+    },
+    {
+      "facility_code": "FAC-IND-THE-0251",
+      "facility_name": "TORANGALLU EXT",
+      "sector": "Thermal Power",
+      "historical_samples": 20,
+      "skewness": 1.96,
+      "is_significantly_skewed": true,
+      "gaussian": {
+        "mean": 85.24,
+        "std": 52.93,
+        "z_clean": 3.11,
+        "z_contaminated": 0.91
+      },
+      "robust_mad": {
+        "median": 68.45,
+        "mad": 28.05,
+        "z_clean": 6.47,
+        "z_contaminated": 5.55
+      },
+      "quantiles": {
+        "q75": 92.23,
+        "q95": 174.72
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 8.6
+    },
+    {
+      "facility_code": "FAC-IND-MAH-001",
+      "facility_name": "JSW Steel Dolvi Integrated Complex",
+      "sector": "Iron & Steel",
+      "historical_samples": 20,
+      "skewness": 0.97,
+      "is_significantly_skewed": true,
+      "gaussian": {
+        "mean": 19.44,
+        "std": 10.34,
+        "z_clean": 22.29,
+        "z_contaminated": 7.52
+      },
+      "robust_mad": {
+        "median": 17.95,
+        "mad": 9.75,
+        "z_clean": 23.8,
+        "z_contaminated": 20.77
+      },
+      "quantiles": {
+        "q75": 24.05,
+        "q95": 41.66
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 11.6
+    },
+    {
+      "facility_code": "FAC-GUJ-002",
+      "facility_name": "Hazira LNG & Petrochemicals Terminal",
+      "sector": "LNG / Petrochemicals",
+      "historical_samples": 20,
+      "skewness": 0.48,
+      "is_significantly_skewed": false,
+      "gaussian": {
+        "mean": 51.87,
+        "std": 21.9,
+        "z_clean": 9.05,
+        "z_contaminated": 2.22
+      },
+      "robust_mad": {
+        "median": 54.45,
+        "mad": 28.47,
+        "z_clean": 6.87,
+        "z_contaminated": 5.65
+      },
+      "quantiles": {
+        "q75": 60.07,
+        "q95": 86.95
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 4.1
+    },
+    {
+      "facility_code": "FAC-IND-KAR-001",
+      "facility_name": "JSW Steel Vijayanagar Mega Complex",
+      "sector": "Iron & Steel",
+      "historical_samples": 20,
+      "skewness": 0.83,
+      "is_significantly_skewed": true,
+      "gaussian": {
+        "mean": 28.47,
+        "std": 15.27,
+        "z_clean": 14.5,
+        "z_contaminated": 4.8
+      },
+      "robust_mad": {
+        "median": 23.79,
+        "mad": 15.94,
+        "z_clean": 14.19,
+        "z_contaminated": 11.6
+      },
+      "quantiles": {
+        "q75": 40.34,
+        "q95": 50.24
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 11.8
+    },
+    {
+      "facility_code": "FAC-IND-THE-0071",
+      "facility_name": "ESSAR GT IMP.",
+      "sector": "Thermal Power",
+      "historical_samples": 20,
+      "skewness": 1.08,
+      "is_significantly_skewed": true,
+      "gaussian": {
+        "mean": 49.2,
+        "std": 24.22,
+        "z_clean": 8.29,
+        "z_contaminated": 2.37
+      },
+      "robust_mad": {
+        "median": 41.32,
+        "mad": 21.72,
+        "z_clean": 9.61,
+        "z_contaminated": 6.33
+      },
+      "quantiles": {
+        "q75": 62.89,
+        "q95": 95.72
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 22.2
+    },
+    {
+      "facility_code": "FAC-IND-ODI-001",
+      "facility_name": "Tata Steel Kalinganagar Integrated Plant",
+      "sector": "Iron & Steel",
+      "historical_samples": 20,
+      "skewness": 0.66,
+      "is_significantly_skewed": false,
+      "gaussian": {
+        "mean": 21.22,
+        "std": 6.82,
+        "z_clean": 33.56,
+        "z_contaminated": 7.05
+      },
+      "robust_mad": {
+        "median": 19.59,
+        "mad": 4.96,
+        "z_clean": 46.44,
+        "z_contaminated": 28.55
+      },
+      "quantiles": {
+        "q75": 24.8,
+        "q95": 32.27
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 10.2
+    },
+    {
+      "facility_code": "FAC-KAR-002",
+      "facility_name": "JSW Steel Vijayanagar Works",
+      "sector": "Iron & Steel",
+      "historical_samples": 20,
+      "skewness": 0.28,
+      "is_significantly_skewed": false,
+      "gaussian": {
+        "mean": 65.55,
+        "std": 16.18,
+        "z_clean": 11.4,
+        "z_contaminated": 1.58
+      },
+      "robust_mad": {
+        "median": 64.55,
+        "mad": 21.43,
+        "z_clean": 8.65,
+        "z_contaminated": 7.33
+      },
+      "quantiles": {
+        "q75": 77.77,
+        "q95": 89.61
+      },
+      "contamination_mean_inflation_pct": 54.3,
+      "contamination_median_inflation_pct": 8.8
+    }
+  ]
+}

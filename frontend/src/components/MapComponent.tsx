@@ -27,8 +27,10 @@ import {
   Filter,
   RotateCcw,
   Compass,
+  X,
 } from "lucide-react";
 import { ThermalMapMarker } from "./ThermalMapMarker";
+import FacilityDetailDrawer from "./FacilityDetailDrawer";
 
 // Google Maps Roadmap raster style
 const GOOGLE_ROADMAP: any = {
@@ -115,6 +117,7 @@ export default function MapComponent({
           lat,
           lon,
         });
+        setWindowHours(720); // Expand to 30 days so nearby persistent facility hotspots are visible
         mapRef.current?.flyTo({
           center: [lon, lat],
           zoom: 13.5,
@@ -122,6 +125,16 @@ export default function MapComponent({
           duration: 1800,
           essential: true,
         });
+
+        // Clean up focus parameters from browser URL so it doesn't stay permanently locked on refresh or other interactions
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("focus_lat");
+          url.searchParams.delete("focus_lon");
+          url.searchParams.delete("facility_id");
+          url.searchParams.delete("facility_name");
+          window.history.replaceState({}, "", url.toString());
+        }
       }
     }
   }, [searchParams]);
@@ -136,7 +149,7 @@ export default function MapComponent({
   });
 
   // Unified Filter States
-  const [windowHours, setWindowHours] = useState<number | null>(null);
+  const [windowHours, setWindowHours] = useState<number | null>(24);
   const [showAllDetections, setShowAllDetections] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [classFilter, setClassFilter] = useState<string>("");
@@ -153,6 +166,25 @@ export default function MapComponent({
   const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
   const [error, setError] = useState<string | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [selectedFacilityForDrawer, setSelectedFacilityForDrawer] = useState<any | null>(null);
+  const [hoveredFacilityInfo, setHoveredFacilityInfo] = useState<{
+    name: string;
+    sector: string;
+    district: string;
+    state: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Listen to background FIRMS ingestion refresh events
+  useEffect(() => {
+    const handleRefreshed = () => {
+      setRefreshTrigger((c) => c + 1);
+    };
+    window.addEventListener("thermo-data-refreshed", handleRefreshed);
+    return () => window.removeEventListener("thermo-data-refreshed", handleRefreshed);
+  }, []);
 
   const startTime = useMemo(() => {
     return windowHours ? new Date(Date.now() - windowHours * 3600000).toISOString() : undefined;
@@ -165,9 +197,20 @@ export default function MapComponent({
     setClassFilter("");
     setShowFacilities(true);
     setShowObservations(false);
+    setFocusedFacility(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("focus_lat");
+      url.searchParams.delete("focus_lon");
+      url.searchParams.delete("facility_id");
+      url.searchParams.delete("facility_name");
+      url.searchParams.delete("eventId");
+      window.history.replaceState({}, "", url.toString());
+    }
   };
 
   const handleCenterIndia = () => {
+    setFocusedFacility(null);
     mapRef.current?.flyTo({
       center: [78.9629, 22.5937],
       zoom: 4.8,
@@ -249,6 +292,16 @@ export default function MapComponent({
         targetPitch = 15;
       }
 
+      setFocusedFacility(null);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("focus_lat");
+        url.searchParams.delete("focus_lon");
+        url.searchParams.delete("facility_id");
+        url.searchParams.delete("facility_name");
+        window.history.replaceState({}, "", url.toString());
+      }
+
       if (onEventClick && eventId) {
         onEventClick(eventId);
       }
@@ -273,6 +326,7 @@ export default function MapComponent({
       setLoadingEvents(true);
 
       const eventFilters = {
+        hours: windowHours ?? undefined,
         start_time: startTime,
         classification: classFilter || undefined,
         anomaly_tier: severityFilter || undefined,
@@ -307,6 +361,7 @@ export default function MapComponent({
     showObservations,
     showAllDetections,
     selectedEventId,
+    refreshTrigger,
   ]);
 
   // Selected event deep details + auto fly-to
@@ -418,6 +473,49 @@ export default function MapComponent({
         }}
         mapStyle={mapType === "hybrid" ? GOOGLE_HYBRID : GOOGLE_ROADMAP}
         style={{ width: "100%", height: "100%" }}
+        interactiveLayerIds={showFacilities ? ["facilities-circles"] : []}
+        onClick={(e) => {
+          const feature = e.features?.[0];
+          if (feature && feature.layer?.id === "facilities-circles") {
+            const p = feature.properties as any;
+            if (p) {
+              const geom = feature.geometry as any;
+              const coords = geom && Array.isArray(geom.coordinates) ? geom.coordinates : [78.96, 22.59];
+              setSelectedFacilityForDrawer({
+                id: p.id,
+                name: p.name || "Industrial Facility",
+                facility_code: p.facility_code || "FAC-IND",
+                sector_category: p.sector_category || "Industrial",
+                sub_type: p.sub_type,
+                operator_name: p.operator_name,
+                state: p.state || "India",
+                district: p.district || "",
+                latitude: Number(p.latitude || coords[1] || 0),
+                longitude: Number(p.longitude || coords[0] || 0),
+              });
+            }
+          }
+        }}
+        onMouseMove={(e) => {
+          const feature = e.features?.[0];
+          if (feature && feature.layer?.id === "facilities-circles") {
+            const p = feature.properties as any;
+            if (p) {
+              setHoveredFacilityInfo({
+                name: p.name || "Industrial Facility",
+                sector: p.sector_category || "Industrial",
+                district: p.district || "",
+                state: p.state || "",
+                x: e.point.x,
+                y: e.point.y,
+              });
+            }
+          } else {
+            setHoveredFacilityInfo(null);
+          }
+        }}
+        onMouseLeave={() => setHoveredFacilityInfo(null)}
+        cursor={hoveredFacilityInfo ? "pointer" : "grab"}
         onMoveEnd={(e) => {
           const bounds = e.target.getBounds();
           setViewport({
@@ -436,11 +534,11 @@ export default function MapComponent({
               id="facilities-circles"
               type="circle"
               paint={{
-                "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 10, 6, 14, 10],
-                "circle-color": "#3b82f6",
-                "circle-opacity": 0.35,
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3.5, 8, 5.5, 12, 9, 16, 14],
+                "circle-color": "#EAB308",
+                "circle-opacity": 0.85,
                 "circle-stroke-width": 1.5,
-                "circle-stroke-color": "#60a5fa",
+                "circle-stroke-color": "#78350F",
               }}
             />
           </Source>
@@ -476,8 +574,9 @@ export default function MapComponent({
         {/* Thermal Event Markers (Guaranteed Selected Event Inclusion) */}
         {displayFeatures.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
-          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k } = feature.properties;
+          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
           const isSelected = selectedEventId === event_id;
+          const isCooled = lifecycle_status === "EXTINGUISHED" || lifecycle_status === "COOLING";
 
           return (
             <Marker
@@ -501,16 +600,31 @@ export default function MapComponent({
                   classification={classification}
                   anomalyTier={anomaly_tier}
                   isSelected={isSelected}
+                  peakFrp={Number(peak_frp_mw || 0)}
+                  maxBrightnessK={Number(max_brightness_k || 0)}
+                  isCooled={isCooled}
                   onClick={() => onEventClick(event_id)}
                 />
                 <div className="absolute left-1/2 -translate-x-1/2 -top-8 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-xl border border-slate-700 z-50 flex items-center gap-1.5 backdrop-blur-md">
-                  <span className="font-bold text-orange-400">{classification}</span>
+                  <span className={`font-bold ${
+                    classification === "IND_ROUTINE" ? "text-yellow-400" :
+                    classification === "IND_FLARE" ? "text-orange-400" :
+                    classification === "IND_FIRE" ? "text-red-400" :
+                    classification === "AGRI_BURN" ? "text-emerald-400" :
+                    classification === "WILDFIRE" ? "text-teal-400" : "text-slate-300"
+                  }`}>{classification}</span>
                   <span className="text-slate-500">·</span>
                   <span className="text-emerald-400 font-semibold">{Number(peak_frp_mw || 0).toFixed(1)} MW</span>
                   {max_brightness_k && (
                     <>
                       <span className="text-slate-500">·</span>
                       <span className="text-slate-300">{Number(max_brightness_k).toFixed(1)} K</span>
+                    </>
+                  )}
+                  {isCooled && (
+                    <>
+                      <span className="text-slate-500">·</span>
+                      <span className="text-sky-400 text-[10px] uppercase font-semibold">Cooled</span>
                     </>
                   )}
                 </div>
@@ -520,14 +634,73 @@ export default function MapComponent({
         })}
 
         {/* Selected Highlight Marker */}
-        {selectedFeature && (
+        {selectedFeature && (() => {
+          const props = selectedFeature.properties || {};
+          const cls = (props.classification || "").toUpperCase();
+          const tier = (props.anomaly_tier || "").toUpperCase();
+          const isCritical = tier === "CRITICAL" || cls === "IND_FIRE";
+          const isAbnormal = !isCritical && (tier === "ABNORMAL" || cls === "IND_FLARE");
+          const isIndustry = cls.startsWith("IND_") || cls === "INDUSTRIAL";
+          const isAgri = cls === "AGRI_BURN" || cls === "AGRICULTURE";
+          const isWildfire = cls === "WILDFIRE" || cls === "FOREST_FIRE";
+
+          let ringColor = "border-slate-400";
+          if (isIndustry) {
+            ringColor = isCritical ? "border-red-500" : isAbnormal ? "border-orange-500" : "border-yellow-400";
+          } else if (isWildfire) {
+            ringColor = isCritical ? "border-red-500" : isAbnormal ? "border-orange-500" : "border-teal-400";
+          } else if (isAgri) {
+            ringColor = isCritical ? "border-red-500" : isAbnormal ? "border-orange-500" : "border-emerald-500";
+          }
+
+          return (
+            <Marker
+              longitude={selectedFeature.geometry.coordinates[0]}
+              latitude={selectedFeature.geometry.coordinates[1]}
+              anchor="center"
+            >
+              <div className="pointer-events-none">
+                <div className={`w-12 h-12 rounded-full border-2 ${ringColor} animate-ping absolute -top-3 -left-3 opacity-60`} />
+              </div>
+            </Marker>
+          );
+        })()}
+
+        {/* Focused Target Facility Location Beacon */}
+        {focusedFacility && (
           <Marker
-            longitude={selectedFeature.geometry.coordinates[0]}
-            latitude={selectedFeature.geometry.coordinates[1]}
-            anchor="center"
+            key="focused-facility-marker"
+            longitude={focusedFacility.lon}
+            latitude={focusedFacility.lat}
+            anchor="bottom"
           >
-            <div className="pointer-events-none">
-              <div className="w-12 h-12 rounded-full border-2 border-orange-500 animate-ping absolute -top-3 -left-3 opacity-60" />
+            <div className="relative flex flex-col items-center group pointer-events-auto">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-950/90 text-amber-100 text-[11px] font-bold rounded-lg shadow-xl border border-amber-500/60 whitespace-nowrap mb-1 backdrop-blur-sm">
+                <span>🏢 {focusedFacility.name}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFocusedFacility(null);
+                    if (typeof window !== "undefined") {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete("focus_lat");
+                      url.searchParams.delete("focus_lon");
+                      url.searchParams.delete("facility_id");
+                      url.searchParams.delete("facility_name");
+                      window.history.replaceState({}, "", url.toString());
+                    }
+                  }}
+                  className="ml-1 p-0.5 rounded hover:bg-amber-800 text-amber-300 hover:text-white transition cursor-pointer"
+                  title="Dismiss facility marker"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="relative flex items-center justify-center">
+                <span className="absolute w-8 h-8 rounded-full bg-amber-500/40 animate-ping" />
+                <span className="relative w-4 h-4 rounded-full bg-amber-500 border-2 border-white shadow-lg shadow-amber-500/50" />
+              </div>
             </div>
           </Marker>
         )}
@@ -595,6 +768,14 @@ export default function MapComponent({
               </div>
             </div>
 
+            {/* 30-Minute Storage-Optimized Telemetry Cadence Notice */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-tight">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <span>
+                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry is polled on an optimized 30-minute cadence. A curated prototype dataset is active for live deployment & cloud storage constraints; the full nationwide telemetry stream will be continuously ingested during the hackathon evaluation.
+              </span>
+            </div>
+
             {/* View Mode + Filters + Layer Checkboxes */}
             <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-800 text-xs">
               {/* Priority vs All Hotspots Toggle */}
@@ -616,7 +797,16 @@ export default function MapComponent({
               <select
                 aria-label="Severity Filter"
                 value={severityFilter}
-                onChange={(e) => setSeverityFilter(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSeverityFilter(val);
+                  if (val) {
+                    setShowAllDetections(true);
+                    if (val === "CRITICAL" && windowHours === 6) {
+                      setWindowHours(168);
+                    }
+                  }
+                }}
                 className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
               >
                 <option value="">All Severities</option>
@@ -630,39 +820,33 @@ export default function MapComponent({
               <select
                 aria-label="Classification Filter"
                 value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
+                onChange={(e) => {
+                  setClassFilter(e.target.value);
+                  if (e.target.value) setShowAllDetections(true);
+                }}
                 className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
               >
                 <option value="">All Categories</option>
-                <option value="IND_FLARE">🏭 Industrial Flare</option>
-                <option value="IND_FIRE">🔥 Industrial Fire</option>
-                <option value="IND_ROUTINE">⚙️ Routine Process</option>
-                <option value="AGRI_BURN">🌾 Agri Crop Residue</option>
+                <option value="INDUSTRY">🏭 Industry (All Levels)</option>
+                <option value="AGRI_BURN">🌾 Agriculture (Crop)</option>
                 <option value="WILDFIRE">🌲 Forest Wildfire</option>
                 <option value="OTHER_UNCERTAIN">❓ Other / Uncertain</option>
               </select>
 
-              {/* Facility Overlay Checkbox */}
-              <label className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-300 cursor-pointer select-none hover:bg-slate-700/60 transition">
-                <input
-                  type="checkbox"
-                  checked={showFacilities}
-                  onChange={(e) => setShowFacilities(e.target.checked)}
-                  className="rounded border-slate-600 text-orange-600 focus:ring-0 focus:ring-offset-0 bg-slate-900 cursor-pointer"
-                />
-                <span>Facilities</span>
-              </label>
+              {/* Dynamic Reset Filters Button */}
+              {(classFilter || severityFilter || !showAllDetections || windowHours !== 24) && (
+                <button
+                  onClick={handleClearFilters}
+                  type="button"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 transition cursor-pointer"
+                  title="Reset all filters to defaults"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset Filters</span>
+                </button>
+              )}
 
-              {/* Raw FIRMS Passes Overlay Checkbox */}
-              <label className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-300 cursor-pointer select-none hover:bg-slate-700/60 transition">
-                <input
-                  type="checkbox"
-                  checked={showObservations}
-                  onChange={(e) => setShowObservations(e.target.checked)}
-                  className="rounded border-slate-600 text-orange-600 focus:ring-0 focus:ring-offset-0 bg-slate-900 cursor-pointer"
-                />
-                <span>FIRMS Heat</span>
-              </label>
+
 
               {/* Symbology Legend Button */}
               <button
@@ -695,54 +879,70 @@ export default function MapComponent({
 
         {/* TACTICAL SYMBOLOGY LEGEND CARD */}
         {showLegend && (
-          <div className="absolute top-36 left-4 z-30 bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700 w-80 space-y-3 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute top-36 left-4 z-30 bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700 w-84 space-y-3 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                Tactical Symbology (9-Icon)
+                Tactical 4-Icon Symbology
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                Type × Severity
+              <span className="text-[10px] text-orange-400 font-mono font-bold">
+                Level-Aware
               </span>
             </div>
 
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2.5 text-xs">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                1. Base Shape (Classification)
+                1. Four Primary Emitter Classes
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                <div className="p-2 bg-slate-800/80 rounded-lg border border-slate-700 flex flex-col items-center gap-1">
-                  <Factory className="w-4 h-4 text-orange-400" />
-                  <span className="text-slate-300 font-medium">Industrial</span>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center gap-2">
+                  <Factory className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-200">Industry</div>
+                    <div className="text-[10px] text-slate-400">3-Color Level System</div>
+                  </div>
                 </div>
-                <div className="p-2 bg-slate-800/80 rounded-lg border border-slate-700 flex flex-col items-center gap-1">
-                  <Sprout className="w-4 h-4 text-emerald-400" />
-                  <span className="text-slate-300 font-medium">Vegetation</span>
+                <div className="p-2 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center gap-2">
+                  <Sprout className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-200">Agriculture</div>
+                    <div className="text-[10px] text-slate-400">Crop residue fire</div>
+                  </div>
                 </div>
-                <div className="p-2 bg-slate-800/80 rounded-lg border border-slate-700 flex flex-col items-center gap-1">
-                  <HelpCircle className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-300 font-medium">Uncertain</span>
+                <div className="p-2 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-orange-400 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-200">Wildfire</div>
+                    <div className="text-[10px] text-slate-400">Forest canopy burn</div>
+                  </div>
+                </div>
+                <div className="p-2 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-200">Uncertain</div>
+                    <div className="text-[10px] text-slate-400">Unverified signal</div>
+                  </div>
                 </div>
               </div>
 
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pt-1">
-                2. Semantic Color (Severity)
+                2. Industry 3-Color Critical Levels
               </div>
               <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-red-600 border border-red-400 shrink-0" />
-                  <span className="text-slate-300 font-medium">Red: <span className="text-slate-400 font-normal">Critical Anomaly (Z &ge; 4.0σ)</span></span>
+                  <span className="w-3 h-3 rounded-full bg-red-600 border border-red-400 shrink-0 shadow-xs shadow-red-500/50" />
+                  <span className="text-slate-300 font-medium">Red: <span className="text-slate-400 font-normal">Emergency Fire / Critical Anomaly (Critical)</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-400 shrink-0" />
-                  <span className="text-slate-300 font-medium">Amber: <span className="text-slate-400 font-normal">Abnormal Anomaly (2.5 &le; Z &lt; 4.0σ)</span></span>
+                  <span className="w-3 h-3 rounded-full bg-orange-500 border border-orange-400 shrink-0 shadow-xs shadow-orange-500/50" />
+                  <span className="text-slate-300 font-medium">Orange: <span className="text-slate-400 font-normal">Elevated Flare / Abnormal Radiance (Abnormal)</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-600 border border-emerald-400 shrink-0" />
-                  <span className="text-slate-300 font-medium">Green: <span className="text-slate-400 font-normal">Nominal & Elevated</span></span>
+                  <span className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-300 shrink-0 shadow-xs shadow-yellow-400/50" />
+                  <span className="text-slate-300 font-medium">Yellow: <span className="text-slate-400 font-normal">Nominal Routine Industrial Process (Normal)</span></span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-slate-500 border border-slate-400 shrink-0" />
-                  <span className="text-slate-300 font-medium">Neutral: <span className="text-slate-400 font-normal">Baseline Insufficient (N &lt; 10)</span></span>
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
+                  <span className="w-3 h-3 rounded-full bg-yellow-300/40 border border-dashed border-yellow-400 shrink-0" />
+                  <span className="text-slate-300 font-medium">Faded: <span className="text-slate-400 font-normal">Cooled / Extinguished Event (Faded with respective color)</span></span>
                 </div>
               </div>
             </div>
@@ -845,7 +1045,39 @@ export default function MapComponent({
             <span>{locationError}</span>
           </div>
         )}
+
+        {/* Hovered Facility Information Tooltip */}
+        {hoveredFacilityInfo && (
+          <div
+            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full mb-3 rounded-xl border border-amber-500/40 bg-slate-900/95 px-3 py-2 text-xs shadow-2xl backdrop-blur-md text-white space-y-0.5"
+            style={{
+              left: `${hoveredFacilityInfo.x}px`,
+              top: `${hoveredFacilityInfo.y - 12}px`,
+            }}
+          >
+            <div className="flex items-center gap-1.5 font-bold text-amber-300">
+              <span>🏢</span>
+              <span>{hoveredFacilityInfo.name}</span>
+            </div>
+            <div className="text-[11px] text-slate-300">
+              <span className="font-semibold text-orange-400">{hoveredFacilityInfo.sector}</span>
+              {hoveredFacilityInfo.district && ` · ${hoveredFacilityInfo.district}`}
+              {hoveredFacilityInfo.state && `, ${hoveredFacilityInfo.state}`}
+            </div>
+            <div className="text-[10px] text-slate-400 pt-0.5">
+              Click marker to inspect facility & download dossier
+            </div>
+          </div>
+        )}
       </Map>
+
+      {/* Selected Facility Detail Drawer & Report Export */}
+      {selectedFacilityForDrawer && (
+        <FacilityDetailDrawer
+          facility={selectedFacilityForDrawer}
+          onClose={() => setSelectedFacilityForDrawer(null)}
+        />
+      )}
     </div>
   );
 }

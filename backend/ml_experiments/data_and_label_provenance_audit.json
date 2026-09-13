@@ -1,0 +1,124 @@
+{
+  "audit_timestamp_utc": "2026-09-03T10:31:38.669475+00:00",
+  "audit_objective": "Identify ground truth vs weak-supervision, eliminate circular label contamination, enforce scientific integrity",
+  "datasets": {
+    "three_tier_training_dataset": {
+      "filepath": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\data\\processed\\three_tier_training_dataset.csv",
+      "total_rows": 954,
+      "columns": [
+        "event_id",
+        "facility_id",
+        "spatial_group",
+        "dist_to_facility",
+        "facility_category_encoded",
+        "peak_frp_mw",
+        "mean_frp_mw",
+        "frp_variance",
+        "max_brightness_k",
+        "duration_hours",
+        "day_night_ratio",
+        "historical_active_days_90d",
+        "historical_peak_frp",
+        "pct_cropland",
+        "pct_forest",
+        "pct_urban",
+        "is_industrial_zone",
+        "label",
+        "tier",
+        "label_source",
+        "label_confidence"
+      ],
+      "labels": {
+        "AGRI_BURN": 191,
+        "IND_FLARE": 171,
+        "WILDFIRE": 162,
+        "OTHER_UNCERTAIN": 148,
+        "IND_ROUTINE": 146,
+        "IND_FIRE": 136
+      },
+      "tiers": {
+        "TIER_A": 750,
+        "TIER_B": 120,
+        "TIER_C": 84
+      },
+      "provenance_matrix": {
+        "WEAK_RULE": 750,
+        "HARD_NEGATIVE": 120,
+        "VERIFIED": 84
+      },
+      "circular_sample_count": 750,
+      "independent_sample_count": 204,
+      "circularity_percentage": 78.62,
+      "eligible_for_training_only": 750,
+      "eligible_for_benchmark_eval": 204
+    },
+    "hardened_training_dataset": {
+      "filepath": "C:\\SHARAN PROJECTS\\SiH 2026-ThermoTrace AI\\backend\\data\\processed\\hardened_training_dataset.csv",
+      "total_rows": 2132,
+      "labels": {
+        "AGRI_BURN": 1549,
+        "IND_ROUTINE": 236,
+        "WILDFIRE": 124,
+        "OTHER_UNCERTAIN": 121,
+        "IND_FLARE": 62,
+        "IND_FIRE": 40
+      },
+      "tiers": {
+        "Tier_A_RuleDerived": 1706,
+        "Tier_B_HardNegative": 216,
+        "Tier_C_HandVerified": 210
+      },
+      "provenance_matrix": {
+        "WEAK_RULE": 1706,
+        "HARD_NEGATIVE": 216,
+        "VERIFIED": 210
+      },
+      "circular_count": 1706,
+      "independent_count": 426,
+      "circularity_percentage": 80.02
+    }
+  },
+  "database_storage": {
+    "total_stored_events": 1756,
+    "classification_distribution": {
+      "AGRI_BURN": 1440,
+      "IND_ROUTINE": 128,
+      "WILDFIRE": 119,
+      "OTHER_UNCERTAIN": 52,
+      "IND_FLARE": 17
+    },
+    "anomaly_tier_distribution": {
+      "NORMAL": 1631,
+      "ABNORMAL": 79,
+      "CRITICAL": 18,
+      "ELEVATED": 28
+    },
+    "persistence_distribution": {
+      "TRANSIENT": 1737,
+      "INTERMITTENT": 19
+    },
+    "lifecycle_distribution": {
+      "STABLE": 960,
+      "INSUFFICIENT_DATA": 690,
+      "INCREASING": 24,
+      "DECREASING": 41,
+      "EXTINGUISHED": 6,
+      "COOLING": 31,
+      "ACTIVE": 4
+    },
+    "events_with_facility_association": 125,
+    "events_without_facility": 1631,
+    "multi_observation_events": 979,
+    "single_observation_events": 777
+  },
+  "critical_circularity_findings": {
+    "finding_1": "In three_tier_training_dataset.csv, 750 samples (78.6%) are WEAK_RULE labels derived from the exact features (distance, land cover, FRP, duration) later provided to the XGBoost classifier.",
+    "finding_2": "Evaluating models on Tier A weak-rule samples creates artificial 99%+ accuracy claims because the model simply memorizes the generating heuristic equations.",
+    "rule_enforcement": "STRICT QUARANTINE: Tier A samples are strictly restricted to the training split. ONLY Tier B (Hard Negatives) and Tier C (Verified Historical Incidents) with zero circularity are permitted in the validation/test benchmark sets.",
+    "ground_truth_veracity": {
+      "verified_tier_c_samples": 204,
+      "status": "DATA_LIMITED_BENCHMARK",
+      "recommendation": "Independent evaluation must use leakage-safe holdouts (facility, spatial, temporal) on non-circular samples."
+    }
+  }
+}

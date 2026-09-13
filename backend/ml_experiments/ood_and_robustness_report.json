@@ -1,0 +1,94 @@
+{
+  "cases_evaluated": [
+    {
+      "case_id": "OOD-01",
+      "name": "Desert_Sand_Solar_Glint",
+      "description": "High solar heating in Thar Desert with no combustion duration or industrial infrastructure.",
+      "raw_predicted_class": "OTHER_UNCERTAIN",
+      "calibrated_confidence": 0.9647,
+      "entropy": 0.2092,
+      "abstention_triggered": false,
+      "final_assigned_class": "OTHER_UNCERTAIN",
+      "class_probabilities": {
+        "AGRI_BURN": 0.0078,
+        "IND_FIRE": 0.0063,
+        "IND_FLARE": 0.0065,
+        "IND_ROUTINE": 0.0059,
+        "OTHER_UNCERTAIN": 0.9647,
+        "WILDFIRE": 0.0088
+      }
+    },
+    {
+      "case_id": "OOD-02",
+      "name": "Steel_Slag_Dump_Cooling",
+      "description": "Unassociated hot slag dump: moderate FRP (12 MW), 0% urban, 100% barren, no plant match.",
+      "raw_predicted_class": "AGRI_BURN",
+      "calibrated_confidence": 0.3919,
+      "entropy": 1.63,
+      "abstention_triggered": true,
+      "final_assigned_class": "OTHER_UNCERTAIN",
+      "class_probabilities": {
+        "AGRI_BURN": 0.3919,
+        "IND_FIRE": 0.0943,
+        "IND_FLARE": 0.1146,
+        "IND_ROUTINE": 0.0871,
+        "OTHER_UNCERTAIN": 0.1641,
+        "WILDFIRE": 0.148
+      }
+    },
+    {
+      "case_id": "OOD-03",
+      "name": "Conflicting_Context_Midnight_Mega_Blaze",
+      "description": "600 MW thermal spike in 95% cropland at 2 AM (Night pass) with zero facility link.",
+      "raw_predicted_class": "AGRI_BURN",
+      "calibrated_confidence": 0.857,
+      "entropy": 0.5482,
+      "abstention_triggered": false,
+      "final_assigned_class": "AGRI_BURN",
+      "class_probabilities": {
+        "AGRI_BURN": 0.857,
+        "IND_FIRE": 0.1034,
+        "IND_FLARE": 0.0079,
+        "IND_ROUTINE": 0.0073,
+        "OTHER_UNCERTAIN": 0.0134,
+        "WILDFIRE": 0.0109
+      }
+    },
+    {
+      "case_id": "ROB-01",
+      "name": "Context_Deprivation_Missing_Facility",
+      "description": "True refinery flare but facility registry is missing (Distance = 99999m, Category = 0).",
+      "raw_predicted_class": "IND_FLARE",
+      "calibrated_confidence": 0.9589,
+      "entropy": 0.2366,
+      "abstention_triggered": false,
+      "final_assigned_class": "IND_FLARE",
+      "class_probabilities": {
+        "AGRI_BURN": 0.0079,
+        "IND_FIRE": 0.0065,
+        "IND_FLARE": 0.9589,
+        "IND_ROUTINE": 0.0061,
+        "OTHER_UNCERTAIN": 0.0099,
+        "WILDFIRE": 0.0107
+      }
+    },
+    {
+      "case_id": "ROB-02",
+      "name": "Context_Deprivation_Missing_LandCover",
+      "description": "Agricultural burn with land cover raster unavailable (Uniform 33% cropland/forest/urban).",
+      "raw_predicted_class": "AGRI_BURN",
+      "calibrated_confidence": 0.3257,
+      "entropy": 1.6091,
+      "abstention_triggered": true,
+      "final_assigned_class": "OTHER_UNCERTAIN",
+      "class_probabilities": {
+        "AGRI_BURN": 0.3257,
+        "IND_FIRE": 0.0765,
+        "IND_FLARE": 0.0779,
+        "IND_ROUTINE": 0.0712,
+        "OTHER_UNCERTAIN": 0.1761,
+        "WILDFIRE": 0.2726
+      }
+    }
+  ]
+}

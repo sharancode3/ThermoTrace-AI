@@ -1,0 +1,35 @@
+{
+  "benchmark_name": "FINAL_GOLD_INDEPENDENT_BENCHMARK",
+  "created_at": "2026-09-03T15:10:31.199832Z",
+  "total_samples": 300,
+  "class_distribution": {
+    "AGRI_BURN": 100,
+    "WILDFIRE": 60,
+    "OTHER_UNCERTAIN": 60,
+    "IND_ROUTINE": 40,
+    "IND_FLARE": 25,
+    "IND_FIRE": 15
+  },
+  "provenance_distribution": {
+    "Real_Database_Telemetry_Unseen": 239,
+    "Heldout_Verified_Tier_C": 61
+  },
+  "unseen_database_events_count": 239,
+  "verified_ground_truth_count": 61,
+  "features": [
+    "dist_to_facility",
+    "facility_category_encoded",
+    "peak_frp_mw",
+    "mean_frp_mw",
+    "frp_variance",
+    "max_brightness_k",
+    "duration_hours",
+    "day_night_ratio",
+    "historical_active_days_90d",
+    "historical_peak_frp",
+    "pct_cropland",
+    "pct_forest",
+    "pct_urban",
+    "is_industrial_zone"
+  ]
+}

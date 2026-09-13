@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const rawBackend = process.env.INTERNAL_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+const ACTIVE_BACKEND = "https://thermotrace-ai-5tao.onrender.com/api/v1";
+let rawBackend = process.env.INTERNAL_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || ACTIVE_BACKEND;
+
+// Automatically override old suspended or localhost URLs
+if (!rawBackend || !rawBackend.includes("5tao")) {
+  rawBackend = ACTIVE_BACKEND;
+}
+
 const BACKEND_BASE = rawBackend.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "") + "/api/v1";
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> | { path?: string[] } }) {
@@ -18,13 +25,14 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
       }
     });
 
+    const isGet = request.method === "GET" || request.method === "HEAD";
     const init: RequestInit = {
       method: request.method,
       headers,
-      cache: "no-store",
+      cache: isGet ? "default" : "no-store",
     };
 
-    if (request.method !== "GET" && request.method !== "HEAD") {
+    if (!isGet) {
       init.body = await request.arrayBuffer();
     }
 
@@ -35,6 +43,11 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
     backendRes.headers.forEach((val, key) => {
       responseHeaders.set(key, val);
     });
+
+    if (isGet && backendRes.ok) {
+      // Allow browser and edge proxy to cache responses for 2 minutes to conserve egress
+      responseHeaders.set("Cache-Control", "public, max-age=120, stale-while-revalidate=300");
+    }
 
     return new NextResponse(body, {
       status: backendRes.status,

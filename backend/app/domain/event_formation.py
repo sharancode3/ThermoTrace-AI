@@ -5,7 +5,7 @@ via PostGIS spatial queries, and triggers full ML intelligence classification.
 """
 import uuid
 import numpy as np
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -19,7 +19,11 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
     runs ST-DBSCAN spatio-temporal clustering, associates nearest industrial facility,
     and updates/creates thermal_events with attached event_observations.
     """
-    query = session.query(ThermalObservation).order_by(ThermalObservation.observation_timestamp_utc.asc())
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    query = session.query(ThermalObservation).filter(
+        ThermalObservation.observation_timestamp_utc >= cutoff
+    ).order_by(ThermalObservation.observation_timestamp_utc.asc())
     all_obs = query.all()
     if not all_obs:
         return 0
@@ -73,25 +77,34 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
 
         if fac_res and fac_res[5] is not None:
             dist_to_fac = float(fac_res[5])
-            if dist_to_fac <= 3500.0:  # Within 3.5km industrial boundary
+            if dist_to_fac <= 5000.0:  # Within 5.0km industrial boundary
                 associated_fac_id = fac_res[0]
                 primary_land_use = fac_res[2] or "Industrial"
             else:
                 primary_land_use = "Cropland" if c_lat > 24.0 else "Regional Hotspot"
 
-        # Check if an existing event covers this cluster (same centroid proximity < 500m)
-        existing_event = session.query(ThermalEvent).filter(
-            text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 500)")
-        ).params(lon=c_lon, lat=c_lat).first()
+        # Check if an existing event covers this cluster:
+        # 1. By facility association (strict priority: update existing event for this plant)
+        # 2. By centroid spatial proximity (within 1500m)
+        existing_event = None
+        if associated_fac_id:
+            existing_event = session.query(ThermalEvent).filter(
+                ThermalEvent.associated_facility_id == associated_fac_id
+            ).order_by(ThermalEvent.latest_detected_utc.desc()).first()
+
+        if not existing_event:
+            existing_event = session.query(ThermalEvent).filter(
+                text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 1500)")
+            ).params(lon=c_lon, lat=c_lat).order_by(ThermalEvent.latest_detected_utc.desc()).first()
 
         if existing_event:
             existing_event.peak_frp_mw = max(float(existing_event.peak_frp_mw or 0.0), peak_frp)
             existing_event.mean_frp_mw = (float(existing_event.mean_frp_mw or 0.0) + mean_frp) / 2.0
             existing_event.aggregate_frp_mw = max(float(existing_event.aggregate_frp_mw or 0.0), total_frp)
-            existing_event.observation_count = obs_count
-            existing_event.latest_detected_utc = latest_utc
+            existing_event.max_brightness_k = max(float(existing_event.max_brightness_k or 0.0), max_k)
+            existing_event.latest_detected_utc = max(existing_event.latest_detected_utc, latest_utc) if existing_event.latest_detected_utc else latest_utc
             existing_event.distance_to_facility_m = dist_to_fac
-            if associated_fac_id and not existing_event.associated_facility_id:
+            if associated_fac_id:
                 existing_event.associated_facility_id = associated_fac_id
                 existing_event.primary_land_use = primary_land_use
             target_event = existing_event
@@ -134,10 +147,62 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
                 )
                 session.add(link)
 
+        session.flush()
+        target_event.observation_count = session.query(EventObservation).filter(
+            EventObservation.event_id == target_event.id
+        ).count()
         session.commit()
 
         # Trigger ML intelligence & Anomaly scoring
         process_event_intelligence(session, target_event.event_id)
         events_formed_or_updated += 1
 
+    # Reconcile lifecycles: Hotspots without fresh passes in 3-4 days normalize to NORMAL and EXTINGUISHED
+    reconcile_event_lifecycles(session)
+
     return events_formed_or_updated
+
+def reconcile_event_lifecycles(session: Session) -> Dict[str, int]:
+    """
+    Normalizes and reconciles event lifecycles:
+    - Recent detections (< 24h) remain ACTIVE.
+    - Detections between 24h and 72h transition to COOLING.
+    - Detections with no new passes for >= 3 days (>= 72h) are EXTINGUISHED / NORMAL:
+      Hotspot anomaly tier normalizes back to NORMAL as the thermal fire has ended.
+    """
+    now_utc = datetime.now(timezone.utc)
+    t24 = now_utc - timedelta(hours=24)
+    t72 = now_utc - timedelta(days=3)
+
+    # 1. Extinguished (> 72h / 3 days): fire is gone, anomaly normalized to NORMAL
+    ext_res = session.execute(text("""
+        UPDATE thermal_events
+        SET lifecycle_status = 'EXTINGUISHED',
+            anomaly_tier = 'NORMAL'
+        WHERE latest_detected_utc < :t72
+          AND (lifecycle_status != 'EXTINGUISHED' OR anomaly_tier != 'NORMAL');
+    """), {"t72": t72})
+
+    # 2. Cooling (24h - 72h)
+    cool_res = session.execute(text("""
+        UPDATE thermal_events
+        SET lifecycle_status = 'COOLING'
+        WHERE latest_detected_utc < :t24
+          AND latest_detected_utc >= :t72
+          AND lifecycle_status != 'COOLING';
+    """), {"t24": t24, "t72": t72})
+
+    # 3. Active (< 24h)
+    act_res = session.execute(text("""
+        UPDATE thermal_events
+        SET lifecycle_status = 'ACTIVE'
+        WHERE latest_detected_utc >= :t24
+          AND lifecycle_status != 'ACTIVE';
+    """), {"t24": t24})
+
+    session.commit()
+    return {
+        "extinguished_normalized": ext_res.rowcount,
+        "cooling": cool_res.rowcount,
+        "active": act_res.rowcount
+    }

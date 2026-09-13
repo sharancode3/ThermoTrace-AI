@@ -10,7 +10,7 @@ from app.db.models import ThermalObservation
 from scripts.live_firms_ingestion import cluster_observations_into_events
 
 
-DEFAULT_CSV = "/data/raw/firms/firms_india_viirs_5d_20260830.csv"
+DEFAULT_CSV = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/raw/firms/firms_india_viirs_5d_20260830.csv"))
 
 
 def import_local_firms(path: str = DEFAULT_CSV) -> None:
