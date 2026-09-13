@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import endpoints
-from app.api.routes import chat, stream, reports, facilities
+from app.api.routes import chat, stream, reports, facilities, nearby_notifications
 from app.db.database import SessionLocal
 from app.domain.firms_poller import poll_firms_foreground_cycle
 from app.domain.event_formation import form_events_from_observations
@@ -72,6 +72,8 @@ async def lifespan(app: FastAPI):
             except Exception as ext_err:
                 print(f"[DATABASE] PostGIS extension check: {ext_err}")
         Base.metadata.create_all(bind=engine)
+        from app.db.migrations import apply_runtime_migrations
+        apply_runtime_migrations(engine)
         print("[DATABASE] Schema tables verified and ready.")
     except Exception as err:
         print(f"[DATABASE INIT WARNING] {err}")
@@ -107,6 +109,7 @@ app.include_router(chat.router, prefix="/api/v1")
 app.include_router(stream.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(facilities.router, prefix="/api/v1")
+app.include_router(nearby_notifications.router, prefix="/api/v1")
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def root_check():

@@ -1,0 +1,12 @@
+{
+  "name": "ThermoTrace AI",
+  "short_name": "ThermoTrace",
+  "description": "Location-aware thermal intelligence monitoring",
+  "start_url": "/monitor",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#ea580c",
+  "icons": [
+    { "src": "/assets/thermotrace-satellite.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any" }
+  ]
+}

@@ -9,6 +9,8 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Thermo Intelligence | NTRO",
   description: "Industrial Fire & Persistent Thermal Source Detection Platform",
+  manifest: "/manifest.json",
+  themeColor: "#ea580c",
 };
 
 export default function RootLayout({

@@ -47,7 +47,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://thermo_admin:thermo_secret@postgres:5432/thermo_db}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
@@ -55,6 +55,9 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - FIRMS_MAP_KEY=5ee48ea9900661577c1dc26dfcc70550
       - ENVIRONMENT=development
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:admin@example.com}
     volumes:
       - ./backend:/app
       - ./data:/data:ro
@@ -63,7 +66,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app --reload-dir /app/scripts
+    command: sh -c "python scripts/ingest_facilities.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app --reload-dir /app/scripts"
 
   # ---------------------------------------------------------
   # Celery Worker (Task Processing)
@@ -75,7 +78,7 @@ services:
     container_name: thermotrace_celery_worker
     restart: unless-stopped
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://thermo_admin:thermo_secret@postgres:5432/thermo_db}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
@@ -102,7 +105,7 @@ services:
     container_name: thermotrace_firms_daemon
     restart: unless-stopped
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://thermo_admin:thermo_secret@postgres:5432/thermo_db}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}

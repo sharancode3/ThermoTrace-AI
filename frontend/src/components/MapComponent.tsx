@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import { ThermalMapMarker } from "./ThermalMapMarker";
 import FacilityDetailDrawer from "./FacilityDetailDrawer";
+import { NearbyAlertCenter } from "./NearbyAlertCenter";
+import { requestCurrentPosition } from "@/lib/geolocation";
 
 // Google Maps Roadmap raster style
 const GOOGLE_ROADMAP: any = {
@@ -221,13 +223,7 @@ export default function MapComponent({
   const [locationError, setLocationError] = useState<string | null>(null);
 
   const handleMyLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported by your browser");
-      setTimeout(() => setLocationError(null), 4000);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
+    requestCurrentPosition().then((position) => {
         const coords = {
           lat: position.coords.latitude,
           lon: position.coords.longitude,
@@ -239,37 +235,10 @@ export default function MapComponent({
           zoom: 13.5,
           duration: 1800,
         });
-      },
-      (err) => {
-        console.warn("High accuracy geolocation failed, trying standard accuracy:", err.message);
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const coords = {
-              lat: position.coords.latitude,
-              lon: position.coords.longitude,
-            };
-            setUserLocation(coords);
-            setLocationError(null);
-            mapRef.current?.flyTo({
-              center: [coords.lon, coords.lat],
-              zoom: 13.5,
-              duration: 1800,
-            });
-          },
-          (fallbackErr) => {
-            console.error("Geolocation fallback error:", fallbackErr.message);
-            let msg = "Unable to retrieve location";
-            if (fallbackErr.code === 1) msg = "Location permission denied";
-            else if (fallbackErr.code === 2) msg = "Location unavailable";
-            else if (fallbackErr.code === 3) msg = "Location request timed out";
-            setLocationError(msg);
-            setTimeout(() => setLocationError(null), 4000);
-          },
-          { enableHighAccuracy: false, timeout: 10000 }
-        );
-      },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
-    );
+      }).catch((error) => {
+        setLocationError(error instanceof Error ? error.message : "Unable to retrieve location");
+        setTimeout(() => setLocationError(null), 4000);
+      });
   };
 
   // External fly-to listener from News / Alerts
@@ -873,6 +842,9 @@ export default function MapComponent({
                   Reset
                 </button>
               )}
+              <div className="ml-auto pl-1">
+                <NearbyAlertCenter />
+              </div>
             </div>
           </div>
         </div>
@@ -1070,6 +1042,8 @@ export default function MapComponent({
           </div>
         )}
       </Map>
+
+      <div id="nearby-alert-toast-layer" className="pointer-events-none absolute bottom-[13rem] left-3 z-30 w-[calc(100%-1.5rem)] max-w-[360px] sm:bottom-6 sm:left-6" />
 
       {/* Selected Facility Detail Drawer & Report Export */}
       {selectedFacilityForDrawer && (

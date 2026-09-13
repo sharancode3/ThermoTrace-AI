@@ -346,6 +346,14 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         session.delete(existing_notif)
     
     session.commit()
+    # Personalized nearby alerts consume the finalized tier/classification and
+    # remain isolated from the nationwide operational notification contract.
+    try:
+        from app.services.nearby_notification_service import create_nearby_notifications
+        create_nearby_notifications(session, event)
+    except Exception as nearby_error:
+        session.rollback()
+        print(f"[NEARBY NOTIFICATION NOTICE] {nearby_error}")
 
 def process_all_intelligence():
     from app.db.database import SessionLocal
