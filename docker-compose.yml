@@ -47,13 +47,14 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://thermo_admin:thermo_secret@postgres:5432/thermo_db}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
       - POSTGRES_DB=${POSTGRES_DB:-thermo_db}
       - REDIS_URL=redis://redis:6379/0
       - FIRMS_MAP_KEY=5ee48ea9900661577c1dc26dfcc70550
+      - FIRMS_POLL_INTERVAL_MINUTES=${FIRMS_POLL_INTERVAL_MINUTES:-30}
       - ENVIRONMENT=development
     volumes:
       - ./backend:/app
@@ -75,7 +76,7 @@ services:
     container_name: thermotrace_celery_worker
     restart: unless-stopped
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://thermo_admin:thermo_secret@postgres:5432/thermo_db}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
@@ -102,14 +103,14 @@ services:
     container_name: thermotrace_firms_daemon
     restart: unless-stopped
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://thermo_admin:thermo_secret@postgres:5432/thermo_db}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-thermo_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thermo_secret}
       - POSTGRES_DB=${POSTGRES_DB:-thermo_db}
       - REDIS_URL=redis://redis:6379/0
       - FIRMS_MAP_KEY=5ee48ea9900661577c1dc26dfcc70550
-      - FIRMS_POLL_INTERVAL_MINUTES=10
+      - FIRMS_POLL_INTERVAL_MINUTES=${FIRMS_POLL_INTERVAL_MINUTES:-30}
     volumes:
       - ./backend:/app
     depends_on:
@@ -135,6 +136,7 @@ services:
       # backend through Docker's service network, not its own localhost.
       - INTERNAL_BACKEND_URL=http://backend:8000/api/v1
       - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - NEXT_PUBLIC_FIRMS_POLL_INTERVAL_MINUTES=${FIRMS_POLL_INTERVAL_MINUTES:-30}
     volumes:
       - ./frontend:/app
       - /app/node_modules

@@ -1,15 +1,18 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import MapComponent from "@/components/MapComponent";
 import { EventDetailPanel } from "@/components/EventDetailPanel";
+import { clearEventCache, fetchEventWind, WindData } from "@/lib/apiClient";
 
 function MonitorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const selectedEventId = searchParams.get("eventId");
+  const [wind, setWind] = useState<WindData | null>(null);
+  const [windVisible, setWindVisible] = useState(true);
 
   const setSelectedEventId = (id: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -19,19 +22,43 @@ function MonitorContent() {
       params.delete("eventId");
     }
     const newQuery = params.toString();
-    router.push(`${pathname}${newQuery ? "?" + newQuery : ""}`);
+    router.replace(`${pathname}${newQuery ? "?" + newQuery : ""}`);
   };
+
+  useEffect(() => {
+    if (!selectedEventId) { setWind(null); return; }
+    let cancelled = false;
+    setWind(null);
+    fetchEventWind(selectedEventId).then((result) => {
+      if (!cancelled) setWind(result);
+    }).catch((error) => {
+      if (cancelled) return;
+      if (error instanceof Error && error.message.includes("(404)")) {
+        void clearEventCache().finally(() => {
+          if (!cancelled) setSelectedEventId(null);
+        });
+        return;
+      }
+      setWind({ available: false, status: "WIND_DATA_UNAVAILABLE", reason: error instanceof Error ? error.message : "Wind provider request failed" });
+    });
+    return () => { cancelled = true; };
+  }, [selectedEventId, pathname, router, searchParams]);
 
   return (
     <div className="relative w-full h-full">
       <MapComponent
         onEventClick={setSelectedEventId}
         selectedEventId={selectedEventId}
+        wind={wind}
+        windVisible={windVisible}
       />
       {selectedEventId && (
         <EventDetailPanel
           eventId={selectedEventId}
           onClose={() => setSelectedEventId(null)}
+          wind={wind}
+          windVisible={windVisible}
+          onWindVisibilityChange={setWindVisible}
         />
       )}
     </div>

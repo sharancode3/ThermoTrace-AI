@@ -9,9 +9,11 @@ import {
   fetchGisFacilities,
   fetchGisObservations,
   fetchEventDetail,
+  clearEventCache,
   GeoCollection,
   GeoFeature,
   Viewport,
+  WindData,
 } from "@/lib/apiClient";
 import {
   Layers,
@@ -88,13 +90,40 @@ const GOOGLE_HYBRID: any = {
 };
 
 type MapComponentProps = {
-  onEventClick: (id: string) => void;
+  onEventClick: (id: string | null) => void;
   selectedEventId?: string | null;
+  wind?: WindData | null;
+  windVisible?: boolean;
 };
+
+function buildWindCorridor(longitude: number, latitude: number, towardDegrees: number, speedKmh: number): any {
+  const angle = towardDegrees * Math.PI / 180;
+  const longitudeScale = Math.max(0.25, Math.cos(latitude * Math.PI / 180));
+  // A compact, speed-scaled tactical context corridor; it is not a plume model.
+  const reach = Math.min(0.07, Math.max(0.025, 0.025 + speedKmh * 0.002));
+  const halfWidth = reach * 0.35;
+  const point = (forward: number, lateral: number): [number, number] => [
+    longitude + (Math.sin(angle) * forward + Math.cos(angle) * lateral) / longitudeScale,
+    latitude + Math.cos(angle) * forward - Math.sin(angle) * lateral,
+  ];
+  const origin = point(-0.005, 0);
+  const left = point(reach, -halfWidth);
+  const right = point(reach, halfWidth);
+  return {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      geometry: { type: "Polygon", coordinates: [[origin, left, right, origin]] },
+      properties: {},
+    }],
+  };
+}
 
 export default function MapComponent({
   onEventClick,
   selectedEventId,
+  wind,
+  windVisible = true,
 }: MapComponentProps) {
   const mapRef = useRef<MapRef>(null);
   const searchParams = useSearchParams();
@@ -375,6 +404,15 @@ export default function MapComponent({
     fetchEventDetail(selectedEventId)
       .then((res) => {
         if (cancelled) return;
+        if (!res) {
+          void clearEventCache().finally(() => {
+            if (cancelled) return;
+            setSelectedEventData(null);
+            onEventClick(null);
+            setRefreshTrigger((count) => count + 1);
+          });
+          return;
+        }
         setSelectedEventData(res);
 
         const lon = res?.longitude ?? res?.centroid?.coordinates?.[0];
@@ -411,7 +449,19 @@ export default function MapComponent({
         }
       })
       .catch((err) => {
-        if (!cancelled) console.error("Failed to load selected event detail:", err);
+        if (cancelled) return;
+        // An IndexedDB cache can outlive a database reset. Do not leave the
+        // operator on a non-existent event or surface a development overlay.
+        if (err instanceof Error && err.message.includes("(404)")) {
+          void clearEventCache().finally(() => {
+            if (cancelled) return;
+            setSelectedEventData(null);
+            onEventClick(null);
+            setRefreshTrigger((count) => count + 1);
+          });
+          return;
+        }
+        console.warn("Selected event detail unavailable:", err);
       });
 
     return () => { cancelled = true; };
@@ -664,6 +714,35 @@ export default function MapComponent({
               </div>
             </Marker>
           );
+        })()}
+
+        {/* Selected-event only: contextual prevailing-wind vector. It is never a dispersion model. */}
+        {windVisible && wind?.available && selectedEventData && (() => {
+          const longitude = Number(selectedEventData.longitude ?? selectedEventData.centroid?.coordinates?.[0]);
+          const latitude = Number(selectedEventData.latitude ?? selectedEventData.centroid?.coordinates?.[1]);
+          const toward = Number(wind.direction_toward_degrees);
+          if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !Number.isFinite(toward)) return null;
+          const corridor = buildWindCorridor(longitude, latitude, toward, Number(wind.speed_kmh) || 0);
+          const angle = toward * Math.PI / 180;
+          const positions = [0.010, 0.022, 0.034].map((distance, index) => ({
+            longitude: longitude + Math.sin(angle) * distance,
+            latitude: latitude + Math.cos(angle) * distance,
+            index,
+          }));
+          return <>
+            <Source id="selected-event-wind-corridor" type="geojson" data={corridor}>
+              <Layer id="selected-event-wind-corridor-fill" type="fill" paint={{ "fill-color": "#0891b2", "fill-opacity": 0.16 }} />
+              <Layer id="selected-event-wind-corridor-outline" type="line" paint={{ "line-color": "#67e8f9", "line-width": 1.5, "line-opacity": 0.8, "line-dasharray": [2, 2] }} />
+            </Source>
+            {positions.map((position) => <Marker key={`wind-arrow-${position.index}`} longitude={position.longitude} latitude={position.latitude} anchor="center">
+              <div className="pointer-events-none text-cyan-200 drop-shadow-[0_1px_2px_rgba(15,23,42,.9)]" style={{ transform: `rotate(${toward}deg)` }} aria-hidden="true">↑</div>
+            </Marker>)}
+            <Marker longitude={longitude} latitude={latitude} anchor="bottom">
+              <div data-testid="wind-vector-overlay" aria-label={`Wind from ${wind.direction_from_cardinal} toward ${wind.direction_toward_cardinal} at ${wind.speed_kmh} kilometres per hour`} className="pointer-events-none mb-7 rounded-lg border border-cyan-300/50 bg-slate-950/90 px-2 py-1.5 text-[10px] text-cyan-50 shadow-lg backdrop-blur-sm">
+                <div className="font-bold tracking-wide">WIND TOWARD {wind.direction_toward_cardinal}</div><div>{wind.speed_kmh} km/h · from {wind.direction_from_cardinal}</div>
+              </div>
+            </Marker>
+          </>;
         })()}
 
         {/* Focused Target Facility Location Beacon */}

@@ -10,7 +10,7 @@ import {
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
   Layers, Compass, Info, Copy, Check, Eye, ExternalLink
 } from "lucide-react";
-import { fetchEventIntelligence } from "@/lib/apiClient";
+import { fetchEventHistory, fetchEventIntelligence, WindData } from "@/lib/apiClient";
 
 function formatRelativeTime(dateStr?: string | null) {
   if (!dateStr) return "Just now";
@@ -24,18 +24,55 @@ function formatRelativeTime(dateStr?: string | null) {
 }
 
 
+function ThermalTrendCard({ history }: { history: any }) {
+  const trend = history?.thermal_trend;
+  if (!trend || trend.status !== "AVAILABLE") return <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Thermal Trend</h2><p className="mt-2 text-xs font-semibold text-slate-600">{trend?.observation_count === 1 ? "INSUFFICIENT OBSERVATIONS" : "BRIGHTNESS TEMPERATURE UNAVAILABLE"}</p><p className="mt-1 text-[11px] text-slate-500">Satellite observations are discrete, not continuous ground-temperature telemetry.</p></section>;
+  const rising = trend.trend === "RISING";
+  const symbol = rising ? "▲" : trend.trend === "FALLING" ? "▼" : "→";
+  const colour = rising ? "text-red-700" : trend.trend === "FALLING" ? "text-sky-700" : "text-slate-700";
+  const points = (history.history || []).filter((item: any) => Number.isFinite(Number(item.brightness_k)) && !Number.isNaN(Date.parse(item.acquired_at)));
+  const min = Math.min(...points.map((item: any) => Number(item.brightness_k)));
+  const projected = Number(trend.current_brightness_k) + Number(trend.latest_rate_k_per_hour);
+  const max = Math.max(projected, ...points.map((item: any) => Number(item.brightness_k)));
+  const plot = points.map((item: any, index: number) => `${8 + index * (70 / Math.max(1, points.length - 1))},${48 - ((Number(item.brightness_k) - min) / Math.max(1, max - min)) * 38}`).join(" ");
+  const lastPlot = plot.split(" ").at(-1)?.split(",") || ["78", "48"];
+  const projectedY = 48 - ((projected - min) / Math.max(1, max - min)) * 38;
+  return <section className="rounded-2xl border border-orange-200 bg-orange-50/40 p-4 space-y-3" aria-label={`Brightness temperature ${trend.trend.toLowerCase()} at ${trend.latest_rate_k_per_hour} Kelvin per hour`}>
+    <div className="flex justify-between gap-2"><h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Thermal Trend</h2><span className={`font-mono text-xs font-bold ${colour}`}>{symbol} {trend.trend} · {trend.latest_rate_k_per_hour > 0 ? "+" : ""}{Number(trend.latest_rate_k_per_hour).toFixed(1)} K/hour</span></div>
+    <div className="grid grid-cols-2 gap-2 text-xs"><div><p className="text-slate-500">Current Brightness Temperature</p><p className="font-mono font-bold text-slate-900">{Number(trend.current_brightness_k).toFixed(1)} K</p></div><div><p className="text-slate-500">Previous Observation</p><p className="font-mono font-bold text-slate-900">{Number(trend.previous_brightness_k).toFixed(1)} K</p></div><div><p className="text-slate-500">Last Observation</p><p className="font-mono text-slate-700">{new Date(trend.current_timestamp).toLocaleString()}</p></div><div><p className="text-slate-500">Observation Span</p><p className="font-mono text-slate-700">{Number(trend.observation_span_hours).toFixed(1)} hours</p></div></div>
+    <svg viewBox="0 0 100 56" className="h-20 w-full" role="img" aria-label="Observed brightness temperature chart with latest-rate extrapolation"><line x1="6" y1="50" x2="96" y2="50" stroke="#94a3b8"/><line x1="6" y1="4" x2="6" y2="50" stroke="#94a3b8"/><polyline points={plot} fill="none" stroke="#ea580c" strokeWidth="2"/><line x1={lastPlot[0]} y1={lastPlot[1]} x2="92" y2={projectedY} stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 2"/>{points.map((item: any, index: number) => { const [x, y] = plot.split(" ")[index].split(","); return <circle key={item.id} cx={x} cy={y} r="2.5" fill="#ea580c"/>; })}<circle cx="92" cy={projectedY} r="2" fill="#fff" stroke="#64748b"/></svg>
+    <p className="text-[11px] text-slate-500">OBSERVATION-BASED TREND · {trend.observation_count} satellite observations · values use 4-micron brightness temperature.</p>
+  </section>;
+}
+
+function WindConditionsCard({ wind, visible, onVisibleChange }: { wind: WindData | null; visible: boolean; onVisibleChange: (visible: boolean) => void }) {
+  if (!wind) return <section className="rounded-2xl border border-slate-200 p-4"><h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Wind Conditions</h2><p className="mt-2 text-xs text-slate-500">Loading provider-backed wind conditions…</p></section>;
+  if (!wind.available) {
+    const eventMissing = wind.reason?.includes("404");
+    return <section className="rounded-2xl border border-slate-200 p-4"><h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Wind Conditions</h2><p className="mt-2 text-xs font-semibold text-slate-600">{eventMissing ? "EVENT DATA OUT OF DATE" : wind.status || "WIND DATA UNAVAILABLE"}</p><p className="mt-1 text-[11px] text-slate-500">{eventMissing ? "This cached map event is no longer available from the active backend. Close this investigation and refresh the monitor to select a live event." : wind.reason || "No provider measurement was returned."}</p></section>;
+  }
+  return <section className="rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4 space-y-2"><div className="flex justify-between gap-2"><h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Wind Conditions {wind.stale ? "· STALE" : ""}</h2><button type="button" onClick={() => onVisibleChange(!visible)} className="rounded border border-cyan-300 px-2 py-1 text-[10px] font-bold text-cyan-800">{visible ? "HIDE ON MAP" : "SHOW ON MAP"}</button></div><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-full border border-cyan-300 text-xs font-bold text-cyan-800" style={{ transform: `rotate(${wind.direction_toward_degrees}deg)` }}>↑</div><div><p className="font-mono font-bold text-slate-900">{wind.direction_from_cardinal} → {wind.direction_toward_cardinal}</p><p className="text-xs text-slate-600">{wind.speed_kmh} km/h · {wind.direction_from_degrees}° from {wind.direction_from_cardinal}</p></div></div><p className="text-[11px] text-slate-600">Wind from {wind.direction_from_cardinal} toward {wind.direction_toward_cardinal} at {wind.speed_kmh} km/h.</p><p className="text-[11px] text-slate-500">{wind.data_kind === "FORECAST_MODEL" ? "FORECAST WIND" : "HISTORICAL REANALYSIS"} · {wind.source} · {wind.timestamp ? new Date(wind.timestamp).toLocaleString() : "timestamp unavailable"}</p></section>;
+}
+
 export function EventDetailPanel({ 
   eventId, 
-  onClose 
+  onClose,
+  wind,
+  windVisible = true,
+  onWindVisibilityChange,
 }: { 
   eventId: string; 
   onClose: () => void; 
+  wind: WindData | null;
+  windVisible?: boolean;
+  onWindVisibilityChange: (visible: boolean) => void;
 }) {
   const searchParams = useSearchParams();
   const hasOverlay = Boolean(searchParams?.get("overlay"));
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "telemetry" | "baseline" | "geography" | "ai_brief">("overview");
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -44,14 +81,24 @@ export function EventDetailPanel({
     if (!eventId) return;
     setLoading(true);
     setError(null);
-    fetchEventIntelligence(eventId)
-      .then((res) => {
+    Promise.all([fetchEventIntelligence(eventId), fetchEventHistory(eventId)])
+      .then(([res, nextHistory]) => {
+        if (!res) {
+          onClose();
+          return;
+        }
         setData(res);
+        setHistory(nextHistory);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Error fetching event details:", err);
-        setError(err.message || "Failed to load event telemetry");
+        // A cache may reference an event removed from the active backend.
+        // Closing it lets the monitor reload its current event list.
+        if (err instanceof Error && err.message.includes("(404)")) {
+          onClose();
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Failed to load event telemetry");
         setLoading(false);
       });
   }, [eventId]);
@@ -407,6 +454,11 @@ export function EventDetailPanel({
                     </div>
                     <div className="text-xs text-slate-500 font-medium">{data.historical_active_days_90d || 0} active days in 90d</div>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <ThermalTrendCard history={history} />
+                  <WindConditionsCard wind={wind} visible={windVisible} onVisibleChange={onWindVisibilityChange} />
                 </div>
 
                 {/* 3-Column Tactical Dossier Grid */}
@@ -847,6 +899,9 @@ export function EventDetailPanel({
                         </div>
                       </div>
                     </div>
+
+                    <ThermalTrendCard history={history} />
+                    <WindConditionsCard wind={wind} visible={windVisible} onVisibleChange={onWindVisibilityChange} />
 
                     <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2 text-xs">
                       <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Why did the system make this classification?</div>

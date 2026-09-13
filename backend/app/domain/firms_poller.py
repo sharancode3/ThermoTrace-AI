@@ -38,6 +38,7 @@ SUPPORTED_SENSORS = [
 ]
 
 LAST_POLL_TIMESTAMP = None
+POLL_INTERVAL_SECONDS = max(1, int(os.getenv("FIRMS_POLL_INTERVAL_MINUTES", "30"))) * 60
 
 def compute_dedup_key(lat: float, lon: float, acq_date: str, acq_time: str, sensor: str) -> str:
     """Computes a deterministic SHA-256 deduplication key for a satellite observation with 4-decimal rounding."""
@@ -86,10 +87,10 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
     
     if not force and LAST_POLL_TIMESTAMP is not None:
         elapsed = (now - LAST_POLL_TIMESTAMP).total_seconds()
-        if elapsed < 1800:
+        if elapsed < POLL_INTERVAL_SECONDS:
             return {
                 "status": "THROTTLED",
-                "message": f"30-minute polling cadence active ({int(elapsed)}s elapsed since last poll). Next poll in {int(1800 - elapsed)}s.",
+                "message": f"Polling cadence active ({int(elapsed)}s elapsed since last poll). Next poll in {int(POLL_INTERVAL_SECONDS - elapsed)}s.",
                 "inserted_count": 0,
                 "duplicated_count": 0
             }
@@ -222,6 +223,11 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
         )
         for ev in recent_events:
             process_event_intelligence(session, ev.event_id)
+    except Exception as e:
+        # News/intelligence refresh must not prevent cleanup or poll completion.
+        session.rollback()
+        print(f"Error refreshing event intelligence in poller: {e}")
+
     # Database Optimization: Maintain only data visible & necessary in the application
     try:
         session.execute(text("""

@@ -29,6 +29,7 @@ from app.domain.features import get_thermal_trend, get_evidence_completeness, ge
 from app.domain.llm_humanizer import humanize_intelligence
 from app.domain.geocoding import resolve_indian_location
 from app.domain.sovereign_geofencing import is_within_sovereign_india
+from app.services.weather_service import WindLookupError, lookup_wind
 
 router = APIRouter()
 
@@ -569,11 +570,71 @@ def get_event_history(event_id: str, db: Session = Depends(get_db)):
         for obs in observations
     ]
 
+    valid = []
+    for item in history:
+        timestamp, brightness = item["acquired_at"], item["brightness_k"]
+        if timestamp is None or brightness is None:
+            continue
+        try:
+            valid.append((datetime.fromisoformat(timestamp.replace("Z", "+00:00")), float(brightness), item))
+        except (TypeError, ValueError):
+            continue
+
+    intervals = []
+    for previous, current in zip(valid, valid[1:]):
+        elapsed_hours = (current[0] - previous[0]).total_seconds() / 3600
+        if elapsed_hours <= 0:
+            continue
+        rate = (current[1] - previous[1]) / elapsed_hours
+        intervals.append({
+            "from_timestamp": previous[0].isoformat(),
+            "to_timestamp": current[0].isoformat(),
+            "rate_k_per_hour": round(rate, 3),
+        })
+
+    thermal_trend = {"status": "INSUFFICIENT_OBSERVATIONS", "observation_count": len(valid), "intervals": intervals}
+    if intervals:
+        latest = intervals[-1]
+        rate = latest["rate_k_per_hour"]
+        # A documented, configurable near-zero band avoids asserting a direction for negligible change.
+        stable_band = float(os.getenv("BRIGHTNESS_TEMPERATURE_STABLE_RATE_K_PER_HOUR", "0.5"))
+        thermal_trend = {
+            "status": "AVAILABLE",
+            "observation_count": len(valid),
+            "current_brightness_k": valid[-1][1],
+            "previous_brightness_k": valid[-2][1],
+            "current_timestamp": valid[-1][0].isoformat(),
+            "previous_timestamp": valid[-2][0].isoformat(),
+            "observation_span_hours": round((valid[-1][0] - valid[0][0]).total_seconds() / 3600, 3),
+            "latest_rate_k_per_hour": rate,
+            "trend": "RISING" if rate > stable_band else "FALLING" if rate < -stable_band else "STABLE",
+            "stable_rate_band_k_per_hour": stable_band,
+            "strongest_heating_interval": max(intervals, key=lambda interval: interval["rate_k_per_hour"]),
+            "strongest_cooling_interval": min(intervals, key=lambda interval: interval["rate_k_per_hour"]),
+            "intervals": intervals,
+        }
+
     return {
         "event_id": event_id,
         "observation_count": len(history),
         "history": history,
+        "thermal_trend": thermal_trend,
     }
+
+
+@router.get("/events/{event_id}/wind")
+def get_event_wind(event_id: str, db: Session = Depends(get_db)):
+    """Return provider-backed wind at the event's latest recorded observation time."""
+    event = db.query(ThermalEvent).filter(ThermalEvent.event_id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.latitude is None or event.longitude is None or event.latest_detected_utc is None:
+        return {"available": False, "status": "WIND_DATA_UNAVAILABLE", "reason": "Event coordinates or observation timestamp unavailable"}
+    try:
+        return lookup_wind(float(event.latitude), float(event.longitude), event.latest_detected_utc)
+    except WindLookupError as exc:
+        # Do not substitute a value: provider failure is a first-class state.
+        return {"available": False, "status": "HISTORICAL_WIND_DATA_UNAVAILABLE" if event.latest_detected_utc < datetime.now(timezone.utc) - timedelta(hours=48) else "WIND_DATA_UNAVAILABLE", "reason": str(exc)}
 
 
 @router.get("/events/{event_id}/compare")
