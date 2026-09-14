@@ -160,6 +160,14 @@ async function get<T>(
   return result;
 }
 
+/** A deleted/expired event is expected during a rolling retention refresh. */
+async function getOptional<T>(path: string): Promise<T | null> {
+  const response = await fetch(`${API_BASE_URL}${path}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  return response.json() as Promise<T>;
+}
+
 export async function fetchHealth() {
   return get<any>("/health");
 }
@@ -169,18 +177,11 @@ export async function fetchGisEvents(
   filters: EventFilters = {},
   forceRefresh: boolean = false
 ): Promise<GeoCollection> {
-  const now = Date.now();
   const cachedFeatures = await getAllCachedFeatures();
-  const lastSyncUtc = await getLastSyncUtc();
-  const lastSyncTime = await getLastSyncTime();
 
-  // 1. If we already have cached features and synced recently (within 45s),
-  // return filtered cached features directly with 0 network transfer!
-  if (!forceRefresh && cachedFeatures.length > 0 && (now - lastSyncTime) < 45000) {
-    return filterCachedFeatures(cachedFeatures, viewport, filters);
-  }
-
-  // 2. Incremental Delta Sync: If we already have a baseline, only request events detected AFTER lastSyncUtc
+  // An event is a rolling, server-owned entity. Do not merge a delta into a
+  // browser snapshot indefinitely: retention/formation can remove or replace
+  // IDs at any ingestion cadence (5, 30, or other minutes).
   try {
     const params: Record<string, any> = {
       show_all: true,
@@ -188,26 +189,10 @@ export async function fetchGisEvents(
       ...filters,
     };
 
-    if (lastSyncUtc && !forceRefresh) {
-      params.since_utc = lastSyncUtc;
-    }
-
-    const resp = await get<GeoCollection>("/gis/events", params, forceRefresh);
-
-    if (resp.features && resp.features.length > 0) {
-      // Merge new delta events into persistent IndexedDB store
-      await saveFeaturesToCache(resp.features);
-    } else {
-      // No new events detected on server: update sync timestamp
-      await setLastSyncMeta(null, now);
-    }
-
-    const updatedFeatures = await getAllCachedFeatures();
-    return filterCachedFeatures(
-      updatedFeatures.length > 0 ? updatedFeatures : (resp.features || []),
-      viewport,
-      filters
-    );
+    const resp = await get<GeoCollection>("/gis/events", params, true);
+    await clearEventCache();
+    await saveFeaturesToCache(resp.features || []);
+    return resp;
   } catch (err) {
     console.warn("[DeltaSync] Background sync failed, serving cached dataset:", err);
     if (cachedFeatures.length > 0) {
@@ -236,21 +221,47 @@ export function fetchGisObservations(
 }
 
 export function fetchEventDetail(eventId: string) {
-  return get<any>(`/events/${encodeURIComponent(eventId)}`);
+  return getOptional<any>(`/events/${encodeURIComponent(eventId)}`);
 }
 
 export const fetchEventIntelligence = fetchEventDetail;
 
 export function fetchEventHistory(eventId: string) {
-  return get<any>(
+  return getOptional<any>(
     `/events/${encodeURIComponent(eventId)}/history`
   );
 }
 
 export function fetchEventComparison(eventId: string) {
-  return get<any>(
+  return getOptional<any>(
     `/events/${encodeURIComponent(eventId)}/compare`
   );
+}
+
+export type WindData = {
+  available: boolean;
+  status?: string;
+  reason?: string;
+  data_kind?: "FORECAST_MODEL" | "HISTORICAL_REANALYSIS";
+  source?: string;
+  requested_at?: string;
+  timestamp?: string;
+  stale?: boolean;
+  latitude?: number;
+  longitude?: number;
+  speed_kmh?: number;
+  direction_from_degrees?: number;
+  direction_from_cardinal?: string;
+  direction_toward_degrees?: number;
+  direction_toward_cardinal?: string;
+};
+
+export function fetchEventWind(eventId: string) {
+  return getOptional<WindData>(`/events/${encodeURIComponent(eventId)}/wind`).then((wind) => wind ?? ({
+    available: false,
+    status: "EVENT_DATA_OUT_OF_DATE",
+    reason: "The selected event is no longer available from the active backend.",
+  }));
 }
 
 export async function fetchNews() {

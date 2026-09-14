@@ -8,6 +8,8 @@ import { useEffect, useRef } from "react";
  * Triggers poll strictly every 30 minutes (1,800,000ms) to conserve cloud quota.
  */
 export function useFirmsPoller(onNewData?: () => void) {
+  const intervalMinutes = Math.max(1, Number(process.env.NEXT_PUBLIC_FIRMS_POLL_INTERVAL_MINUTES || "30") || 30);
+  const intervalMs = intervalMinutes * 60 * 1000;
   const isPollingRef = useRef<boolean>(false);
   const lastPollTimeRef = useRef<number>(0);
 
@@ -16,12 +18,12 @@ export function useFirmsPoller(onNewData?: () => void) {
     // Guard: Prevent polling more than once per 30 minutes (1,800,000 ms) across all tabs unless explicitly forced
     if (typeof window !== "undefined") {
       const storedLast = window.localStorage.getItem("thermo_last_firms_poll_time");
-      if (!force && storedLast && (now - parseInt(storedLast, 10)) < 1800000) {
+      if (!force && storedLast && (now - parseInt(storedLast, 10)) < intervalMs) {
         return;
       }
     }
 
-    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < 1800000) {
+    if (!force && lastPollTimeRef.current > 0 && (now - lastPollTimeRef.current) < intervalMs) {
       return;
     }
 
@@ -63,7 +65,7 @@ export function useFirmsPoller(onNewData?: () => void) {
       if (document.visibilityState === "visible") {
         executePoll();
       }
-    }, 1800000);
+    }, intervalMs);
 
     return () => {
       clearInterval(interval);

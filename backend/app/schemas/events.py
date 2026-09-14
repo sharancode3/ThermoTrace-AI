@@ -111,6 +111,7 @@ class NewsItemResponse(BaseModel):
     confidence_pct: float
     peak_frp_mw: float
     brightness_temp_k: Optional[float] = None
+    thermal_trend: Optional[str] = "STABLE"
     is_industrial: bool = False
     evidence_strength: Optional[str] = "LIMITED"
     evidence_rationale: Optional[str] = ""

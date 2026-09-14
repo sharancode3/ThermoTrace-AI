@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Activity, BarChart3, MapPin, X } from "lucide-react";
-import { fetchEventComparison, fetchEventHistory, fetchEventIntelligence } from "@/lib/apiClient";
+import { fetchEventComparison, fetchEventHistory, fetchEventIntelligence, fetchEventWind, WindData } from "@/lib/apiClient";
 
 type Tab = "overview" | "timeline" | "geography" | "baseline";
 const format = (value: number | null | undefined, unit = "") => value === null || value === undefined ? "Unavailable" : `${value.toFixed(1)}${unit}`;
@@ -13,18 +13,24 @@ export function EventInvestigationDrawer({ eventId, onClose }: { eventId: string
   const [detail, setDetail] = useState<any>();
   const [history, setHistory] = useState<any>();
   const [comparison, setComparison] = useState<any>();
+  const [wind, setWind] = useState<WindData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDetail(undefined); setHistory(undefined); setComparison(undefined); setError(null);
-    Promise.all([fetchEventIntelligence(eventId), fetchEventHistory(eventId), fetchEventComparison(eventId)])
-      .then(([nextDetail, nextHistory, nextComparison]) => { setDetail(nextDetail); setHistory(nextHistory); setComparison(nextComparison); })
+    setDetail(undefined); setHistory(undefined); setComparison(undefined); setWind(null); setError(null);
+    Promise.all([fetchEventIntelligence(eventId), fetchEventHistory(eventId), fetchEventComparison(eventId), fetchEventWind(eventId)])
+      .then(([nextDetail, nextHistory, nextComparison, nextWind]) => { 
+        setDetail(nextDetail); 
+        setHistory(nextHistory); 
+        setComparison(nextComparison); 
+        setWind(nextWind);
+      })
       .catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load investigation"));
   }, [eventId]);
 
   const tabs: [Tab, string][] = [["overview", "Overview"], ["timeline", "Timeline"], ["geography", "Geographic Context"], ["baseline", "Historical Baseline"]];
   return <aside className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col rounded-t-lg border border-slate-200 bg-white shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:w-[440px] md:max-h-none md:rounded-none" aria-label="Event investigation">
-    <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3"><div><p className="font-mono text-sm font-semibold text-slate-900">{detail?.event_id ?? eventId}</p><p className="text-xs text-slate-500">{detail?.facility_name ?? detail?.location_name ?? "Loading location…"}</p></div><button aria-label="Close investigation" onClick={onClose} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></header>
+    <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3"><div><div className="flex items-center gap-2"><p className="font-mono text-sm font-semibold text-slate-900">{detail?.event_id ?? eventId}</p>{(detail?.thermal_trend === "INCREASING" || detail?.thermal_trend === "RISING") && <span className="text-red-600 font-bold text-xs" title="Temperature increasing at the moment">↑</span>}{(detail?.thermal_trend === "DECREASING" || detail?.thermal_trend === "FALLING") && <span className="text-emerald-600 font-bold text-xs" title="Temperature decreasing at the moment">↓</span>}</div><p className="text-xs text-slate-500">{detail?.facility_name ?? detail?.location_name ?? "Loading location…"}</p></div><button aria-label="Close investigation" onClick={onClose} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></header>
     <nav className="flex overflow-x-auto border-b border-slate-200 px-2" aria-label="Investigation tabs">{tabs.map(([value, label]) => <button key={value} role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`whitespace-nowrap border-b-2 px-3 py-3 text-xs font-medium ${tab === value ? "border-orange-600 text-orange-700" : "border-transparent text-slate-600"}`}>{label}</button>)}</nav>
     <div className="flex-1 overflow-y-auto p-4 text-sm">
       {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700">Investigation unavailable: {error}</p>}
@@ -32,7 +38,27 @@ export function EventInvestigationDrawer({ eventId, onClose }: { eventId: string
       {detail && tab === "overview" && <div className="space-y-4">
         <section className="rounded-md border border-slate-200 p-3"><div className="flex items-center justify-between"><span className="font-semibold text-slate-900">{detail.classification}</span><span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium">{detail.anomaly_tier}</span></div><p className="mt-2 text-xs text-slate-500">First detected {when(detail.first_detected_utc)}</p></section>
         <section className="grid grid-cols-2 gap-2">{[["Peak FRP", format(detail.peak_frp_mw, " MW")], ["Mean FRP", format(detail.mean_frp_mw, " MW")], ["Brightness", format(detail.max_brightness_k, " K")], ["Observations", String(detail.observation_count ?? "Unavailable")], ["Duration", format(detail.duration_hours, " h")], ["Confidence", format((detail.classification_confidence ?? 0) * 100, "%")]].map(([label, value]) => <div key={label} className="rounded-md border border-slate-200 p-3"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 font-mono font-semibold text-slate-900">{value}</p></div>)}</section>
-        <section className="rounded-md border border-slate-200 p-3"><h2 className="font-semibold text-slate-900">Evidence</h2><p className="mt-2 text-xs text-slate-600">Persistence: {detail.persistence_tier} · Thermal trend: {detail.thermal_trend} · Evidence completeness: {detail.evidence_completeness}</p>{Object.keys(detail.shap_top_contributors ?? {}).length > 0 && <ul className="mt-2 space-y-1 text-xs">{Object.entries(detail.shap_top_contributors).map(([key, value]) => <li key={key} className="flex justify-between"><span>{key}</span><span className="font-mono">{String(value)}</span></li>)}</ul>}</section>
+        {wind && (
+          <section className="rounded-md border border-orange-200 bg-orange-50/40 p-3 text-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-900 uppercase">Wind Conditions</span>
+              <span className="font-mono text-[10px] text-orange-700 font-semibold">{wind.available ? (wind.data_kind === "FORECAST_MODEL" ? "FORECAST" : "ERA5 REANALYSIS") : "UNAVAILABLE"}</span>
+            </div>
+            {wind.available ? (
+              <>
+                <div className="flex justify-between font-mono">
+                  <span>Direction: {wind.direction_from_cardinal} → {wind.direction_toward_cardinal}</span>
+                  <span className="font-bold">{wind.speed_kmh} km/h</span>
+                </div>
+                <p className="text-[11px] text-slate-600">Bearing: {wind.direction_from_degrees}° (from) → {wind.direction_toward_degrees}° (toward)</p>
+                <p className="text-[10px] text-slate-500">{wind.source} · {wind.timestamp ? new Date(wind.timestamp).toLocaleString() : "N/A"}</p>
+              </>
+            ) : (
+              <p className="text-[11px] text-rose-700 font-semibold">{wind.status || "WIND DATA UNAVAILABLE"}</p>
+            )}
+          </section>
+        )}
+        <section className="rounded-md border border-slate-200 p-3"><h2 className="font-semibold text-slate-900">Evidence</h2><p className="mt-2 text-xs text-slate-600">Persistence: {detail.persistence_tier} · Temperature trend: {detail.thermal_trend === "INCREASING" || detail.thermal_trend === "RISING" ? "↑ INCREASING" : detail.thermal_trend === "DECREASING" || detail.thermal_trend === "FALLING" ? "↓ DECREASING" : detail.thermal_trend} · Evidence completeness: {detail.evidence_completeness}</p>{Object.keys(detail.shap_top_contributors ?? {}).length > 0 && <ul className="mt-2 space-y-1 text-xs">{Object.entries(detail.shap_top_contributors).map(([key, value]) => <li key={key} className="flex justify-between"><span>{key}</span><span className="font-mono">{String(value)}</span></li>)}</ul>}</section>
       </div>}
       {detail && tab === "timeline" && <div className="space-y-3"><h2 className="flex items-center gap-2 font-semibold text-slate-900"><Activity className="h-4 w-4" /> Observation timeline</h2>{!history?.history?.length ? <p className="rounded-md border border-slate-200 p-3 text-slate-500">INSUFFICIENT DATA</p> : <><div className="rounded-md border border-slate-200 p-3 text-xs"><p>First detected: {when(detail.first_detected_utc)}</p><p>Peak FRP: {format(detail.peak_frp_mw, " MW")}</p><p>Latest observation: {when(detail.latest_detected_utc)}</p></div><div className="space-y-2">{history.history.map((point: any) => <div key={point.id} className="flex justify-between border-b border-slate-100 pb-2 text-xs"><span>{when(point.acquired_at)}</span><span className="font-mono">{format(point.frp_mw, " MW")} · {format(point.brightness_k, " K")}</span></div>)}</div></>}</div>}
       {detail && tab === "geography" && <div className="space-y-3"><h2 className="flex items-center gap-2 font-semibold text-slate-900"><MapPin className="h-4 w-4" /> Geographic context</h2><section className="rounded-md border border-slate-200 p-3 text-xs space-y-2"><p><strong>Facility:</strong> {detail.facility_name ?? "No associated facility"}</p><p><strong>Distance:</strong> {format(detail.distance_to_facility_m, " m")}</p><p><strong>Land cover:</strong> {detail.primary_land_use ?? "Unavailable"}</p><p><strong>Footprint:</strong> {format(detail.bounding_area_ha, " ha")}</p><p><strong>Coordinates:</strong> {detail.centroid?.coordinates ? `${detail.centroid.coordinates[1].toFixed(4)}, ${detail.centroid.coordinates[0].toFixed(4)}` : "Unavailable"}</p></section></div>}

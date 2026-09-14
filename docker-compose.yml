@@ -54,6 +54,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-thermo_db}
       - REDIS_URL=redis://redis:6379/0
       - FIRMS_MAP_KEY=5ee48ea9900661577c1dc26dfcc70550
+      - FIRMS_POLL_INTERVAL_MINUTES=${FIRMS_POLL_INTERVAL_MINUTES:-30}
       - ENVIRONMENT=development
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
@@ -112,7 +113,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-thermo_db}
       - REDIS_URL=redis://redis:6379/0
       - FIRMS_MAP_KEY=5ee48ea9900661577c1dc26dfcc70550
-      - FIRMS_POLL_INTERVAL_MINUTES=10
+      - FIRMS_POLL_INTERVAL_MINUTES=${FIRMS_POLL_INTERVAL_MINUTES:-30}
     volumes:
       - ./backend:/app
     depends_on:
@@ -138,6 +139,7 @@ services:
       # backend through Docker's service network, not its own localhost.
       - INTERNAL_BACKEND_URL=http://backend:8000/api/v1
       - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - NEXT_PUBLIC_FIRMS_POLL_INTERVAL_MINUTES=${FIRMS_POLL_INTERVAL_MINUTES:-30}
     volumes:
       - ./frontend:/app
       - /app/node_modules

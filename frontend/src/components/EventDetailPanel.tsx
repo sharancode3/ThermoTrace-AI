@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { 
   X, Loader2, Activity, AlertTriangle, ShieldCheck, Flame, 
-  MapPin, Clock, BarChart3, TrendingUp, Cpu, 
+  MapPin, Clock, BarChart3, TrendingUp, TrendingDown, Cpu, 
   ChevronRight, Download, FileText, Satellite,
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
   Layers, Compass, Info, Copy, Check, Eye, ExternalLink
 } from "lucide-react";
-import { fetchEventIntelligence } from "@/lib/apiClient";
+import { fetchEventHistory, fetchEventIntelligence, WindData } from "@/lib/apiClient";
 
 function formatRelativeTime(dateStr?: string | null) {
   if (!dateStr) return "Just now";
@@ -24,18 +24,460 @@ function formatRelativeTime(dateStr?: string | null) {
 }
 
 
+function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTrend?: string }) {
+  const trend = history?.thermal_trend;
+  const isAvailable = trend && trend.status === "AVAILABLE";
+  const [selectedPoint, setSelectedPoint] = useState<{
+    x: number;
+    y: number;
+    brightness_k: number;
+    acquired_at: string;
+    isProjected?: boolean;
+  } | null>(null);
+
+  // Clear selected point if event/history changes
+  useEffect(() => {
+    setSelectedPoint(null);
+  }, [history]);
+  
+  // Resolve effective trend from observation intervals or event fallback
+  const effectiveTrend = isAvailable ? trend.trend : fallbackTrend;
+  const isIncreasing = effectiveTrend === "RISING" || effectiveTrend === "INCREASING";
+  const isDecreasing = effectiveTrend === "FALLING" || effectiveTrend === "DECREASING";
+  const isStable = effectiveTrend === "STABLE";
+
+  const trendArrow = isIncreasing ? (
+    <span className="text-red-600 font-extrabold text-sm inline-flex items-center" title="Temperature is increasing at the moment" aria-label="Temperature increasing">↑</span>
+  ) : isDecreasing ? (
+    <span className="text-emerald-600 font-extrabold text-sm inline-flex items-center" title="Temperature is decreasing at the moment" aria-label="Temperature decreasing">↓</span>
+  ) : (
+    <span className="text-slate-500 font-bold text-sm inline-flex items-center" title="Temperature is stable at the moment" aria-label="Temperature stable">→</span>
+  );
+
+  if (!isAvailable) {
+    return (
+      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+          <span>Temperature Trend</span>
+          {(isIncreasing || isDecreasing || isStable) && trendArrow}
+        </h2>
+        <p className="mt-2 text-xs font-semibold text-slate-600">
+          {trend?.observation_count === 1 ? "INSUFFICIENT OBSERVATIONS" : "BRIGHTNESS TEMPERATURE UNAVAILABLE"}
+        </p>
+        <p className="mt-1 text-[11px] text-slate-500">
+          Satellite observations are discrete, not continuous ground-temperature telemetry.
+        </p>
+      </section>
+    );
+  }
+
+  const rising = trend.trend === "RISING";
+  const symbol = rising ? "↑" : trend.trend === "FALLING" ? "↓" : "→";
+  const colour = rising ? "text-red-700" : trend.trend === "FALLING" ? "text-emerald-700" : "text-slate-700";
+  const points = (history.history || []).filter((item: any) => Number.isFinite(Number(item.brightness_k)) && !Number.isNaN(Date.parse(item.acquired_at)));
+  const projected = Number(trend.current_brightness_k) + Number(trend.latest_rate_k_per_hour);
+  const observedValues = points.map((item: any) => Number(item.brightness_k));
+  const rawMin = Math.min(projected, ...observedValues);
+  const rawMax = Math.max(projected, ...observedValues);
+  const rangePadding = Math.max(1.5, (rawMax - rawMin) * 0.15);
+  const min = rawMin - rangePadding;
+  const max = rawMax + rangePadding;
+  const chartX = (index: number) => 8 + index * (70 / Math.max(1, points.length - 1));
+  const chartY = (value: number) => 48 - ((value - min) / Math.max(1, max - min)) * 38;
+  const plot = points.map((item: any, index: number) => `${chartX(index)},${chartY(Number(item.brightness_k))}`).join(" ");
+  const lastPlot = plot.split(" ").at(-1)?.split(",") || ["78", "48"];
+  const projectedY = chartY(projected);
+  const observedArea = `M ${plot.replaceAll(" ", " L ")} L ${lastPlot[0]},50 L 8,50 Z`;
+
+  const parsedPoints = points.map((item: any, index: number) => {
+    const [px, py] = plot.split(" ")[index].split(",");
+    return {
+      x: Number(px),
+      y: Number(py),
+      brightness_k: Number(item.brightness_k),
+      acquired_at: item.acquired_at,
+      id: item.id || `pt-${index}`,
+      isProjected: false,
+    };
+  });
+
+  const projectedPt = {
+    x: 92,
+    y: projectedY,
+    brightness_k: projected,
+    acquired_at: "Next-hour projection",
+    id: "projected-rate",
+    isProjected: true,
+  };
+
+  return (
+    <section className="rounded-2xl border border-orange-200 bg-orange-50/40 p-4 space-y-3" aria-label={`Brightness temperature ${trend.trend.toLowerCase()} at ${trend.latest_rate_k_per_hour} Kelvin per hour`}>
+      <div className="flex justify-between gap-2">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+          <span>Temperature Trend</span>
+          {trendArrow}
+        </h2>
+        <span className={`font-mono text-xs font-bold ${colour}`}>
+          {symbol} {rising ? "HEATING — CRITICAL" : trend.trend === "FALLING" ? "COOLING — GOOD" : "STABLE"} · {trend.latest_rate_k_per_hour > 0 ? "+" : ""}{Number(trend.latest_rate_k_per_hour).toFixed(1)} K/hour
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div><p className="text-slate-500">Current Brightness Temperature</p><p className="font-mono font-bold text-slate-900">{Number(trend.current_brightness_k).toFixed(1)} K</p></div>
+        <div><p className="text-slate-500">Previous Observation</p><p className="font-mono font-bold text-slate-900">{Number(trend.previous_brightness_k).toFixed(1)} K</p></div>
+        <div><p className="text-slate-500">Last Observation</p><p className="font-mono text-slate-700">{new Date(trend.current_timestamp).toLocaleString()}</p></div>
+        <div><p className="text-slate-500">Observation Span</p><p className="font-mono text-slate-700">{Number(trend.observation_span_hours).toFixed(1)} hours</p></div>
+      </div>
+
+      <div className="relative">
+        <svg
+          viewBox="0 0 100 56"
+          preserveAspectRatio="none"
+          className="h-28 w-full select-none rounded-xl border border-orange-100 bg-white/70"
+          role="img"
+          aria-label="Observed brightness temperature chart. Hover over any dot to view temperature and timestamp."
+        >
+          <defs>
+            <linearGradient id="temperature-trend-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f97316" stopOpacity="0.32" />
+              <stop offset="100%" stopColor="#f97316" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {[12, 24, 36, 48].map((y) => (
+            <line key={y} x1="8" y1={y} x2="94" y2={y} stroke="#fed7aa" strokeWidth="0.6" strokeDasharray="2 2" />
+          ))}
+          <line x1="8" y1="50" x2="94" y2="50" stroke="#94a3b8" strokeWidth="1" />
+          <line x1="8" y1="6" x2="8" y2="50" stroke="#94a3b8" strokeWidth="1" />
+          <path d={observedArea} fill="url(#temperature-trend-fill)" />
+          <polyline points={plot} fill="none" stroke="#ea580c" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
+          <line x1={lastPlot[0]} y1={lastPlot[1]} x2="92" y2={projectedY} stroke="#64748b" strokeWidth="1.7" strokeDasharray="3 2" />
+
+          {/* Active selection vertical dashed guideline */}
+          {selectedPoint && (
+            <line
+              x1={selectedPoint.x}
+              y1="4"
+              x2={selectedPoint.x}
+              y2="50"
+              stroke="#cbd5e1"
+              strokeDasharray="2 2"
+              strokeWidth="1"
+            />
+          )}
+
+          {/* Observed Points (Hover over dots to see temperature and time) */}
+          {parsedPoints.map((pt: any) => {
+            const isPtSelected = selectedPoint && !selectedPoint.isProjected && Math.abs(selectedPoint.x - pt.x) < 0.1;
+            const timeLabel = new Date(pt.acquired_at).toLocaleString([], {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const tooltipText = `${Number(pt.brightness_k).toFixed(1)} K (${(Number(pt.brightness_k) - 273.15).toFixed(1)} °C) · ${timeLabel}`;
+
+            return (
+              <g
+                key={pt.id}
+                className="cursor-pointer"
+                onMouseEnter={() => setSelectedPoint(pt)}
+                onMouseLeave={() => setSelectedPoint(null)}
+                onClick={() => setSelectedPoint(pt)}
+              >
+                <title>{tooltipText}</title>
+                {/* Generous hover hit target (r=12 for easy targeting) */}
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r="12"
+                  fill="transparent"
+                />
+                {/* Active hover halo */}
+                {isPtSelected && (
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="6"
+                    fill="none"
+                    stroke="#ea580c"
+                    strokeWidth="1.5"
+                    opacity="0.5"
+                  />
+                )}
+                {/* Visual Dot */}
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={isPtSelected ? "4.5" : "3.2"}
+                  fill="#ea580c"
+                  stroke="#ffffff"
+                  strokeWidth={isPtSelected ? "1.5" : "1"}
+                  className="transition-all duration-150"
+                />
+              </g>
+            );
+          })}
+
+          {/* Projected Rate Point */}
+          <g
+            className="cursor-pointer"
+            onMouseEnter={() => setSelectedPoint(projectedPt)}
+            onMouseLeave={() => setSelectedPoint(null)}
+            onClick={() => setSelectedPoint(projectedPt)}
+          >
+            <title>{`${Number(projected).toFixed(1)} K · Next-hour projection`}</title>
+            <circle
+              cx="92"
+              cy={projectedY}
+              r="12"
+              fill="transparent"
+            />
+            {selectedPoint?.isProjected && (
+              <circle
+                cx="92"
+                cy={projectedY}
+                r="6"
+                fill="none"
+                stroke="#64748b"
+                strokeWidth="1.5"
+                opacity="0.5"
+              />
+            )}
+            <circle
+              cx="92"
+              cy={projectedY}
+              r={selectedPoint?.isProjected ? "4" : "2.8"}
+              fill="#fff"
+              stroke="#64748b"
+              strokeWidth={selectedPoint?.isProjected ? "2" : "1"}
+              className="transition-all duration-150"
+            />
+          </g>
+        </svg>
+
+        {/* Clean, minimalist popup showing temperature and time on hover */}
+        {selectedPoint && (
+          <div
+            className="absolute z-30 pointer-events-none rounded-lg border border-slate-300 bg-white/95 px-2.5 py-1.5 shadow-xl backdrop-blur-sm transition-opacity duration-150"
+            style={{
+              left: `${Math.min(78, Math.max(22, selectedPoint.x))}%`,
+              top: selectedPoint.y < 26 ? "55%" : "0%",
+              transform: selectedPoint.y < 26 ? "translate(-50%, 0)" : "translate(-50%, -95%)",
+            }}
+          >
+            <div className="text-xs font-mono font-bold text-slate-900 whitespace-nowrap">
+              {Number(selectedPoint.brightness_k).toFixed(1)} K
+              <span className="ml-1 text-[10px] font-normal text-slate-500 font-sans">
+                ({(Number(selectedPoint.brightness_k) - 273.15).toFixed(1)} °C)
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">
+              {selectedPoint.isProjected
+                ? "Next-hour projection"
+                : new Date(selectedPoint.acquired_at).toLocaleString([], {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p className="text-[11px] text-slate-500">Based on {trend.observation_count} satellite readings. The solid line is measured temperature; the dashed line shows the next-hour direction if this rate continues.</p>
+    </section>
+  );
+}
+
+function WindConditionsCard({
+  wind,
+  visible,
+  onVisibleChange,
+}: {
+  wind: WindData | null;
+  visible: boolean;
+  onVisibleChange: (visible: boolean) => void;
+}) {
+  // Loading State
+  if (!wind) {
+    return (
+      <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-orange-600" />
+            <span>WIND CONDITIONS</span>
+          </h2>
+          <span className="text-[10px] font-mono text-orange-600 animate-pulse font-semibold">
+            Loading…
+          </span>
+        </div>
+        <p className="text-xs text-slate-500">
+          Loading provider-backed meteorological wind telemetry…
+        </p>
+      </section>
+    );
+  }
+
+  // Error / Unavailable / Historical Unavailable States
+  if (!wind.available) {
+    const isHistoricalUnavailable =
+      wind.status === "HISTORICAL_WIND_DATA_UNAVAILABLE" ||
+      wind.reason?.toLowerCase().includes("historical");
+    const isOutOfDate = wind.status === "EVENT_DATA_OUT_OF_DATE";
+
+    const errorTitle = isHistoricalUnavailable
+      ? "HISTORICAL WIND DATA UNAVAILABLE"
+      : isOutOfDate
+      ? "EVENT DATA OUT OF DATE"
+      : wind.status || "WIND DATA UNAVAILABLE";
+
+    return (
+      <section className="rounded-2xl border border-rose-200 bg-rose-50/40 p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-rose-600" />
+            <span>WIND CONDITIONS</span>
+          </h2>
+          <span className="text-[10px] font-mono font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded">
+            UNAVAILABLE
+          </span>
+        </div>
+        <p className="text-xs font-bold text-rose-900">{errorTitle}</p>
+        <p className="text-[11px] text-slate-600 leading-relaxed">
+          {isHistoricalUnavailable
+            ? "Historical meteorological reanalysis data for this observation timestamp is not available from the reanalysis provider."
+            : isOutOfDate
+            ? "This cached event is no longer available from the active backend. Please refresh the monitor."
+            : wind.reason || "Provider meteorological wind measurements could not be retrieved."}
+        </p>
+      </section>
+    );
+  }
+
+  // Active Real Wind Conditions Card
+  const isStale = Boolean(wind.stale);
+  const fromCard = wind.direction_from_cardinal || "N/A";
+  const toCard = wind.direction_toward_cardinal || "N/A";
+  const speed = typeof wind.speed_kmh === "number" ? `${wind.speed_kmh} km/h` : "Unavailable";
+  const fromDeg = Number(wind.direction_from_degrees);
+  const towardDeg = Number(wind.direction_toward_degrees);
+  const bearingText = Number.isFinite(fromDeg)
+    ? `${fromDeg}° (${fromCard}) → ${Number.isFinite(towardDeg) ? towardDeg : (fromDeg + 180) % 360}° (${toCard})`
+    : "Unavailable";
+  const timestampText = wind.timestamp ? new Date(wind.timestamp).toLocaleString() : "Unavailable";
+  const sourceText = wind.source || (wind.data_kind === "FORECAST_MODEL" ? "Open-Meteo forecast model" : "Open-Meteo archive (ERA5 reanalysis)");
+
+  return (
+    <section className="rounded-2xl border border-orange-200 bg-orange-50/40 p-4 space-y-3.5">
+      {/* Header with Title, Status Badges & Toggle */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-orange-600" />
+            <span>WIND CONDITIONS</span>
+          </h2>
+          {isStale && (
+            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+              STALE
+            </span>
+          )}
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-200 font-semibold">
+            {wind.data_kind === "FORECAST_MODEL" ? "FORECAST" : "ERA5 REANALYSIS"}
+          </span>
+        </div>
+
+        {/* Toggle Button: WIND VECTOR ON / OFF */}
+        <button
+          type="button"
+          onClick={() => onVisibleChange(!visible)}
+          className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded-lg border transition flex items-center gap-1.5 cursor-pointer ${
+            visible
+              ? "bg-orange-600 text-white border-orange-600 hover:bg-orange-700 shadow-sm"
+              : "bg-white text-slate-600 border-slate-300 hover:bg-slate-100"
+          }`}
+          title={visible ? "Hide wind direction cone on map" : "Show wind direction cone on map"}
+        >
+          <span>WIND VECTOR:</span>
+          <span>{visible ? "ON" : "OFF"}</span>
+        </button>
+      </div>
+
+      {/* Main Direction & Speed Visual Row */}
+      <div className="flex items-center gap-3.5 p-2.5 bg-white/80 rounded-xl border border-orange-100 shadow-xs">
+        <div
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-orange-50 border-2 border-orange-400 text-sm font-black text-orange-700 shadow-inner"
+          style={{ transform: `rotate(${Number.isFinite(towardDeg) ? towardDeg : 0}deg)` }}
+          title={`Wind blowing toward ${toCard} (${towardDeg}°)`}
+        >
+          ↑
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+            Wind Direction
+          </div>
+          <div className="font-mono font-black text-slate-900 text-sm">
+            {fromCard} → {toCard}
+          </div>
+          <div className="text-xs font-mono font-bold text-orange-600">
+            {speed}
+          </div>
+        </div>
+      </div>
+
+      {/* Structured Attribute Grid */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Bearing</p>
+          <p className="font-mono font-bold text-slate-900 text-[11px] truncate" title={bearingText}>
+            {Number.isFinite(fromDeg) ? `${fromDeg}°` : "N/A"} <span className="text-slate-400 font-normal">from</span> → {Number.isFinite(towardDeg) ? `${towardDeg}°` : "N/A"} <span className="text-slate-400 font-normal">to</span>
+          </p>
+        </div>
+        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Speed</p>
+          <p className="font-mono font-bold text-slate-900 text-[11px]">
+            {speed}
+          </p>
+        </div>
+        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80 col-span-2">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Observation Timestamp</p>
+          <p className="font-mono text-slate-800 text-[11px]">
+            {timestampText}
+          </p>
+        </div>
+        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80 col-span-2">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Telemetry Source</p>
+          <p className="font-mono text-slate-700 text-[11px] truncate" title={sourceText}>
+            {sourceText}
+          </p>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-slate-500 leading-tight">
+        Direction describes air moving from <strong className="text-slate-700 font-semibold">{fromCard}</strong> toward <strong className="text-slate-700 font-semibold">{toCard}</strong>. Visual cone on the map is aligned with the wind-toward vector.
+      </p>
+    </section>
+  );
+}
+
 export function EventDetailPanel({ 
   eventId, 
-  onClose 
+  onClose,
+  wind,
+  windVisible = true,
+  onWindVisibilityChange,
 }: { 
   eventId: string; 
   onClose: () => void; 
+  wind: WindData | null;
+  windVisible?: boolean;
+  onWindVisibilityChange: (visible: boolean) => void;
 }) {
   const searchParams = useSearchParams();
   const hasOverlay = Boolean(searchParams?.get("overlay"));
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "telemetry" | "baseline" | "geography" | "ai_brief">("overview");
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -44,14 +486,24 @@ export function EventDetailPanel({
     if (!eventId) return;
     setLoading(true);
     setError(null);
-    fetchEventIntelligence(eventId)
-      .then((res) => {
+    Promise.all([fetchEventIntelligence(eventId), fetchEventHistory(eventId)])
+      .then(([res, nextHistory]) => {
+        if (!res) {
+          onClose();
+          return;
+        }
         setData(res);
+        setHistory(nextHistory);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Error fetching event details:", err);
-        setError(err.message || "Failed to load event telemetry");
+        // A cache may reference an event removed from the active backend.
+        // Closing it lets the monitor reload its current event list.
+        if (err instanceof Error && err.message.includes("(404)")) {
+          onClose();
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Failed to load event telemetry");
         setLoading(false);
       });
   }, [eventId]);
@@ -256,6 +708,28 @@ export function EventDetailPanel({
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
+              {(() => {
+                const effTrend = history?.thermal_trend?.status === "AVAILABLE" 
+                  ? history.thermal_trend.trend 
+                  : data?.thermal_trend;
+                const isInc = effTrend === "RISING" || effTrend === "INCREASING";
+                const isDec = effTrend === "FALLING" || effTrend === "DECREASING";
+                if (isInc) {
+                  return (
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 font-bold text-[10px]" title="Temperature is increasing at the moment">
+                      <span className="text-xs">↑</span> Temp Increasing
+                    </span>
+                  );
+                }
+                if (isDec) {
+                  return (
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]" title="Temperature is decreasing at the moment">
+                      <span className="text-xs">↓</span> Temp Decreasing
+                    </span>
+                  );
+                }
+                return null;
+              })()}
               {data && (
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${sourcePillStyle}`}>
                   {isIndustrial ? "Industrial" : isAgricultural ? "Agriculture" : isWildfire ? "Wildfire" : "Uncertain"}
@@ -409,6 +883,11 @@ export function EventDetailPanel({
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <ThermalTrendCard history={history} fallbackTrend={data?.thermal_trend} />
+                  <WindConditionsCard wind={wind} visible={windVisible} onVisibleChange={onWindVisibilityChange} />
+                </div>
+
                 {/* 3-Column Tactical Dossier Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   {/* COLUMN 1: Sensor Radiometry & Anomaly */}
@@ -445,8 +924,15 @@ export function EventDetailPanel({
                           <span className="font-mono font-semibold text-slate-800">{data.duration_hours?.toFixed(1)} hours</span>
                         </div>
                         <div className="flex justify-between py-1">
-                          <span className="text-slate-500">Thermal Trend:</span>
-                          <span className="font-mono font-bold text-orange-600">{data.thermal_trend || "STABLE"}</span>
+                          <span className="text-slate-500">Temperature Trend:</span>
+                          <span className="font-mono font-bold flex items-center gap-1">
+                            {(() => {
+                              const eff = history?.thermal_trend?.status === "AVAILABLE" ? history.thermal_trend.trend : data.thermal_trend;
+                              if (eff === "INCREASING" || eff === "RISING") return <span className="text-red-600 font-bold">↑ INCREASING</span>;
+                              if (eff === "DECREASING" || eff === "FALLING") return <span className="text-emerald-600 font-bold">↓ DECREASING</span>;
+                              return <span className="text-orange-600">{data.thermal_trend || "STABLE"}</span>;
+                            })()}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -819,10 +1305,19 @@ export function EventDetailPanel({
                       </div>
 
                       <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-mono">
-                        <span className="text-slate-400 text-[11px]">Telemetry Trend:</span>
-                        <span className="font-bold text-emerald-400 flex items-center gap-1">
-                          <TrendingUp className="w-3.5 h-3.5" />
-                          {data.thermal_trend || "STABLE"} (Peak {data.peak_frp_mw?.toFixed(1)} MW)
+                        <span className="text-slate-400 text-[11px]">Temperature Trend:</span>
+                        <span className="font-bold flex items-center gap-1">
+                          {(() => {
+                            const eff = history?.thermal_trend?.status === "AVAILABLE" ? history.thermal_trend.trend : data.thermal_trend;
+                            if (eff === "INCREASING" || eff === "RISING") {
+                              return <span className="text-red-400 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> ↑ INCREASING</span>;
+                            }
+                            if (eff === "DECREASING" || eff === "FALLING") {
+                              return <span className="text-emerald-400 flex items-center gap-1"><TrendingDown className="w-3.5 h-3.5" /> ↓ DECREASING</span>;
+                            }
+                            return <span className="text-emerald-400 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> {data.thermal_trend || "STABLE"}</span>;
+                          })()}
+                          <span className="text-slate-400 font-normal">(Peak {data.peak_frp_mw?.toFixed(1)} MW)</span>
                         </span>
                       </div>
                     </div>
@@ -847,6 +1342,9 @@ export function EventDetailPanel({
                         </div>
                       </div>
                     </div>
+
+                    <ThermalTrendCard history={history} fallbackTrend={data?.thermal_trend} />
+                    <WindConditionsCard wind={wind} visible={windVisible} onVisibleChange={onWindVisibilityChange} />
 
                     <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2 text-xs">
                       <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Why did the system make this classification?</div>
@@ -1014,7 +1512,9 @@ export function EventDetailPanel({
                         </div>
                         <div className="p-2.5 bg-slate-50 rounded-lg">
                           <div className="text-slate-400 text-[10px]">thermal_trend</div>
-                          <div className="font-bold text-slate-800">{data.thermal_trend}</div>
+                          <div className="font-bold text-slate-800 flex items-center gap-1">
+                            {data.thermal_trend === "INCREASING" ? "↑ INCREASING" : data.thermal_trend === "DECREASING" ? "↓ DECREASING" : data.thermal_trend}
+                          </div>
                         </div>
                         <div className="p-2.5 bg-slate-50 rounded-lg">
                           <div className="text-slate-400 text-[10px]">persistence_tier</div>
