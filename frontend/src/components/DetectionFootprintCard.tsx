@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import Map, { Source, Layer, Marker } from "react-map-gl/maplibre";
+import Map, { Marker } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { WindData } from "@/lib/apiClient";
+import { buildAwarenessCorridorGeoJson } from "@/lib/corridorGeometry";
+import { syncWindCorridorToMap, syncFootprintSquaresToMap } from "@/lib/windLayerHelper";
 import { Users } from "lucide-react";
 
-// ESRI World Imagery (High-Res Defense Aerial Basemap with zero commercial labels)
+// ESRI World Imagery (High-Res Aerial Basemap with zero commercial labels)
 const ESRI_SATELLITE_STYLE: any = {
   version: 8,
   sources: {
@@ -51,7 +53,7 @@ interface DetectionFootprintCardProps {
 }
 
 /**
- * Builds 375m x 375m square bounding polygon for a VIIRS footprint centered at lat/lon
+ * Builds nominal 375m x 375m square bounding polygon for a VIIRS footprint centered at lat/lon
  */
 function buildFootprintPolygon(lon: number, lat: number) {
   const degLat = 375 / 111320;
@@ -69,75 +71,6 @@ function buildFootprintPolygon(lon: number, lat: number) {
   ];
 }
 
-/**
- * Builds prominent cyan dashed downwind dispersion cone matching reference image
- */
-function buildPlumeCone(
-  lon: number,
-  lat: number,
-  towardDeg: number,
-  speedKmh: number = 15
-) {
-  const angle = (towardDeg * Math.PI) / 180;
-  const lonScale = Math.max(0.2, Math.cos((lat * Math.PI) / 180));
-  // 24-degree half-angle = ~48-degree wide smoke dispersion cone
-  const halfAngle = (24 * Math.PI) / 180;
-
-  const reachM = Math.min(4200, Math.max(2200, 1800 + speedKmh * 85));
-  const reachDeg = reachM / 111320;
-
-  const project = (forward: number, lateral: number): [number, number] => [
-    lon + (Math.sin(angle) * forward + Math.cos(angle) * lateral) / lonScale,
-    lat + Math.cos(angle) * forward - Math.sin(angle) * lateral,
-  ];
-
-  const origin: [number, number] = [lon, lat];
-  const arcSegments = 24;
-  const arcPoints: [number, number][] = [];
-
-  for (let i = -arcSegments / 2; i <= arcSegments / 2; i++) {
-    const phi = (i / (arcSegments / 2)) * halfAngle;
-    arcPoints.push(project(reachDeg * Math.cos(phi), reachDeg * Math.sin(phi)));
-  }
-
-  const polygon = [origin, ...arcPoints, origin];
-  return {
-    type: "Feature" as const,
-    geometry: {
-      type: "Polygon" as const,
-      coordinates: [polygon],
-    },
-    properties: {},
-  };
-}
-
-/**
- * Builds central downwind vector centerline
- */
-function buildPlumeCenterline(
-  lon: number,
-  lat: number,
-  towardDeg: number,
-  speedKmh: number = 15
-) {
-  const angle = (towardDeg * Math.PI) / 180;
-  const lonScale = Math.max(0.2, Math.cos((lat * Math.PI) / 180));
-  const reachM = Math.min(3800, Math.max(2000, 1600 + speedKmh * 80));
-  const reachDeg = reachM / 111320;
-
-  const endLon = lon + (Math.sin(angle) * reachDeg) / lonScale;
-  const endLat = lat + Math.cos(angle) * reachDeg;
-
-  return {
-    type: "Feature" as const,
-    geometry: {
-      type: "LineString" as const,
-      coordinates: [[lon, lat], [endLon, endLat]],
-    },
-    properties: {},
-  };
-}
-
 export function DetectionFootprintCard({
   latitude,
   longitude,
@@ -148,22 +81,19 @@ export function DetectionFootprintCard({
 }: DetectionFootprintCardProps) {
   const mapRef = useRef<any>(null);
 
-  // Normalize constituent observation coordinates (generating 3 footprint boxes if single point)
+  // Constituent observation coordinates: exactly 1 real observation = 1 footprint box.
+  // Never fabricate or hallucinate synthetic pixel boxes.
   const validObs = useMemo(() => {
     if (observations && observations.length > 0) {
       const filtered = observations
         .filter((o) => Number.isFinite(Number(o.latitude)) && Number.isFinite(Number(o.longitude)))
         .slice(-8);
-      if (filtered.length >= 2) return filtered;
+      if (filtered.length > 0) return filtered;
     }
-    // 3 constituent overlapping 375m pixels matching reference image
-    const latOffset = 220 / 111320;
-    const lonOffset = 220 / (111320 * Math.max(0.2, Math.cos((latitude * Math.PI) / 180)));
-    return [
-      { latitude, longitude },
-      { latitude: latitude + latOffset * 0.7, longitude: longitude + lonOffset * 0.7 },
-      { latitude: latitude - latOffset * 0.5, longitude: longitude + lonOffset * 1.1 },
-    ];
+    if (Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))) {
+      return [{ latitude: Number(latitude), longitude: Number(longitude) }];
+    }
+    return [];
   }, [observations, latitude, longitude]);
 
   const footprintGeoJson = useMemo(() => {
@@ -186,52 +116,84 @@ export function DetectionFootprintCard({
     };
   }, [validObs]);
 
-  // Wind Plume Conical Corridor GeoJSON
+  // Downwind Awareness Corridor GeoJSON using shared pure geospatial engine
   const towardDeg = Number(wind?.direction_toward_degrees);
   const speedKmh = Number(wind?.speed_kmh) || 0;
+  const gustsKmh = Number(wind?.gusts_kmh) || null;
   const hasWind = Number.isFinite(towardDeg) && Boolean(wind?.available);
 
-  const plumeGeoJson = useMemo(() => {
+  const corridorGeo = useMemo(() => {
     if (!hasWind) return null;
-    return buildPlumeCone(longitude, latitude, towardDeg, speedKmh);
-  }, [longitude, latitude, towardDeg, speedKmh, hasWind]);
+    return buildAwarenessCorridorGeoJson({
+      longitude,
+      latitude,
+      towardDeg,
+      speedKmh,
+      gustsKmh,
+    });
+  }, [longitude, latitude, towardDeg, speedKmh, gustsKmh, hasWind]);
 
-  const plumeCenterlineGeoJson = useMemo(() => {
-    if (!hasWind) return null;
-    return buildPlumeCenterline(longitude, latitude, towardDeg, speedKmh);
-  }, [longitude, latitude, towardDeg, speedKmh, hasWind]);
-
-  // Camera framing: shift camera downwind halfway so both footprint & plume cone fit in view
-  const { centerLon, centerLat, zoomLevel } = useMemo(() => {
-    if (!hasWind) {
-      return { centerLon: longitude, centerLat: latitude, zoomLevel: 13.5 };
-    }
-    const angle = (towardDeg * Math.PI) / 180;
-    const lonScale = Math.max(0.2, Math.cos((latitude * Math.PI) / 180));
-    // Plume reaches ~2500m; shift camera ~900m downwind along the cone vector
-    const shiftM = 900;
-    const cLat = latitude + (Math.cos(angle) * shiftM) / 111320;
-    const cLon = longitude + (Math.sin(angle) * shiftM) / (111320 * lonScale);
-    return { centerLon: cLon, centerLat: cLat, zoomLevel: 13.1 };
-  }, [longitude, latitude, towardDeg, hasWind]);
-
+  // Synchronize Wind Corridor and Footprint Squares to MapLibre
   useEffect(() => {
-    if (mapRef.current) {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    const syncAll = () => {
+      syncWindCorridorToMap({
+        map,
+        sourceId: "footprint-wind-corridor-source",
+        layerPrefix: "footprint-wind-corridor",
+        corridorResult: corridorGeo || null,
+        featureCollection: corridorGeo?.featureCollection || null,
+        isSatellite: true,
+        visible: Boolean(hasWind && corridorGeo),
+      });
+      syncFootprintSquaresToMap(map, footprintGeoJson);
+    };
+
+    syncAll();
+    map.on("styledata", syncAll);
+    map.on("style.load", syncAll);
+    map.on("load", syncAll);
+
+    return () => {
+      map.off("styledata", syncAll);
+      map.off("style.load", syncAll);
+      map.off("load", syncAll);
+    };
+  }, [corridorGeo, footprintGeoJson, hasWind]);
+
+  // Camera framing using authoritative combined bounds (corridor + footprints)
+  const boundsKey = corridorGeo?.bounds ? corridorGeo.bounds.join(",") : "";
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (corridorGeo?.bounds) {
+      let [minLon, minLat, maxLon, maxLat] = corridorGeo.bounds;
+      validObs.forEach((obs) => {
+        if (obs.longitude < minLon) minLon = obs.longitude;
+        if (obs.longitude > maxLon) maxLon = obs.longitude;
+        if (obs.latitude < minLat) minLat = obs.latitude;
+        if (obs.latitude > maxLat) maxLat = obs.latitude;
+      });
+      mapRef.current.fitBounds(
+        [
+          [minLon, minLat],
+          [maxLon, maxLat],
+        ],
+        {
+          padding: 36,
+          maxZoom: 14.5,
+          duration: 600,
+        }
+      );
+    } else {
       mapRef.current.flyTo({
-        center: [centerLon, centerLat],
-        zoom: zoomLevel,
-        duration: 800,
+        center: [longitude, latitude],
+        zoom: 13.5,
+        duration: 600,
       });
     }
-  }, [centerLon, centerLat, zoomLevel]);
-
-  // Approximate population density within 5km buffer
-  const populationEstimate = useMemo(() => {
-    if (distanceToFacilityM !== null && distanceToFacilityM !== undefined && distanceToFacilityM < 1500) {
-      return "~5,200 people within 5 km";
-    }
-    return "~3,100 people within 5 km";
-  }, [distanceToFacilityM]);
+  }, [boundsKey, longitude, latitude, validObs]);
 
   return (
     <section 
@@ -245,9 +207,9 @@ export function DetectionFootprintCard({
             DETECTION FOOTPRINT
           </span>
         </div>
-        <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
+        <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500" title="Population layer is not actively ingested for this sector">
           <Users className="w-3.5 h-3.5 text-slate-400" />
-          <span>{populationEstimate}</span>
+          <span>Population exposure data unavailable</span>
         </div>
       </div>
 
@@ -256,9 +218,9 @@ export function DetectionFootprintCard({
         <Map
           ref={mapRef}
           initialViewState={{
-            longitude: centerLon,
-            latitude: centerLat,
-            zoom: zoomLevel,
+            longitude,
+            latitude,
+            zoom: 13.2,
             pitch: 0,
           }}
           mapStyle={ESRI_SATELLITE_STYLE}
@@ -267,79 +229,21 @@ export function DetectionFootprintCard({
           doubleClickZoom={false}
           dragRotate={false}
           attributionControl={false}
+          onLoad={(e) => {
+            const map = e.target;
+            syncWindCorridorToMap({
+              map,
+              sourceId: "footprint-wind-corridor-source",
+              layerPrefix: "footprint-wind-corridor",
+              corridorResult: corridorGeo || null,
+              featureCollection: corridorGeo?.featureCollection || null,
+              isSatellite: true,
+              visible: Boolean(hasWind && corridorGeo),
+            });
+            syncFootprintSquaresToMap(map, footprintGeoJson);
+          }}
         >
-          {/* Conical Plume Corridor Fill (Translucent Cyan with dashed border) */}
-          {plumeGeoJson && (
-            <Source id="footprint-plume-fill-source" type="geojson" data={plumeGeoJson as any}>
-              <Layer
-                id="footprint-plume-fill"
-                type="fill"
-                paint={{
-                  "fill-color": "#06b6d4",
-                  "fill-opacity": 0.28,
-                }}
-              />
-              <Layer
-                id="footprint-plume-border"
-                type="line"
-                paint={{
-                  "line-color": "#38bdf8",
-                  "line-width": 2,
-                  "line-dasharray": [4, 3],
-                  "line-opacity": 0.95,
-                }}
-              />
-            </Source>
-          )}
-
-          {/* Central Downwind Vector Line */}
-          {plumeCenterlineGeoJson && (
-            <Source id="footprint-plume-centerline-source" type="geojson" data={plumeCenterlineGeoJson as any}>
-              <Layer
-                id="footprint-plume-centerline-glow"
-                type="line"
-                paint={{
-                  "line-color": "#06b6d4",
-                  "line-width": 3,
-                  "line-opacity": 0.35,
-                  "line-blur": 2,
-                }}
-              />
-              <Layer
-                id="footprint-plume-centerline"
-                type="line"
-                paint={{
-                  "line-color": "#e0f2fe",
-                  "line-width": 1.5,
-                  "line-opacity": 0.9,
-                  "line-dasharray": [3, 3],
-                }}
-              />
-            </Source>
-          )}
-
-          {/* 375m VIIRS Constituent Footprint Squares (Green outline & soft fill) */}
-          <Source id="footprint-squares-source" type="geojson" data={footprintGeoJson as any}>
-            <Layer
-              id="footprint-squares-fill"
-              type="fill"
-              paint={{
-                "fill-color": "#22c55e",
-                "fill-opacity": 0.22,
-              }}
-            />
-            <Layer
-              id="footprint-squares-outline"
-              type="line"
-              paint={{
-                "line-color": "#4ade80",
-                "line-width": 2,
-                "line-opacity": 0.95,
-              }}
-            />
-          </Source>
-
-          {/* Geo-anchored Wind Badge placed directly at the footprint cluster matching reference image */}
+          {/* Geo-anchored Wind Badge placed directly at the footprint cluster */}
           {hasWind && (
             <Marker
               longitude={longitude}
@@ -348,7 +252,13 @@ export function DetectionFootprintCard({
               offset={[14, -14]}
             >
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-500/80 bg-slate-950/85 backdrop-blur-md text-white font-mono text-[11px] font-bold shadow-2xl pointer-events-none whitespace-nowrap">
-                <span>wind {Math.round(speedKmh)} km/h @ {Math.round(towardDeg)}°</span>
+                {corridorGeo?.isLightVariable ? (
+                  <span>light/variable wind (&lt; 3 km/h)</span>
+                ) : (
+                  <span>
+                    wind {Math.round(speedKmh)} km/h · {wind?.direction_from_cardinal || ""} → {wind?.direction_toward_cardinal || ""} ({Math.round(towardDeg)}°)
+                  </span>
+                )}
               </div>
             </Marker>
           )}
@@ -357,11 +267,12 @@ export function DetectionFootprintCard({
         {/* Footer Bar on Aerial Canvas */}
         <div className="absolute bottom-2 left-2.5 z-10 pointer-events-none">
           <div className="font-mono text-[9px] sm:text-[10px] tracking-wider uppercase font-bold text-slate-200 drop-shadow-md bg-black/75 px-2 py-0.5 rounded border border-white/20 backdrop-blur-sm">
-            {validObs.length} × 375 M FOOTPRINTS · ESRI IMAGERY
+            {validObs.length > 0 
+              ? `${validObs.length} × NOMINAL 375 M PIXEL${validObs.length > 1 ? "S" : ""} · ESRI IMAGERY`
+              : "SENSOR FOOTPRINT UNAVAILABLE"}
           </div>
         </div>
       </div>
     </section>
   );
 }
-

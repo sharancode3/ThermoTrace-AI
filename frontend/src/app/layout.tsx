@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "Thermo Intelligence | NTRO",
   description: "Industrial Fire & Persistent Thermal Source Detection Platform",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#ea580c",
 };
 

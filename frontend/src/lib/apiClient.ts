@@ -161,8 +161,14 @@ async function get<T>(
 }
 
 /** A deleted/expired event is expected during a rolling retention refresh. */
-async function getOptional<T>(path: string): Promise<T | null> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+async function getOptional<T>(
+  path: string,
+  params: Record<string, string | number | boolean | undefined> = {}
+): Promise<T | null> {
+  const suffix = query(params);
+  const response = await fetch(
+    `${API_BASE_URL}${path}${suffix ? `?${suffix}` : ""}`
+  );
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Request failed (${response.status})`);
   return response.json() as Promise<T>;
@@ -243,30 +249,80 @@ export type WindData = {
   available: boolean;
   status?: string;
   reason?: string;
+  target_type?: "EVENT" | "FACILITY" | "COORDINATE" | string;
+  target_id?: string;
   data_kind?: "FORECAST_MODEL" | "HISTORICAL_REANALYSIS";
   source?: string;
+  provider?: string;
   requested_at?: string;
   timestamp?: string;
+  time_difference_seconds?: number;
   stale?: boolean;
+  is_light_variable?: boolean;
   latitude?: number;
   longitude?: number;
   speed_kmh?: number;
+  speed_units?: string;
   direction_from_degrees?: number;
   direction_from_cardinal?: string;
   direction_toward_degrees?: number;
   direction_toward_cardinal?: string;
   gusts_kmh?: number;
+  gusts_units?: string;
   temperature_c?: number;
+  temperature_units?: string;
   relative_humidity_pct?: number;
   surface_pressure_hpa?: number;
+  surface_pressure_units?: string;
+  precipitation_mm?: number;
+  precipitation_units?: string;
+  facility_name?: string;
+  facility_code?: string;
+  ambient_context_notice?: string;
 };
 
-export function fetchEventWind(eventId: string) {
-  return getOptional<WindData>(`/events/${encodeURIComponent(eventId)}/wind`).then((wind) => wind ?? ({
-    available: false,
-    status: "EVENT_DATA_OUT_OF_DATE",
-    reason: "The selected event is no longer available from the active backend.",
-  }));
+export function fetchEventWind(
+  eventId: string,
+  options?: { latitude?: number; longitude?: number; timestamp?: string }
+): Promise<WindData> {
+  const params: Record<string, any> = {};
+  if (options?.latitude != null && Number.isFinite(options.latitude)) params.latitude = options.latitude;
+  if (options?.longitude != null && Number.isFinite(options.longitude)) params.longitude = options.longitude;
+  if (options?.timestamp) params.timestamp = options.timestamp;
+
+  return getOptional<WindData>(`/events/${encodeURIComponent(eventId)}/wind`, params).then(
+    (wind): WindData =>
+      wind ?? {
+        available: false,
+        status: "WIND_DATA_UNAVAILABLE",
+        reason: "Wind telemetry is unavailable for this target.",
+        target_type: "EVENT",
+        target_id: eventId,
+        stale: false,
+      }
+  );
+}
+
+export function fetchFacilityWind(
+  facilityId: string,
+  options?: { latitude?: number; longitude?: number; timestamp?: string }
+): Promise<WindData> {
+  const params: Record<string, any> = {};
+  if (options?.latitude != null && Number.isFinite(options.latitude)) params.latitude = options.latitude;
+  if (options?.longitude != null && Number.isFinite(options.longitude)) params.longitude = options.longitude;
+  if (options?.timestamp) params.timestamp = options.timestamp;
+
+  return getOptional<WindData>(`/facilities/${encodeURIComponent(facilityId)}/wind`, params).then(
+    (wind): WindData =>
+      wind ?? {
+        available: false,
+        status: "WIND_DATA_UNAVAILABLE",
+        reason: "Ambient wind telemetry is unavailable for this facility.",
+        target_type: "FACILITY",
+        target_id: facilityId,
+        stale: false,
+      }
+  );
 }
 
 export async function fetchNews() {

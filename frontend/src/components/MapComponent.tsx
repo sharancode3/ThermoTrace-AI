@@ -9,13 +9,15 @@ import {
   fetchGisFacilities,
   fetchGisObservations,
   fetchEventDetail,
-  fetchEventWind,
+  fetchFacilityWind,
   clearEventCache,
   GeoCollection,
   GeoFeature,
   Viewport,
   WindData,
 } from "@/lib/apiClient";
+import { buildAwarenessCorridorGeoJson } from "@/lib/corridorGeometry";
+import { syncWindCorridorToMap } from "@/lib/windLayerHelper";
 import {
   Layers,
   Navigation as NavigationIcon,
@@ -123,89 +125,8 @@ type MapComponentProps = {
   selectedEventId?: string | null;
   wind?: WindData | null;
   windVisible?: boolean;
+  onWindVisibilityChange?: (visible: boolean) => void;
 };
-
-function buildWindCorridor(
-  longitude: number,
-  latitude: number,
-  towardDegrees: number,
-  speedKmh: number,
-  zoom: number = 5
-): any {
-  // Meteorological TOWARD angle: 0 is North (latitude+), 90 is East (longitude+)
-  const angle = (towardDegrees * Math.PI) / 180;
-  const longitudeScale = Math.max(0.25, Math.cos((latitude * Math.PI) / 180));
-
-  // Controlled 32° total beam width (16° half-angle), compliant with 25°–40° specification
-  const halfAngle = (16 * Math.PI) / 180;
-
-  // Zoom-adaptive reach: keep the sector clearly legible without losing its
-  // geographic anchoring. A 120–145px beam remains recognizable over both
-  // pale roadmap tiles and dark satellite imagery.
-  // across all zoom levels while remaining 100% geographically anchored to the hotspot
-  const targetScreenPx = Math.min(145, Math.max(120, 120 + Math.min(25, speedKmh * 0.7)));
-  const effectiveZoom = Math.max(2, Math.min(18, zoom));
-  const degPerPx = 360 / (256 * Math.pow(2, effectiveZoom));
-  const reach = targetScreenPx * degPerPx;
-
-  // Projects forward along wind-toward and lateral (perpendicular) in geographic degrees
-  const point = (forward: number, lateral: number): [number, number] => [
-    longitude + (Math.sin(angle) * forward + Math.cos(angle) * lateral) / longitudeScale,
-    latitude + Math.cos(angle) * forward - Math.sin(angle) * lateral,
-  ];
-
-  // 1. Fan sector polygon originating exactly at hotspot coordinates
-  const origin: [number, number] = [longitude, latitude];
-  const arcSegments = 24;
-  const arcPoints: [number, number][] = [];
-
-  // Smooth circular arc along outer boundary from -halfAngle to +halfAngle
-  for (let i = -arcSegments / 2; i <= arcSegments / 2; i++) {
-    const phi = (i / (arcSegments / 2)) * halfAngle;
-    arcPoints.push(point(reach * Math.cos(phi), reach * Math.sin(phi)));
-  }
-
-  // CCW closed polygon ring: origin -> outer arc -> origin
-  const polygonCoords: [number, number][] = [origin, ...arcPoints, origin];
-
-  // 2. Subtle directional cue features inside the cone (centerline + directional tick)
-  const axisStart = point(reach * 0.18, 0);
-  const axisEnd = point(reach * 0.90, 0);
-
-  const arrowApex = point(reach * 0.78, 0);
-  const arrowLeft = point(reach * 0.68, reach * 0.07);
-  const arrowRight = point(reach * 0.68, -reach * 0.07);
-
-  // Keep geometry types in separate sources. This avoids renderer/filter
-  // ambiguity when a GeoJSON collection mixes polygon and line features.
-  return {
-    fill: {
-      type: "Feature",
-      geometry: { type: "Polygon", coordinates: [polygonCoords] },
-      properties: {},
-    },
-    outline: {
-      type: "Feature",
-      geometry: { type: "LineString", coordinates: polygonCoords },
-      properties: {},
-    },
-    cues: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          geometry: { type: "LineString", coordinates: [axisStart, axisEnd] },
-          properties: {},
-        },
-        {
-          type: "Feature",
-          geometry: { type: "LineString", coordinates: [arrowLeft, arrowApex, arrowRight] },
-          properties: {},
-        },
-      ],
-    },
-  };
-}
 
 export default function MapComponent({
   onEventClick,
@@ -294,38 +215,40 @@ export default function MapComponent({
   } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Wind & Selection States
-  const [internalWind, setInternalWind] = useState<WindData | null>(null);
-  const [activeSelectedId, setActiveSelectedId] = useState<string | null>(selectedEventId || null);
+  // Facility ambient wind state when facility drawer is open without an active event
+  const [facilityWind, setFacilityWind] = useState<WindData | null>(null);
 
   useEffect(() => {
-    setActiveSelectedId(selectedEventId || null);
-    if (selectedEventId) {
-      fetchEventWind(selectedEventId).then((w) => {
-        if (w) setInternalWind(w);
-      }).catch(() => {});
-    } else {
-      setInternalWind(null);
+    if (!selectedFacilityForDrawer?.id || selectedEventId) {
+      setFacilityWind(null);
+      return;
     }
-  }, [selectedEventId]);
+    let cancelled = false;
+    fetchFacilityWind(selectedFacilityForDrawer.id, {
+      latitude: selectedFacilityForDrawer.latitude,
+      longitude: selectedFacilityForDrawer.longitude,
+    })
+      .then((w) => {
+        if (!cancelled && w?.available) setFacilityWind(w);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFacilityForDrawer?.id, selectedFacilityForDrawer?.latitude, selectedFacilityForDrawer?.longitude, selectedEventId]);
 
-  const activeWind = wind || internalWind;
+  const activeWind = selectedEventId ? wind : (selectedFacilityForDrawer ? facilityWind : null);
   const activeWindVisible = windVisible;
 
   const handleHotspotClick = (id: string, lon?: number, lat?: number) => {
-    setActiveSelectedId(id);
     if (onEventClick) {
       onEventClick(id);
     }
-    fetchEventWind(id).then((w) => {
-      if (w) setInternalWind(w);
-    }).catch(() => {});
-
     if (lon !== undefined && lat !== undefined) {
       mapRef.current?.flyTo({
         center: [lon, lat],
         zoom: 12.5,
-        duration: 1200,
+        duration: 1000,
         essential: true,
       });
     }
@@ -638,48 +561,119 @@ export default function MapComponent({
     }
 
     return list;
-  }, [geoData, selectedEventData, selectedEventId, activeSelectedId]);
+  }, [geoData, selectedEventData, selectedEventId]);
 
-  // Selected hotspot coordinates for authoritative overlays
+  // Selected target coordinates (event or facility) for authoritative overlays
   const selectedCoords = useMemo<[number, number] | null>(() => {
-    const targetId = activeSelectedId || selectedEventId;
-    if (!targetId) return null;
-    const feat = displayFeatures.find((f) => f.properties?.event_id === targetId);
-    if (feat && Array.isArray(feat.geometry?.coordinates)) {
-      return [feat.geometry.coordinates[0], feat.geometry.coordinates[1]];
-    }
-    const lon = Number(selectedEventData?.longitude ?? selectedEventData?.centroid?.coordinates?.[0]);
-    const lat = Number(selectedEventData?.latitude ?? selectedEventData?.centroid?.coordinates?.[1]);
-    if (Number.isFinite(lon) && Number.isFinite(lat)) {
-      return [lon, lat];
+    if (selectedEventId) {
+      const feat = displayFeatures.find((f) => f.properties?.event_id === selectedEventId);
+      if (feat && Array.isArray(feat.geometry?.coordinates)) {
+        return [feat.geometry.coordinates[0], feat.geometry.coordinates[1]];
+      }
+      const lon = Number(selectedEventData?.longitude ?? selectedEventData?.centroid?.coordinates?.[0]);
+      const lat = Number(selectedEventData?.latitude ?? selectedEventData?.centroid?.coordinates?.[1]);
+      if (Number.isFinite(lon) && Number.isFinite(lat)) {
+        return [lon, lat];
+      }
+    } else if (selectedFacilityForDrawer) {
+      const lon = Number(selectedFacilityForDrawer.longitude);
+      const lat = Number(selectedFacilityForDrawer.latitude);
+      if (Number.isFinite(lon) && Number.isFinite(lat)) {
+        return [lon, lat];
+      }
     }
     return null;
-  }, [activeSelectedId, selectedEventId, displayFeatures, selectedEventData]);
+  }, [selectedEventId, displayFeatures, selectedEventData, selectedFacilityForDrawer]);
 
-  // Conical Wind Direction Indicator data
-  const windConeData = useMemo(() => {
+  // Authoritative Downwind Awareness Corridor Data using shared pure geometry engine
+  const windGeometry = useMemo(() => {
     if (!activeWindVisible || !activeWind?.available || !selectedCoords) return null;
     const [lon, lat] = selectedCoords;
     const toward = Number(activeWind.direction_toward_degrees);
-    const fromDeg = Number(activeWind.direction_from_degrees);
     if (!Number.isFinite(toward)) return null;
 
     const speed = Number(activeWind.speed_kmh) || 0;
-    const corridor = buildWindCorridor(lon, lat, toward, speed, viewport.zoom);
+    const gusts = Number(activeWind.gusts_kmh) || null;
+
+    const geo = buildAwarenessCorridorGeoJson({
+      longitude: lon,
+      latitude: lat,
+      towardDeg: toward,
+      speedKmh: speed,
+      gustsKmh: gusts,
+    });
+
+    const isFacilityTarget = !selectedEventId && Boolean(selectedFacilityForDrawer);
 
     return {
       lon,
       lat,
       toward,
-      fromDegrees: Number.isFinite(fromDeg)
-        ? Math.round(fromDeg)
+      fromDegrees: Number.isFinite(Number(activeWind.direction_from_degrees))
+        ? Number(activeWind.direction_from_degrees)
         : Math.round(((toward - 180) % 360 + 360) % 360),
-      speed,
-      corridor,
       fromCardinal: activeWind.direction_from_cardinal || "",
       toCardinal: activeWind.direction_toward_cardinal || "",
+      speed,
+      gusts,
+      isFacilityTarget,
+      geo,
     };
-  }, [activeWindVisible, activeWind, selectedCoords, viewport.zoom]);
+  }, [activeWindVisible, activeWind, selectedCoords, selectedEventId, selectedFacilityForDrawer]);
+
+  const isSatellite = mapType === "hybrid";
+
+  // Authoritative MapLibre Lifecycle Synchronizer for Wind-Directed Awareness Corridor
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    const sync = () => {
+      syncWindCorridorToMap({
+        map,
+        sourceId: "thermotrace-wind-corridor-source",
+        layerPrefix: "thermotrace-wind-corridor",
+        corridorResult: windGeometry?.geo || null,
+        featureCollection: windGeometry?.geo?.featureCollection || null,
+        isSatellite,
+        visible: Boolean(activeWindVisible && windGeometry),
+      });
+    };
+
+    sync();
+    map.on("styledata", sync);
+    map.on("style.load", sync);
+    map.on("load", sync);
+
+    return () => {
+      map.off("styledata", sync);
+      map.off("style.load", sync);
+      map.off("load", sync);
+    };
+  }, [windGeometry, isSatellite, activeWindVisible]);
+
+  // Dynamic Camera Fit with Padding to prevent right dossier occlusion
+  useEffect(() => {
+    if (!windGeometry?.geo?.bounds || !mapRef.current) return;
+    const [minLon, minLat, maxLon, maxLat] = windGeometry.geo.bounds;
+    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+    const padding = isDesktop
+      ? { top: 60, bottom: 60, left: 60, right: 540 }
+      : { top: 70, bottom: 180, left: 24, right: 24 };
+
+    mapRef.current.fitBounds(
+      [
+        [minLon, minLat],
+        [maxLon, maxLat],
+      ],
+      {
+        padding,
+        maxZoom: 14.5,
+        duration: 900,
+        essential: true,
+      }
+    );
+  }, [windGeometry?.lon, windGeometry?.lat, windGeometry?.toward]);
 
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
@@ -692,6 +686,17 @@ export default function MapComponent({
         }}
         mapStyle={mapType === "hybrid" ? GOOGLE_HYBRID : GOOGLE_ROADMAP}
         style={{ width: "100%", height: "100%" }}
+        onLoad={(e) => {
+          syncWindCorridorToMap({
+            map: e.target,
+            sourceId: "thermotrace-wind-corridor-source",
+            layerPrefix: "thermotrace-wind-corridor",
+            corridorResult: windGeometry?.geo || null,
+            featureCollection: windGeometry?.geo?.featureCollection || null,
+            isSatellite,
+            visible: Boolean(activeWindVisible && windGeometry),
+          });
+        }}
         interactiveLayerIds={showFacilities ? ["facilities-circles"] : []}
         onClick={(e) => {
           const feature = e.features?.[0];
@@ -794,7 +799,7 @@ export default function MapComponent({
         {displayFeatures.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
-          const isSelected = (activeSelectedId || selectedEventId) === event_id;
+          const isSelected = selectedEventId === event_id;
           const isCooled = lifecycle_status === "EXTINGUISHED" || lifecycle_status === "COOLING";
 
           return (
@@ -894,83 +899,35 @@ export default function MapComponent({
           );
         })()}
 
-        {/* Authoritative Geographically-Anchored Selected-Hotspot Wind Direction Sector (Cyan Plume) */}
-        {windConeData && (
-          <Source id="selected-event-wind-corridor-fill-source" type="geojson" data={windConeData.corridor.fill as any}>
-            <Layer
-              id="selected-event-wind-corridor-fill"
-              type="fill"
-              paint={{
-                "fill-color": "#06b6d4",
-                "fill-opacity": 0.22,
-              }}
-            />
-          </Source>
-        )}
-        {windConeData && (
-          <Source id="selected-event-wind-corridor-outline-source" type="geojson" data={windConeData.corridor.outline as any}>
-            <Layer
-              id="selected-event-wind-corridor-glow"
-              type="line"
-              paint={{
-                "line-color": "#06b6d4",
-                "line-width": 8,
-                "line-opacity": 0.35,
-                "line-blur": 3,
-              }}
-            />
-            <Layer
-              id="selected-event-wind-corridor-outline"
-              type="line"
-              paint={{
-                "line-color": "#38bdf8",
-                "line-width": 2,
-                "line-dasharray": [3, 2],
-                "line-opacity": 1,
-              }}
-            />
-          </Source>
-        )}
-        {windConeData && (
-          <Source id="selected-event-wind-corridor-cues-source" type="geojson" data={windConeData.corridor.cues as any}>
-            <Layer
-              id="selected-event-wind-corridor-cues"
-              type="line"
-              paint={{
-                "line-color": "#0284c7",
-                "line-width": 1.8,
-                "line-opacity": 0.9,
-              }}
-            />
-          </Source>
-        )}
-
-        {/* Compact Glass Pill Wind Information Badge */}
-        {windConeData && (
+        {/* Anchored Wind Direction & Speed Pill Badge */}
+        {windGeometry && (
           <Marker
-            key={`selected-event-wind-overlay-${activeSelectedId || selectedEventId}`}
-            longitude={windConeData.lon}
-            latitude={windConeData.lat}
-            anchor="bottom-left"
-            offset={[14, -14]}
-            style={{ zIndex: 35, pointerEvents: "none" }}
-          >
-            <div
-              data-testid="wind-vector-overlay"
-              aria-label={`Wind ${windConeData.fromCardinal} to ${windConeData.toCardinal} at ${windConeData.speed} kilometres per hour, bearing ${windConeData.toward || windConeData.fromDegrees} degrees`}
-              className="pointer-events-none rounded-lg border border-slate-700/80 bg-slate-900/90 px-2.5 py-1 shadow-xl backdrop-blur-md select-none font-mono text-left flex items-center gap-1.5"
+              key={`selected-target-wind-badge-${selectedEventId || selectedFacilityForDrawer?.id || "target"}`}
+              longitude={windGeometry.lon}
+              latitude={windGeometry.lat}
+              anchor="bottom-left"
+              offset={[14, -14]}
+              style={{ zIndex: 45, pointerEvents: "none" }}
             >
-              <div 
-                className="w-3.5 h-3.5 rounded-full bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center text-cyan-400 shrink-0"
-                style={{ transform: `rotate(${windConeData.toward || windConeData.fromDegrees}deg)` }}
+              <div
+                data-testid="wind-vector-overlay"
+                aria-label={`Wind ${windGeometry.fromCardinal} to ${windGeometry.toCardinal} at ${Math.round(windGeometry.speed)} kilometres per hour, bearing ${Math.round(windGeometry.toward)} degrees`}
+                className="pointer-events-none rounded-lg border border-slate-700/90 bg-slate-950/90 px-2.5 py-1 shadow-2xl backdrop-blur-md select-none font-mono text-left flex items-center gap-1.5"
               >
-                <NavigationIcon className="w-2 h-2 text-cyan-400 fill-cyan-400" />
+                <div 
+                  className="w-4 h-4 rounded-full bg-cyan-500/20 border border-cyan-400/80 flex items-center justify-center text-cyan-400 shrink-0"
+                  style={{ transform: `rotate(${Math.round(windGeometry.toward)}deg)` }}
+                >
+                  <NavigationIcon className="w-2.5 h-2.5 text-cyan-400 fill-cyan-400" />
+                </div>
+                <span className="text-[11px] font-bold text-white whitespace-nowrap">
+                  wind {Math.round(windGeometry.speed)} km/h · {windGeometry.fromCardinal} → {windGeometry.toCardinal} ({Math.round(windGeometry.toward)}°)
+                  {windGeometry.isFacilityTarget && (
+                    <span className="ml-1 text-[9px] text-amber-300 font-semibold uppercase">[Ambient]</span>
+                  )}
+                </span>
               </div>
-              <span className="text-[10.5px] font-bold text-white whitespace-nowrap">
-                wind {Math.round(windConeData.speed)} km/h · {windConeData.fromCardinal} → {windConeData.toCardinal} ({Math.round(windConeData.toward || windConeData.fromDegrees)}°)
-              </span>
-            </div>
-          </Marker>
+            </Marker>
         )}
 
         {/* User Proximity Safety Geofence Layer (25km Contextual Shield) */}

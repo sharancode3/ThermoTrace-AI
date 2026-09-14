@@ -16,46 +16,31 @@ function compassDirection(degrees: number): string {
   return points[idx];
 }
 
-async function lookupEventWindFallback(eventId: string) {
+async function lookupCoordinatesWind(
+  lat: number,
+  lon: number,
+  timeStr: string | null,
+  targetType: "EVENT" | "FACILITY",
+  targetId: string,
+  extraMeta: Record<string, any> = {}
+) {
   try {
-    const eventRes = await fetch(`${BACKEND_BASE}/events/${encodeURIComponent(eventId)}`);
-    if (!eventRes.ok) {
-      return NextResponse.json({
-        available: false,
-        status: "EVENT_NOT_FOUND",
-        reason: "Selected thermal event was not found on backend",
-      }, { status: 404 });
-    }
-    const event = await eventRes.json();
-    const lat = Number(event.latitude ?? event.centroid?.coordinates?.[1]);
-    const lon = Number(event.longitude ?? event.centroid?.coordinates?.[0]);
-    const timeStr = event.latest_detected_utc;
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !timeStr) {
-      return NextResponse.json({
-        available: false,
-        status: "WIND_DATA_UNAVAILABLE",
-        reason: "Event coordinates or observation timestamp unavailable",
-      }, { status: 200 });
-    }
-
-    const requestedAt = new Date(timeStr);
+    const requestedAt = timeStr ? new Date(timeStr) : new Date();
     const now = new Date();
     const isHistorical = requestedAt.getTime() < now.getTime() - 48 * 3600 * 1000;
 
     let url: string;
     let source: string;
-    let dataKind: "HISTORICAL_REANALYSIS" | "FORECAST_MODEL";
+    const dataKind = isHistorical ? "HISTORICAL_REANALYSIS" : "FORECAST_MODEL";
 
+    const hourlyFields = "wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,relative_humidity_2m,surface_pressure,precipitation";
     if (isHistorical) {
       const dateStr = requestedAt.toISOString().slice(0, 10);
-      url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&start_date=${dateStr}&end_date=${dateStr}&timezone=UTC&wind_speed_unit=kmh`;
+      url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=${hourlyFields}&start_date=${dateStr}&end_date=${dateStr}&timezone=UTC&wind_speed_unit=kmh`;
       source = "Open-Meteo archive (ERA5 reanalysis)";
-      dataKind = "HISTORICAL_REANALYSIS";
     } else {
-      url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&forecast_days=2&past_days=2&timezone=UTC&wind_speed_unit=kmh`;
+      url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${hourlyFields}&forecast_days=2&past_days=2&timezone=UTC&wind_speed_unit=kmh`;
       source = "Open-Meteo forecast model";
-      dataKind = "FORECAST_MODEL";
     }
 
     const meteoRes = await fetch(url, { signal: AbortSignal.timeout(8000) });
@@ -64,6 +49,10 @@ async function lookupEventWindFallback(eventId: string) {
         available: false,
         status: isHistorical ? "HISTORICAL_WIND_DATA_UNAVAILABLE" : "WIND_DATA_UNAVAILABLE",
         reason: `Provider request failed with status ${meteoRes.status}`,
+        target_type: targetType,
+        target_id: targetId,
+        latitude: lat,
+        longitude: lon,
       }, { status: 200 });
     }
 
@@ -71,6 +60,11 @@ async function lookupEventWindFallback(eventId: string) {
     const times: string[] = payload?.hourly?.time || [];
     const speeds: (number | null)[] = payload?.hourly?.wind_speed_10m || [];
     const directions: (number | null)[] = payload?.hourly?.wind_direction_10m || [];
+    const gusts: (number | null)[] = payload?.hourly?.wind_gusts_10m || [];
+    const temps: (number | null)[] = payload?.hourly?.temperature_2m || [];
+    const humidities: (number | null)[] = payload?.hourly?.relative_humidity_2m || [];
+    const pressures: (number | null)[] = payload?.hourly?.surface_pressure || [];
+    const precips: (number | null)[] = payload?.hourly?.precipitation || [];
 
     let bestDiff = Infinity;
     let bestIdx = -1;
@@ -90,6 +84,8 @@ async function lookupEventWindFallback(eventId: string) {
         available: false,
         status: isHistorical ? "HISTORICAL_WIND_DATA_UNAVAILABLE" : "WIND_DATA_UNAVAILABLE",
         reason: "Provider response did not contain usable hourly wind values",
+        target_type: targetType,
+        target_id: targetId,
       }, { status: 200 });
     }
 
@@ -97,22 +93,46 @@ async function lookupEventWindFallback(eventId: string) {
     const directionFrom = Math.round(((Number(directions[bestIdx]) % 360 + 360) % 360) * 10) / 10;
     const directionToward = Math.round(((directionFrom + 180) % 360) * 10) / 10;
     const obsTime = new Date(times[bestIdx].replace("Z", "") + "Z");
-    const isStale = Math.abs(obsTime.getTime() - requestedAt.getTime()) > 2 * 3600 * 1000;
+    const timeDiffSec = Math.round(Math.abs(obsTime.getTime() - requestedAt.getTime()) / 1000);
+    const isStale = timeDiffSec > 2 * 3600;
+    const isLight = speedKmh < 3.0;
+
+    const status = isLight ? "LIGHT_VARIABLE_WIND" : (isStale ? "STALE" : "AVAILABLE");
+    const reason = isLight
+      ? "Light/variable wind (< 3 km/h); directional transport is uncertain."
+      : (isStale ? "Provider record is outside nominal 2h observation window." : undefined);
 
     return NextResponse.json({
       available: true,
+      status,
+      reason,
+      target_type: targetType,
+      target_id: targetId,
       data_kind: dataKind,
       source,
+      provider: "Open-Meteo",
       requested_at: requestedAt.toISOString(),
       timestamp: obsTime.toISOString(),
+      time_difference_seconds: timeDiffSec,
       stale: isStale,
-      latitude: lat,
-      longitude: lon,
+      latitude: Math.round(lat * 100000) / 100000,
+      longitude: Math.round(lon * 100000) / 100000,
       speed_kmh: speedKmh,
+      speed_units: "km/h",
       direction_from_degrees: directionFrom,
       direction_from_cardinal: compassDirection(directionFrom),
       direction_toward_degrees: directionToward,
       direction_toward_cardinal: compassDirection(directionToward),
+      gusts_kmh: gusts[bestIdx] != null ? Math.round(Number(gusts[bestIdx]) * 10) / 10 : null,
+      gusts_units: "km/h",
+      temperature_c: temps[bestIdx] != null ? Math.round(Number(temps[bestIdx]) * 10) / 10 : null,
+      temperature_units: "°C",
+      relative_humidity_pct: humidities[bestIdx] != null ? Math.round(Number(humidities[bestIdx]) * 10) / 10 : null,
+      surface_pressure_hpa: pressures[bestIdx] != null ? Math.round(Number(pressures[bestIdx]) * 10) / 10 : null,
+      surface_pressure_units: "hPa",
+      precipitation_mm: precips[bestIdx] != null ? Math.round(Number(precips[bestIdx]) * 100) / 100 : 0.0,
+      precipitation_units: "mm",
+      ...extraMeta,
     }, {
       status: 200,
       headers: {
@@ -120,13 +140,92 @@ async function lookupEventWindFallback(eventId: string) {
       },
     });
   } catch (err: any) {
-    console.error("[WIND FALLBACK ERROR]", err);
+    console.error("[WEATHER FALLBACK ERROR]", err);
     return NextResponse.json({
       available: false,
       status: "WIND_DATA_UNAVAILABLE",
       reason: err.message || "Failed to retrieve real wind telemetry",
+      target_type: targetType,
+      target_id: targetId,
     }, { status: 200 });
   }
+}
+
+async function lookupEventWindFallback(eventId: string, queryParams: URLSearchParams) {
+  let lat = Number(queryParams.get("latitude"));
+  let lon = Number(queryParams.get("longitude"));
+  let timeStr = queryParams.get("timestamp");
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    try {
+      const eventRes = await fetch(`${BACKEND_BASE}/events/${encodeURIComponent(eventId)}`);
+      if (eventRes.ok) {
+        const event = await eventRes.json();
+        lat = Number(event.latitude ?? event.centroid?.coordinates?.[1]);
+        lon = Number(event.longitude ?? event.centroid?.coordinates?.[0]);
+        timeStr = event.latest_detected_utc || event.first_detected_utc;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return NextResponse.json({
+      available: false,
+      status: "EVENT_NOT_FOUND",
+      reason: `Thermal event '${eventId}' was not found on backend and coordinates not supplied.`,
+      target_type: "EVENT",
+      target_id: eventId,
+    }, { status: 404 });
+  }
+
+  return lookupCoordinatesWind(lat, lon, timeStr, "EVENT", eventId);
+}
+
+async function lookupFacilityWindFallback(facilityId: string, queryParams: URLSearchParams) {
+  let lat = Number(queryParams.get("latitude"));
+  let lon = Number(queryParams.get("longitude"));
+  let timeStr = queryParams.get("timestamp");
+  let facilityName = "Strategic Facility";
+  let facilityCode = facilityId;
+  let sectorCategory = "Industrial";
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    try {
+      const facRes = await fetch(`${BACKEND_BASE}/facilities/${encodeURIComponent(facilityId)}/intelligence`);
+      if (facRes.ok) {
+        const fac = await facRes.json();
+        const coords = fac?.facility?.coordinates;
+        if (Array.isArray(coords)) {
+          lon = coords[0];
+          lat = coords[1];
+        }
+        facilityName = fac?.facility?.name || facilityName;
+        facilityCode = fac?.facility?.facility_code || facilityCode;
+        sectorCategory = fac?.facility?.sector_category || sectorCategory;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return NextResponse.json({
+      available: false,
+      status: "FACILITY_NOT_FOUND",
+      reason: `Strategic facility '${facilityId}' was not found on backend and coordinates not supplied.`,
+      target_type: "FACILITY",
+      target_id: facilityId,
+    }, { status: 404 });
+  }
+
+  return lookupCoordinatesWind(lat, lon, timeStr, "FACILITY", facilityId, {
+    facility_name: facilityName,
+    facility_code: facilityCode,
+    sector_category: sectorCategory,
+    ambient_context_notice: "Ambient surface wind context at facility location. Does not assert or model facility emissions or particulate dispersion.",
+  });
 }
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> | { path?: string[] } }) {
@@ -157,10 +256,15 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
 
     const backendRes = await fetch(targetUrl, init);
 
-    // If backend returns 404 for events/{id}/wind, invoke centralized provider fallback
-    const windMatch = subPath.match(/^events\/([^/]+)\/wind$/);
-    if (backendRes.status === 404 && isGet && windMatch) {
-      return await lookupEventWindFallback(windMatch[1]);
+    // If backend returns 404 for events/{id}/wind or facilities/{id}/wind, invoke unified provider fallback
+    const eventWindMatch = subPath.match(/^events\/([^/]+)\/wind$/);
+    if (backendRes.status === 404 && isGet && eventWindMatch) {
+      return await lookupEventWindFallback(eventWindMatch[1], request.nextUrl.searchParams);
+    }
+
+    const facilityWindMatch = subPath.match(/^facilities\/([^/]+)\/wind$/);
+    if (backendRes.status === 404 && isGet && facilityWindMatch) {
+      return await lookupFacilityWindFallback(facilityWindMatch[1], request.nextUrl.searchParams);
     }
 
     const body = await backendRes.arrayBuffer();

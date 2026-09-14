@@ -15,7 +15,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, desc, case
+from sqlalchemy import func, or_, and_, desc, case, cast, String
+from app.services.weather_service import WindLookupError, lookup_wind
 
 from app.db.database import get_db
 from app.db.models import (
@@ -788,3 +789,66 @@ def download_facility_report(
             "X-Report-SHA256": sha256_val,
         },
     )
+
+
+@router.get("/{facility_id}/wind")
+def get_facility_wind(
+    facility_id: str,
+    timestamp: Optional[str] = Query(None, description="Optional ISO timestamp for ambient wind context"),
+    db: Session = Depends(get_db),
+):
+    """Retrieve ambient meteorological wind context at the facility coordinates.
+    
+    Clearly returned as ambient context without asserting emissions or smoke plume generation.
+    """
+    facility = (
+        db.query(IndustrialFacility)
+        .filter(
+            or_(
+                cast(IndustrialFacility.id, String) == facility_id,
+                IndustrialFacility.facility_code == facility_id,
+                func.lower(IndustrialFacility.name) == facility_id.lower(),
+            )
+        )
+        .first()
+    )
+
+    if not facility or facility.latitude is None or facility.longitude is None:
+        raise HTTPException(status_code=404, detail=f"Strategic facility '{facility_id}' not found.")
+
+    if timestamp and isinstance(timestamp, str):
+        try:
+            req_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            req_time = datetime.now(timezone.utc)
+    else:
+        req_time = datetime.now(timezone.utc)
+
+    try:
+        res = lookup_wind(
+            float(facility.latitude),
+            float(facility.longitude),
+            req_time,
+            target_type="FACILITY",
+            target_id=str(facility.id),
+        )
+        res["facility_name"] = facility.name
+        res["facility_code"] = facility.facility_code
+        res["sector_category"] = facility.sector_category
+        res["ambient_context_notice"] = (
+            "Ambient surface wind context at facility location. "
+            "Does not assert or model facility emissions or particulate dispersion."
+        )
+        return res
+    except WindLookupError as exc:
+        return {
+            "available": False,
+            "status": "WIND_DATA_UNAVAILABLE",
+            "reason": str(exc),
+            "target_type": "FACILITY",
+            "target_id": str(facility.id),
+            "facility_name": facility.name,
+            "latitude": float(facility.latitude),
+            "longitude": float(facility.longitude),
+            "requested_at": req_time.isoformat(),
+        }

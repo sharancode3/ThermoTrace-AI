@@ -5,7 +5,7 @@ import sys
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import text, case, or_, func, and_
+from sqlalchemy import text, case, or_, func, and_, cast, String
 from geoalchemy2.shape import to_shape
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
@@ -644,18 +644,68 @@ def get_event_history(event_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/events/{event_id}/wind")
-def get_event_wind(event_id: str, db: Session = Depends(get_db)):
-    """Return provider-backed wind at the event's latest recorded observation time."""
-    event = db.query(ThermalEvent).filter(ThermalEvent.event_id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-    if event.latitude is None or event.longitude is None or event.latest_detected_utc is None:
-        return {"available": False, "status": "WIND_DATA_UNAVAILABLE", "reason": "Event coordinates or observation timestamp unavailable"}
+def get_event_wind(
+    event_id: str,
+    latitude: Optional[float] = Query(None, description="Optional fallback latitude"),
+    longitude: Optional[float] = Query(None, description="Optional fallback longitude"),
+    timestamp: Optional[str] = Query(None, description="Optional fallback ISO timestamp"),
+    db: Session = Depends(get_db),
+):
+    """Return provider-backed wind at the event's observation time.
+    
+    Supports canonical IDs (EVT-YYYY-*, EVT-IN-*), internal UUIDs, and coordinate fallback.
+    """
+    event = (
+        db.query(ThermalEvent)
+        .filter(
+            or_(
+                ThermalEvent.event_id == event_id,
+                func.lower(ThermalEvent.event_id) == event_id.lower(),
+                cast(ThermalEvent.id, String) == event_id,
+            )
+        )
+        .first()
+    )
+
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    obs_time: Optional[datetime] = None
+    canonical_id = event.event_id if event else event_id
+
+    if event and event.latitude is not None and event.longitude is not None:
+        lat = float(event.latitude)
+        lon = float(event.longitude)
+        obs_time = event.latest_detected_utc or event.first_detected_utc
+    elif latitude is not None and longitude is not None:
+        lat = float(latitude)
+        lon = float(longitude)
+        if timestamp and isinstance(timestamp, str):
+            try:
+                obs_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                obs_time = datetime.now(timezone.utc)
+        else:
+            obs_time = datetime.now(timezone.utc)
+    else:
+        raise HTTPException(status_code=404, detail=f"Thermal event '{event_id}' not found and coordinates not provided.")
+
+    if obs_time is None:
+        obs_time = datetime.now(timezone.utc)
+
     try:
-        return lookup_wind(float(event.latitude), float(event.longitude), event.latest_detected_utc)
+        return lookup_wind(lat, lon, obs_time, target_type="EVENT", target_id=canonical_id)
     except WindLookupError as exc:
-        # Do not substitute a value: provider failure is a first-class state.
-        return {"available": False, "status": "HISTORICAL_WIND_DATA_UNAVAILABLE" if event.latest_detected_utc < datetime.now(timezone.utc) - timedelta(hours=48) else "WIND_DATA_UNAVAILABLE", "reason": str(exc)}
+        is_hist = obs_time < datetime.now(timezone.utc) - timedelta(hours=48)
+        return {
+            "available": False,
+            "status": "HISTORICAL_WIND_DATA_UNAVAILABLE" if is_hist else "WIND_DATA_UNAVAILABLE",
+            "reason": str(exc),
+            "target_type": "EVENT",
+            "target_id": canonical_id,
+            "latitude": lat,
+            "longitude": lon,
+            "requested_at": obs_time.isoformat(),
+        }
 
 
 @router.get("/events/{event_id}/compare")

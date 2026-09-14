@@ -23,11 +23,16 @@ import {
   Clock,
   Sparkles,
   Info,
+  Compass,
+  Navigation as NavigationIcon,
+  Wind,
 } from "lucide-react";
 import {
   fetchFacilityIntelligence,
+  fetchFacilityWind,
   FacilitySummary,
   FacilityIntelligence,
+  WindData,
 } from "@/lib/apiClient";
 
 interface FacilityDetailDrawerProps {
@@ -41,6 +46,8 @@ export default function FacilityDetailDrawer({
 }: FacilityDetailDrawerProps) {
   const router = useRouter();
   const [intel, setIntel] = useState<FacilityIntelligence | null>(null);
+  const [facilityWind, setFacilityWind] = useState<WindData | null>(null);
+  const [facilityWindLoading, setFacilityWindLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +56,35 @@ export default function FacilityDetailDrawer({
     "overview" | "history" | "spatial" | "brief"
   >("overview");
   const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!facility) {
+      setFacilityWind(null);
+      return;
+    }
+    setFacilityWindLoading(true);
+    let isMounted = true;
+    fetchFacilityWind(facility.id, {
+      latitude: facility.latitude,
+      longitude: facility.longitude,
+    })
+      .then((data) => {
+        if (isMounted) {
+          setFacilityWind(data);
+          setFacilityWindLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.warn("Facility wind context unavailable", err);
+          setFacilityWindLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [facility?.id, facility?.latitude, facility?.longitude]);
 
   useEffect(() => {
     if (!facility) {
@@ -473,6 +509,90 @@ export default function FacilityDetailDrawer({
                       classification operates in exploratory mode.
                     </div>
                   )}
+
+                  {/* Ambient Surface Wind Context */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <Compass className="h-5 w-5 text-cyan-600" />
+                        <h3 className="font-bold text-slate-900">
+                          Ambient Surface Wind Context
+                        </h3>
+                      </div>
+                      <span className="rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-semibold text-cyan-700">
+                        {facilityWind?.source || "Open-Meteo Telemetry"}
+                      </span>
+                    </div>
+
+                    {facilityWindLoading ? (
+                      <div className="py-4 text-center text-xs text-slate-500 font-mono animate-pulse">
+                        Querying atmospheric surface wind vector at facility coordinates...
+                      </div>
+                    ) : facilityWind && facilityWind.available ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 rounded-xl border border-cyan-200/70">
+                          <div
+                            className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-cyan-700 shadow-sm"
+                            style={{
+                              transform: `rotate(${Number(facilityWind.direction_toward_degrees) || 0}deg)`,
+                            }}
+                          >
+                            <NavigationIcon className="w-5 h-5 text-cyan-600 fill-cyan-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                              Surface Transport Vector
+                            </div>
+                            <div className="font-mono font-bold text-slate-900 text-sm">
+                              Blowing from {facilityWind.direction_from_cardinal || "N/A"} ({facilityWind.direction_from_degrees ?? "—"}°) toward {facilityWind.direction_toward_cardinal || "N/A"} ({facilityWind.direction_toward_degrees ?? "—"}°)
+                            </div>
+                            <div className="text-xs font-mono text-slate-600 mt-0.5">
+                              Speed: <span className="font-bold text-cyan-700">{facilityWind.speed_kmh} km/h</span>
+                              {facilityWind.gusts_kmh !== undefined && (
+                                <span> · Gusts: <span className="font-bold text-slate-800">{facilityWind.gusts_kmh} km/h</span></span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Surface Temp</p>
+                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                              {facilityWind.temperature_c !== undefined ? `${facilityWind.temperature_c.toFixed(1)} °C` : "N/A"}
+                            </p>
+                          </div>
+                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Humidity</p>
+                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                              {facilityWind.relative_humidity_pct !== undefined ? `${facilityWind.relative_humidity_pct}%` : "N/A"}
+                            </p>
+                          </div>
+                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Pressure</p>
+                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                              {facilityWind.surface_pressure_hpa !== undefined ? `${facilityWind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
+                            </p>
+                            <p className="text-[9px] text-slate-400 mt-0.5">Surface pressure</p>
+                          </div>
+                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Precipitation</p>
+                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                              {facilityWind.precipitation_mm !== undefined ? `${facilityWind.precipitation_mm} mm` : "0.0 mm"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-[11px] text-slate-600 leading-relaxed">
+                          <strong className="text-slate-800">Scientific Context:</strong> Ambient surface wind context at facility location. Does not assert or model facility emissions or particulate dispersion.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500">
+                        Surface meteorological measurements are currently unavailable for this coordinate.
+                      </div>
+                    )}
+                  </div>
 
                   {/* Summary Narrative */}
                   <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
