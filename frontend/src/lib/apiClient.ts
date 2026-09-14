@@ -255,6 +255,10 @@ export type WindData = {
   direction_from_cardinal?: string;
   direction_toward_degrees?: number;
   direction_toward_cardinal?: string;
+  gusts_kmh?: number;
+  temperature_c?: number;
+  relative_humidity_pct?: number;
+  surface_pressure_hpa?: number;
 };
 
 export function fetchEventWind(eventId: string) {

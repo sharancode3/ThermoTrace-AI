@@ -36,28 +36,48 @@ def compass_direction(degrees: float) -> str:
     return points[int((float(degrees) % 360 + 11.25) // 22.5) % 16]
 
 
-def _nearest_hourly(payload: dict[str, Any], requested_at: datetime) -> tuple[str, float, float]:
+def _nearest_hourly(payload: dict[str, Any], requested_at: datetime) -> dict[str, Any]:
     hourly = payload.get("hourly") or {}
     times = hourly.get("time") or []
     speeds = hourly.get("wind_speed_10m") or []
     directions = hourly.get("wind_direction_10m") or []
+    gusts = hourly.get("wind_gusts_10m") or []
+    temps = hourly.get("temperature_2m") or []
+    humidities = hourly.get("relative_humidity_2m") or []
+    pressures = hourly.get("surface_pressure") or []
+
     candidates = []
-    for time_value, speed, direction in zip(times, speeds, directions):
+    for idx, (time_value, speed, direction) in enumerate(zip(times, speeds, directions)):
         if speed is None or direction is None:
             continue
         try:
             candidate_time = _parse_time(time_value).replace(tzinfo=timezone.utc)
-            candidates.append((abs((candidate_time - requested_at).total_seconds()), time_value, float(speed), float(direction)))
+            diff = abs((candidate_time - requested_at).total_seconds())
+            candidates.append((diff, idx, time_value, float(speed), float(direction)))
         except (TypeError, ValueError):
             continue
+
     if not candidates:
         raise WindLookupError("Provider response did not contain usable hourly wind values")
-    _, time_value, speed, direction = min(candidates, key=lambda item: item[0])
-    return time_value, speed, direction
+
+    _, idx, time_value, speed, direction = min(candidates, key=lambda item: item[0])
+
+    def safe_val(arr: list[Any], i: int) -> float | None:
+        return float(arr[i]) if arr and i < len(arr) and arr[i] is not None else None
+
+    return {
+        "time_value": time_value,
+        "speed": speed,
+        "direction": direction,
+        "gusts": safe_val(gusts, idx),
+        "temperature": safe_val(temps, idx),
+        "humidity": safe_val(humidities, idx),
+        "pressure": safe_val(pressures, idx),
+    }
 
 
 def lookup_wind(latitude: float, longitude: float, requested_at: datetime) -> dict[str, Any]:
-    """Retrieve a real provider wind record nearest the requested event time.
+    """Retrieve a real provider wind & meteorological record nearest the requested event time.
 
     Historical events use Open-Meteo's archive. Recent events use its forecast
     endpoint and are explicitly returned as forecast/model conditions.
@@ -67,7 +87,7 @@ def lookup_wind(latitude: float, longitude: float, requested_at: datetime) -> di
     params = {
         "latitude": latitude,
         "longitude": longitude,
-        "hourly": "wind_speed_10m,wind_direction_10m",
+        "hourly": "wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,relative_humidity_2m,surface_pressure",
         "timezone": "UTC",
         "wind_speed_unit": "kmh",
     }
@@ -87,13 +107,14 @@ def lookup_wind(latitude: float, longitude: float, requested_at: datetime) -> di
             response = client.get(url, params=params)
             response.raise_for_status()
             payload = response.json()
-        time_value, speed_kmh, direction_from = _nearest_hourly(payload, requested_at)
+        nearest = _nearest_hourly(payload, requested_at)
     except (httpx.HTTPError, ValueError, TypeError, WindLookupError) as exc:
         raise WindLookupError(str(exc)) from exc
 
-    direction_from = round(direction_from % 360.0, 1)
+    speed_kmh = nearest["speed"]
+    direction_from = round(nearest["direction"] % 360.0, 1)
     direction_toward = round(wind_toward_degrees(direction_from), 1)
-    provider_timestamp = _parse_time(time_value).replace(tzinfo=timezone.utc)
+    provider_timestamp = _parse_time(nearest["time_value"]).replace(tzinfo=timezone.utc)
     return {
         "available": True,
         "data_kind": data_kind,
@@ -108,4 +129,8 @@ def lookup_wind(latitude: float, longitude: float, requested_at: datetime) -> di
         "direction_from_cardinal": compass_direction(direction_from),
         "direction_toward_degrees": direction_toward,
         "direction_toward_cardinal": compass_direction(direction_toward),
+        "gusts_kmh": round(nearest["gusts"], 1) if nearest["gusts"] is not None else None,
+        "temperature_c": round(nearest["temperature"], 1) if nearest["temperature"] is not None else None,
+        "relative_humidity_pct": round(nearest["humidity"], 1) if nearest["humidity"] is not None else None,
+        "surface_pressure_hpa": round(nearest["pressure"], 1) if nearest["pressure"] is not None else None,
     }

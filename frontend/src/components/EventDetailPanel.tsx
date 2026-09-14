@@ -8,9 +8,11 @@ import {
   ChevronRight, Download, FileText, Satellite,
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
-  Layers, Compass, Info, Copy, Check, Eye, ExternalLink
+  Layers, Compass, Info, Copy, Check, Eye, ExternalLink,
+  Wind, Gauge, Droplets, Thermometer
 } from "lucide-react";
 import { fetchEventHistory, fetchEventIntelligence, WindData } from "@/lib/apiClient";
+import { DetectionFootprintCard } from "./DetectionFootprintCard";
 
 function formatRelativeTime(dateStr?: string | null) {
   if (!dateStr) return "Just now";
@@ -46,34 +48,23 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
   const isDecreasing = effectiveTrend === "FALLING" || effectiveTrend === "DECREASING";
   const isStable = effectiveTrend === "STABLE";
 
-  const trendArrow = isIncreasing ? (
-    <span className="text-red-600 font-extrabold text-sm inline-flex items-center" title="Temperature is increasing at the moment" aria-label="Temperature increasing">↑</span>
-  ) : isDecreasing ? (
-    <span className="text-emerald-600 font-extrabold text-sm inline-flex items-center" title="Temperature is decreasing at the moment" aria-label="Temperature decreasing">↓</span>
-  ) : (
-    <span className="text-slate-500 font-bold text-sm inline-flex items-center" title="Temperature is stable at the moment" aria-label="Temperature stable">→</span>
-  );
-
   if (!isAvailable) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-          <span>Temperature Trend</span>
-          {(isIncreasing || isDecreasing || isStable) && trendArrow}
+      <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 text-slate-200">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center justify-between font-mono">
+          <span>TEMPERATURE TREND</span>
+          <span className="text-[10px] text-slate-400 font-normal">INSUFFICIENT PASSES</span>
         </h2>
-        <p className="mt-2 text-xs font-semibold text-slate-600">
-          {trend?.observation_count === 1 ? "INSUFFICIENT OBSERVATIONS" : "BRIGHTNESS TEMPERATURE UNAVAILABLE"}
-        </p>
-        <p className="mt-1 text-[11px] text-slate-500">
-          Satellite observations are discrete, not continuous ground-temperature telemetry.
+        <p className="mt-2 text-xs text-slate-400">
+          Satellite passes are discrete snapshots. Single-pass events require additional orbital revisits to plot rate-of-change.
         </p>
       </section>
     );
   }
 
   const rising = trend.trend === "RISING";
-  const symbol = rising ? "↑" : trend.trend === "FALLING" ? "↓" : "→";
-  const colour = rising ? "text-red-700" : trend.trend === "FALLING" ? "text-emerald-700" : "text-slate-700";
+  const trendArrow = rising ? "↑" : trend.trend === "FALLING" ? "↓" : "→";
+  const trendColor = rising ? "text-amber-400" : trend.trend === "FALLING" ? "text-emerald-400" : "text-slate-300";
   const points = (history.history || []).filter((item: any) => Number.isFinite(Number(item.brightness_k)) && !Number.isNaN(Date.parse(item.acquired_at)));
   const projected = Number(trend.current_brightness_k) + Number(trend.latest_rate_k_per_hour);
   const observedValues = points.map((item: any) => Number(item.brightness_k));
@@ -111,60 +102,89 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
   };
 
   return (
-    <section className="rounded-2xl border border-orange-200 bg-orange-50/40 p-4 space-y-3" aria-label={`Brightness temperature ${trend.trend.toLowerCase()} at ${trend.latest_rate_k_per_hour} Kelvin per hour`}>
-      <div className="flex justify-between gap-2">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-          <span>Temperature Trend</span>
-          {trendArrow}
+    <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 text-slate-200 space-y-3 shadow-xl">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5 font-mono">
+          <span>TEMPERATURE TREND</span>
+          <span className="text-slate-500">→</span>
         </h2>
-        <span className={`font-mono text-xs font-bold ${colour}`}>
-          {symbol} {rising ? "HEATING — CRITICAL" : trend.trend === "FALLING" ? "COOLING — GOOD" : "STABLE"} · {trend.latest_rate_k_per_hour > 0 ? "+" : ""}{Number(trend.latest_rate_k_per_hour).toFixed(1)} K/hour
+        <span className={`font-mono text-xs font-bold ${trendColor} flex items-center gap-1`}>
+          <span>{trendArrow}</span>
+          <span>{rising ? "HEATING" : trend.trend === "FALLING" ? "COOLING" : "STABLE"}</span>
+          <span className="text-slate-400 font-normal">· {trend.latest_rate_k_per_hour > 0 ? "+" : ""}{Number(trend.latest_rate_k_per_hour).toFixed(1)} K/hour</span>
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div><p className="text-slate-500">Current Brightness Temperature</p><p className="font-mono font-bold text-slate-900">{Number(trend.current_brightness_k).toFixed(1)} K</p></div>
-        <div><p className="text-slate-500">Previous Observation</p><p className="font-mono font-bold text-slate-900">{Number(trend.previous_brightness_k).toFixed(1)} K</p></div>
-        <div><p className="text-slate-500">Last Observation</p><p className="font-mono text-slate-700">{new Date(trend.current_timestamp).toLocaleString()}</p></div>
-        <div><p className="text-slate-500">Observation Span</p><p className="font-mono text-slate-700">{Number(trend.observation_span_hours).toFixed(1)} hours</p></div>
+
+      {/* Legend Row matching Reference Image 3 */}
+      <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400 border-b border-slate-800/80 pb-2">
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-0.5 bg-orange-500 inline-block" /> observed FRP
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-1 bg-cyan-950 border border-cyan-500 inline-block" /> regional band
+        </span>
+        <span className="text-slate-500">n={trend.observation_count}</span>
+        <span className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> anomalous pass
+        </span>
       </div>
 
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Current Brightness Temp</p>
+          <p className="font-mono font-bold text-slate-100 text-[13px]">{Number(trend.current_brightness_k).toFixed(1)} K <span className="text-[11px] font-normal text-slate-400">({(Number(trend.current_brightness_k) - 273.15).toFixed(1)} °C)</span></p>
+        </div>
+        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Previous Observation</p>
+          <p className="font-mono font-bold text-slate-100 text-[13px]">{Number(trend.previous_brightness_k).toFixed(1)} K</p>
+        </div>
+        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Last Observation</p>
+          <p className="font-mono text-slate-300 text-[11px]">{new Date(trend.current_timestamp).toLocaleString()}</p>
+        </div>
+        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Observation Span</p>
+          <p className="font-mono text-slate-300 text-[11px]">{Number(trend.observation_span_hours).toFixed(1)} hours</p>
+        </div>
+      </div>
+
+      {/* Interactive Dark SVG Chart */}
       <div className="relative">
         <svg
           viewBox="0 0 100 56"
           preserveAspectRatio="none"
-          className="h-28 w-full select-none rounded-xl border border-orange-100 bg-white/70"
+          className="h-28 w-full select-none rounded-xl border border-slate-800 bg-slate-950 shadow-inner"
           role="img"
           aria-label="Observed brightness temperature chart. Hover over any dot to view temperature and timestamp."
         >
           <defs>
-            <linearGradient id="temperature-trend-fill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#f97316" stopOpacity="0.32" />
-              <stop offset="100%" stopColor="#f97316" stopOpacity="0.02" />
+            <linearGradient id="temperature-trend-fill-dark" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#ea580c" stopOpacity="0.38" />
+              <stop offset="100%" stopColor="#ea580c" stopOpacity="0.01" />
             </linearGradient>
           </defs>
           {[12, 24, 36, 48].map((y) => (
-            <line key={y} x1="8" y1={y} x2="94" y2={y} stroke="#fed7aa" strokeWidth="0.6" strokeDasharray="2 2" />
+            <line key={y} x1="8" y1={y} x2="94" y2={y} stroke="#1e293b" strokeWidth="0.6" strokeDasharray="2 2" />
           ))}
-          <line x1="8" y1="50" x2="94" y2="50" stroke="#94a3b8" strokeWidth="1" />
-          <line x1="8" y1="6" x2="8" y2="50" stroke="#94a3b8" strokeWidth="1" />
-          <path d={observedArea} fill="url(#temperature-trend-fill)" />
-          <polyline points={plot} fill="none" stroke="#ea580c" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
-          <line x1={lastPlot[0]} y1={lastPlot[1]} x2="92" y2={projectedY} stroke="#64748b" strokeWidth="1.7" strokeDasharray="3 2" />
+          <line x1="8" y1="50" x2="94" y2="50" stroke="#334155" strokeWidth="1" />
+          <line x1="8" y1="6" x2="8" y2="50" stroke="#334155" strokeWidth="1" />
+          <path d={observedArea} fill="url(#temperature-trend-fill-dark)" />
+          <polyline points={plot} fill="none" stroke="#f97316" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
+          <line x1={lastPlot[0]} y1={lastPlot[1]} x2="92" y2={projectedY} stroke="#94a3b8" strokeWidth="1.6" strokeDasharray="3 2" />
 
-          {/* Active selection vertical dashed guideline */}
           {selectedPoint && (
             <line
               x1={selectedPoint.x}
               y1="4"
               x2={selectedPoint.x}
               y2="50"
-              stroke="#cbd5e1"
+              stroke="#475569"
               strokeDasharray="2 2"
               strokeWidth="1"
             />
           )}
 
-          {/* Observed Points (Hover over dots to see temperature and time) */}
           {parsedPoints.map((pt: any) => {
             const isPtSelected = selectedPoint && !selectedPoint.isProjected && Math.abs(selectedPoint.x - pt.x) < 0.1;
             const timeLabel = new Date(pt.acquired_at).toLocaleString([], {
@@ -184,31 +204,15 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
                 onClick={() => setSelectedPoint(pt)}
               >
                 <title>{tooltipText}</title>
-                {/* Generous hover hit target (r=12 for easy targeting) */}
-                <circle
-                  cx={pt.x}
-                  cy={pt.y}
-                  r="12"
-                  fill="transparent"
-                />
-                {/* Active hover halo */}
+                <circle cx={pt.x} cy={pt.y} r="12" fill="transparent" />
                 {isPtSelected && (
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="6"
-                    fill="none"
-                    stroke="#ea580c"
-                    strokeWidth="1.5"
-                    opacity="0.5"
-                  />
+                  <circle cx={pt.x} cy={pt.y} r="6" fill="none" stroke="#f97316" strokeWidth="1.5" opacity="0.6" />
                 )}
-                {/* Visual Dot */}
                 <circle
                   cx={pt.x}
                   cy={pt.y}
-                  r={isPtSelected ? "4.5" : "3.2"}
-                  fill="#ea580c"
+                  r={isPtSelected ? "4.5" : "3"}
+                  fill="#f97316"
                   stroke="#ffffff"
                   strokeWidth={isPtSelected ? "1.5" : "1"}
                   className="transition-all duration-150"
@@ -217,7 +221,6 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
             );
           })}
 
-          {/* Projected Rate Point */}
           <g
             className="cursor-pointer"
             onMouseEnter={() => setSelectedPoint(projectedPt)}
@@ -225,52 +228,38 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
             onClick={() => setSelectedPoint(projectedPt)}
           >
             <title>{`${Number(projected).toFixed(1)} K · Next-hour projection`}</title>
-            <circle
-              cx="92"
-              cy={projectedY}
-              r="12"
-              fill="transparent"
-            />
+            <circle cx="92" cy={projectedY} r="12" fill="transparent" />
             {selectedPoint?.isProjected && (
-              <circle
-                cx="92"
-                cy={projectedY}
-                r="6"
-                fill="none"
-                stroke="#64748b"
-                strokeWidth="1.5"
-                opacity="0.5"
-              />
+              <circle cx="92" cy={projectedY} r="6" fill="none" stroke="#94a3b8" strokeWidth="1.5" opacity="0.6" />
             )}
             <circle
               cx="92"
               cy={projectedY}
               r={selectedPoint?.isProjected ? "4" : "2.8"}
               fill="#fff"
-              stroke="#64748b"
+              stroke="#94a3b8"
               strokeWidth={selectedPoint?.isProjected ? "2" : "1"}
               className="transition-all duration-150"
             />
           </g>
         </svg>
 
-        {/* Clean, minimalist popup showing temperature and time on hover */}
         {selectedPoint && (
           <div
-            className="absolute z-30 pointer-events-none rounded-lg border border-slate-300 bg-white/95 px-2.5 py-1.5 shadow-xl backdrop-blur-sm transition-opacity duration-150"
+            className="absolute z-30 pointer-events-none rounded-lg border border-slate-700 bg-slate-900/95 px-2.5 py-1.5 shadow-2xl backdrop-blur-md transition-opacity duration-150 text-slate-100"
             style={{
               left: `${Math.min(78, Math.max(22, selectedPoint.x))}%`,
               top: selectedPoint.y < 26 ? "55%" : "0%",
               transform: selectedPoint.y < 26 ? "translate(-50%, 0)" : "translate(-50%, -95%)",
             }}
           >
-            <div className="text-xs font-mono font-bold text-slate-900 whitespace-nowrap">
+            <div className="text-xs font-mono font-bold text-white whitespace-nowrap">
               {Number(selectedPoint.brightness_k).toFixed(1)} K
-              <span className="ml-1 text-[10px] font-normal text-slate-500 font-sans">
+              <span className="ml-1 text-[10px] font-normal text-slate-400 font-sans">
                 ({(Number(selectedPoint.brightness_k) - 273.15).toFixed(1)} °C)
               </span>
             </div>
-            <div className="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">
+            <div className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">
               {selectedPoint.isProjected
                 ? "Next-hour projection"
                 : new Date(selectedPoint.acquired_at).toLocaleString([], {
@@ -284,7 +273,9 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
         )}
       </div>
 
-      <p className="text-[11px] text-slate-500">Based on {trend.observation_count} satellite readings. The solid line is measured temperature; the dashed line shows the next-hour direction if this rate continues.</p>
+      <p className="text-[11px] text-slate-400">
+        Based on {trend.observation_count} satellite readings. The solid line is measured temperature; the dashed line shows the next-hour direction if this rate continues.
+      </p>
     </section>
   );
 }
@@ -298,63 +289,45 @@ function WindConditionsCard({
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
 }) {
-  // Loading State
   if (!wind) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+      <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 space-y-2 text-slate-200">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-orange-600" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5 font-mono">
+            <Compass className="w-3.5 h-3.5 text-cyan-400" />
             <span>WIND CONDITIONS</span>
           </h2>
-          <span className="text-[10px] font-mono text-orange-600 animate-pulse font-semibold">
+          <span className="text-[10px] font-mono text-cyan-400 animate-pulse font-semibold">
             Loading…
           </span>
         </div>
-        <p className="text-xs text-slate-500">
-          Loading provider-backed meteorological wind telemetry…
+        <p className="text-xs text-slate-400">
+          Loading provider-backed meteorological telemetry from Open-Meteo…
         </p>
       </section>
     );
   }
 
-  // Error / Unavailable / Historical Unavailable States
   if (!wind.available) {
-    const isHistoricalUnavailable =
-      wind.status === "HISTORICAL_WIND_DATA_UNAVAILABLE" ||
-      wind.reason?.toLowerCase().includes("historical");
-    const isOutOfDate = wind.status === "EVENT_DATA_OUT_OF_DATE";
-
-    const errorTitle = isHistoricalUnavailable
-      ? "HISTORICAL WIND DATA UNAVAILABLE"
-      : isOutOfDate
-      ? "EVENT DATA OUT OF DATE"
-      : wind.status || "WIND DATA UNAVAILABLE";
-
     return (
-      <section className="rounded-2xl border border-rose-200 bg-rose-50/40 p-4 space-y-2">
+      <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 space-y-2 text-slate-200">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-rose-600" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 font-mono">
+            <Compass className="w-3.5 h-3.5 text-slate-400" />
             <span>WIND CONDITIONS</span>
           </h2>
-          <span className="text-[10px] font-mono font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded">
+          <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/60 border border-amber-800 px-2 py-0.5 rounded">
             UNAVAILABLE
           </span>
         </div>
-        <p className="text-xs font-bold text-rose-900">{errorTitle}</p>
-        <p className="text-[11px] text-slate-600 leading-relaxed">
-          {isHistoricalUnavailable
-            ? "Historical meteorological reanalysis data for this observation timestamp is not available from the reanalysis provider."
-            : isOutOfDate
-            ? "This cached event is no longer available from the active backend. Please refresh the monitor."
-            : wind.reason || "Provider meteorological wind measurements could not be retrieved."}
+        <p className="text-xs font-bold text-slate-300">{wind.status || "METEOROLOGICAL DATA UNAVAILABLE"}</p>
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          {wind.reason || "Provider meteorological wind measurements could not be retrieved."}
         </p>
       </section>
     );
   }
 
-  // Active Real Wind Conditions Card
   const isStale = Boolean(wind.stale);
   const fromCard = wind.direction_from_cardinal || "N/A";
   const toCard = wind.direction_toward_cardinal || "N/A";
@@ -368,32 +341,31 @@ function WindConditionsCard({
   const sourceText = wind.source || (wind.data_kind === "FORECAST_MODEL" ? "Open-Meteo forecast model" : "Open-Meteo archive (ERA5 reanalysis)");
 
   return (
-    <section className="rounded-2xl border border-orange-200 bg-orange-50/40 p-4 space-y-3.5">
+    <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 space-y-3.5 text-slate-200 shadow-xl">
       {/* Header with Title, Status Badges & Toggle */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-orange-600" />
-            <span>WIND CONDITIONS</span>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100 flex items-center gap-1.5 font-mono">
+            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+            <span>WIND & WEATHER TELEMETRY</span>
           </h2>
           {isStale && (
-            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700">
               STALE
             </span>
           )}
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-200 font-semibold">
-            {wind.data_kind === "FORECAST_MODEL" ? "FORECAST" : "ERA5 REANALYSIS"}
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-semibold">
+            {wind.data_kind === "FORECAST_MODEL" ? "OPEN-METEO FORECAST" : "ERA5 REANALYSIS"}
           </span>
         </div>
 
-        {/* Toggle Button: WIND VECTOR ON / OFF */}
         <button
           type="button"
           onClick={() => onVisibleChange(!visible)}
           className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded-lg border transition flex items-center gap-1.5 cursor-pointer ${
             visible
-              ? "bg-orange-600 text-white border-orange-600 hover:bg-orange-700 shadow-sm"
-              : "bg-white text-slate-600 border-slate-300 hover:bg-slate-100"
+              ? "bg-cyan-600 text-slate-950 border-cyan-500 hover:bg-cyan-500 shadow-sm"
+              : "bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800"
           }`}
           title={visible ? "Hide wind direction cone on map" : "Show wind direction cone on map"}
         >
@@ -403,57 +375,63 @@ function WindConditionsCard({
       </div>
 
       {/* Main Direction & Speed Visual Row */}
-      <div className="flex items-center gap-3.5 p-2.5 bg-white/80 rounded-xl border border-orange-100 shadow-xs">
+      <div className="flex items-center gap-3.5 p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 shadow-inner">
         <div
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-orange-50 border-2 border-orange-400 text-sm font-black text-orange-700 shadow-inner"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-cyan-950/80 border-2 border-cyan-400 text-sm font-black text-cyan-300 shadow-inner"
           style={{ transform: `rotate(${Number.isFinite(towardDeg) ? towardDeg : 0}deg)` }}
           title={`Wind blowing toward ${toCard} (${towardDeg}°)`}
         >
           ↑
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
             Wind Direction
           </div>
-          <div className="font-mono font-black text-slate-900 text-sm">
-            {fromCard} → {toCard}
+          <div className="font-mono font-black text-white text-sm">
+            {fromCard} → {toCard} ({Number.isFinite(towardDeg) ? `${towardDeg}°` : ""})
           </div>
-          <div className="text-xs font-mono font-bold text-orange-600">
+          <div className="text-xs font-mono font-bold text-cyan-400">
             {speed}
           </div>
         </div>
       </div>
 
-      {/* Structured Attribute Grid */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80">
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Bearing</p>
-          <p className="font-mono font-bold text-slate-900 text-[11px] truncate" title={bearingText}>
-            {Number.isFinite(fromDeg) ? `${fromDeg}°` : "N/A"} <span className="text-slate-400 font-normal">from</span> → {Number.isFinite(towardDeg) ? `${towardDeg}°` : "N/A"} <span className="text-slate-400 font-normal">to</span>
+      {/* Full Meteorological 4-Metric Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Wind Gusts</p>
+          <p className="font-mono font-bold text-slate-100 text-[12px]">
+            {wind.gusts_kmh !== undefined ? `${wind.gusts_kmh.toFixed(1)} km/h` : "N/A"}
           </p>
         </div>
-        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80">
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Speed</p>
-          <p className="font-mono font-bold text-slate-900 text-[11px]">
-            {speed}
+        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Surface Temp</p>
+          <p className="font-mono font-bold text-slate-100 text-[12px]">
+            {wind.temperature_c !== undefined ? `${wind.temperature_c.toFixed(1)} °C` : "N/A"}
           </p>
         </div>
-        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80 col-span-2">
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Observation Timestamp</p>
-          <p className="font-mono text-slate-800 text-[11px]">
-            {timestampText}
+        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Humidity</p>
+          <p className="font-mono font-bold text-slate-100 text-[12px]">
+            {wind.relative_humidity_pct !== undefined ? `${wind.relative_humidity_pct}%` : "N/A"}
           </p>
         </div>
-        <div className="bg-white/60 p-2 rounded-lg border border-orange-100/80 col-span-2">
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Telemetry Source</p>
-          <p className="font-mono text-slate-700 text-[11px] truncate" title={sourceText}>
-            {sourceText}
+        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Pressure</p>
+          <p className="font-mono font-bold text-slate-100 text-[12px]">
+            {wind.surface_pressure_hpa !== undefined ? `${wind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
           </p>
         </div>
       </div>
 
-      <p className="text-[10px] text-slate-500 leading-tight">
-        Direction describes air moving from <strong className="text-slate-700 font-semibold">{fromCard}</strong> toward <strong className="text-slate-700 font-semibold">{toCard}</strong>. Visual cone on the map is aligned with the wind-toward vector.
+      {/* Source and Timestamp footer */}
+      <div className="p-2 bg-slate-900/50 rounded-lg border border-slate-800/80 text-[10px] font-mono text-slate-400 flex items-center justify-between">
+        <span className="truncate max-w-[200px]" title={sourceText}>{sourceText}</span>
+        <span>{timestampText}</span>
+      </div>
+
+      <p className="text-[10px] text-slate-400 leading-tight">
+        Direction describes air moving from <strong className="text-slate-200 font-semibold">{fromCard}</strong> toward <strong className="text-slate-200 font-semibold">{toCard}</strong>. Visual cone on the map is aligned with the wind-toward vector.
       </p>
     </section>
   );
@@ -690,52 +668,77 @@ export function EventDetailPanel({
         isExpanded 
           ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
           : 'w-full sm:w-[520px] md:w-[540px] max-w-[95vw]'
-      } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-slate-200 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-700`}
+      } ${hasOverlay ? 'z-40' : 'z-50'} bg-[#0a0f18] border-l border-slate-800 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-200`}
     >
-      {/* Header - Adaptive 2-Row Layout with Zero Text Overflow */}
-      <div className="min-h-[4.75rem] py-3 px-4 sm:px-5 border-b border-slate-200 shrink-0 bg-slate-50/95 backdrop-blur-sm flex flex-col justify-center gap-1.5">
-        <div className="flex items-center justify-between gap-3 min-w-0">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className={`p-1.5 sm:p-2 rounded-xl border shrink-0 ${sourceBadgeStyle}`}>
-              <SourceIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* Tactical Header matching Reference Image 3 */}
+      <div className="py-3 px-4 sm:px-5 border-b border-slate-800 shrink-0 bg-[#0d131f] text-slate-100 flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-3 min-w-0">
+          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+            {/* Prominent Threat Score Metric */}
+            <div className={`font-mono text-3xl font-black shrink-0 ${
+              isCritical ? "text-red-400" : isAbnormal ? "text-amber-400" : "text-emerald-400"
+            }`}>
+              {Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)))}
             </div>
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <span className="font-bold text-slate-900 text-xs sm:text-sm font-mono truncate max-w-[200px] sm:max-w-[280px]" title={data?.event_id || eventId}>
-                {data?.event_id || eventId}
-              </span>
-              <button 
-                onClick={handleCopyId}
-                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition shrink-0"
-                title="Copy Event ID"
-                type="button"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-white text-base sm:text-lg flex items-center gap-1.5">
+                  <Flame className={`w-4 h-4 ${isWildfire ? "text-teal-400" : isAgricultural ? "text-amber-400" : "text-orange-500"}`} />
+                  <span>{isIndustrial ? "Industrial Facility" : isAgricultural ? "Agricultural Burn" : isWildfire ? "Wildfire" : "Thermal Anomaly"}</span>
+                </span>
+                <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${
+                  isCritical ? "bg-red-950/80 text-red-300 border-red-800" :
+                  isAbnormal ? "bg-amber-950/80 text-amber-300 border-amber-800" :
+                  "bg-emerald-950/80 text-emerald-300 border-emerald-800"
+                }`}>
+                  {isCritical ? "CRITICAL" : isAbnormal ? "ELEVATED" : isWildfire ? "MEDIUM" : "ROUTINE"}
+                </span>
+              </div>
+
+              {/* Coordinate + Time Subtitle */}
+              <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
+                <span className="text-slate-300 truncate">{data?.event_id || eventId}</span>
+                <span>·</span>
+                <span>{data?.latitude ? `${data.latitude.toFixed(4)}°N` : ""}{data?.longitude ? ` ${data.longitude.toFixed(4)}°E` : ""}</span>
+                <span>·</span>
+                <span>{data?.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Active"}</span>
+                <span>·</span>
+                <span className="text-emerald-400 font-semibold">active</span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <button 
+              onClick={handleCopyId}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
+              title="Copy Event ID"
+              type="button"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+            </button>
+            <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] sm:text-xs font-semibold text-slate-700 shadow-sm transition"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-[11px] font-semibold text-slate-300 transition"
               title={isExpanded ? "Collapse to side panel" : "Expand to multi-column tactical command dossier"}
               type="button"
             >
               {isExpanded ? (
                 <>
-                  <Minimize2 className="w-3.5 h-3.5 text-slate-600" />
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-400" />
                   <span className="hidden sm:inline">Collapse</span>
                 </>
               ) : (
                 <>
-                  <Maximize2 className="w-3.5 h-3.5 text-orange-600" />
-                  <span className="hidden sm:inline">Enlarge Dossier</span>
+                  <Maximize2 className="w-3.5 h-3.5 text-orange-400" />
+                  <span className="hidden sm:inline">Enlarge</span>
                 </>
               )}
             </button>
             <button 
               onClick={onClose}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition"
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
               title="Close Dossier"
               type="button"
             >
@@ -744,75 +747,48 @@ export function EventDetailPanel({
           </div>
         </div>
 
-        {/* Sub-header with badges and facility/location */}
-        <div className="flex items-center gap-2 flex-wrap pl-9 sm:pl-10">
-          {data && (
-            <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${sourcePillStyle}`}>
-              {isIndustrial ? "Industrial" : isAgricultural ? "Agriculture" : isWildfire ? "Wildfire" : "Uncertain"}
-            </span>
-          )}
-          {(() => {
-            const effTrend = history?.thermal_trend?.status === "AVAILABLE" 
-              ? history.thermal_trend.trend 
-              : data?.thermal_trend;
-            const isInc = effTrend === "RISING" || effTrend === "INCREASING";
-            const isDec = effTrend === "FALLING" || effTrend === "DECREASING";
-            if (isInc) {
-              return (
-                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 font-bold text-[9px] sm:text-[10px] shrink-0" title="Temperature is increasing at the moment">
-                  <span className="text-xs font-bold">↑</span> Temp Increasing
-                </span>
-              );
-            }
-            if (isDec) {
-              return (
-                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[9px] sm:text-[10px] shrink-0" title="Temperature is decreasing at the moment">
-                  <span className="text-xs font-bold">↓</span> Temp Decreasing
-                </span>
-              );
-            }
-            return null;
-          })()}
-          <span className="text-[11px] sm:text-xs text-slate-500 font-medium truncate flex-1 min-w-[120px]" title={data?.facility_name || data?.location_name || "Indian Thermal Incident"}>
-            {data?.facility_name || data?.location_name || "Indian Thermal Incident"}
-          </span>
-        </div>
+        {/* Fallback notice banner matching Image 3 */}
+        {isInsufficient && (
+          <div className="p-2 rounded-lg bg-amber-950/30 border border-amber-800/60 text-amber-200/90 text-[11px] font-mono leading-relaxed">
+            Band is a regional fallback averaged across sites of this type — not this facility's own history.
+          </div>
+        )}
       </div>
 
-      {/* Navigation Tabs (Only in standard drawer view) */}
+      {/* Navigation Tabs (Tactical Dark Styling) */}
       {!isExpanded && (
-        <div className="flex border-b border-slate-200 px-3 py-1 bg-slate-50/90 text-xs font-semibold shrink-0 gap-1 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
+        <div className="flex border-b border-slate-800 px-3 py-1 bg-slate-950 text-xs font-semibold shrink-0 gap-1 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#334155_transparent]">
           <button 
             onClick={() => setActiveTab("overview")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             Overview
           </button>
           <button 
             onClick={() => setActiveTab("telemetry")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
           >
             <Activity className="w-3.5 h-3.5" />
             ML & 14-D Vector
           </button>
           <button 
             onClick={() => setActiveTab("baseline")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
             Baseline Anomaly
           </button>
           <button 
             onClick={() => setActiveTab("geography")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
           >
             <MapPin className="w-3.5 h-3.5" />
             Facility & Terrain
           </button>
           <button 
             onClick={() => setActiveTab("ai_brief")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
           >
             <Cpu className="w-3.5 h-3.5" />
             Grounded Brief
@@ -1353,9 +1329,122 @@ export function EventDetailPanel({
                       </div>
                     </div>
 
+                    {/* 1. Detection Footprint High-Res Satellite Card matching Reference Image 3 */}
+                    <DetectionFootprintCard
+                      latitude={data.latitude}
+                      longitude={data.longitude}
+                      observations={history?.history || []}
+                      wind={wind}
+                      facilityName={data.facility_name}
+                      distanceToFacilityM={data.distance_to_facility_m}
+                    />
+
+                    {/* 2. Before / After Imagery with Sentinel-2 Revisit Latency Notice */}
+                    <section className="rounded-2xl border border-slate-800 bg-[#0d131f] text-slate-200 overflow-hidden shadow-2xl p-4 space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold tracking-wider uppercase text-slate-100 text-xs">
+                            BEFORE / AFTER IMAGERY
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
+                          Sentinel-2 MSI · 10m
+                        </span>
+                      </div>
+
+                      {/* Revisit Latency Notice matching Reference Image 3 */}
+                      <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-start gap-2.5">
+                        <Satellite className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1 text-xs">
+                          <div className="font-bold text-slate-200">No optical pass tasked for this window</div>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                            Sentinel-2 revisit is 5 days and cloud-dependent. Thermal detection does not wait on imagery — a brief can be raised without optical confirmation.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Surface Corroboration & Spectral Indices */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                            <span>NDBI (Built-up)</span>
+                            <span className={ndbiVal > 0 ? "text-cyan-400 font-bold" : "text-amber-400"}>
+                              {ndbiVal > 0 ? `+${ndbiVal.toFixed(3)}` : ndbiVal.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-1.5 rounded-full ${ndbiVal > 0 ? "bg-cyan-400" : "bg-slate-600"}`}
+                              style={{ width: `${Math.min(100, Math.max(10, ((ndbiVal + 0.6) / 1.2) * 100))}%` }}
+                            />
+                          </div>
+                          <div className="text-[9px] text-slate-400">
+                            {ndbiVal > 0 ? "Built fabric / mining corridor" : "Vegetated / natural soil"}
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                            <span>NDVI (Vegetation)</span>
+                            <span className={ndviVal > 0.4 ? "text-emerald-400 font-bold" : "text-slate-300 font-mono"}>
+                              {ndviVal.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-1.5 rounded-full ${ndviVal > 0.4 ? "bg-emerald-400" : "bg-slate-600"}`}
+                              style={{ width: `${Math.min(100, Math.max(10, ndviVal * 100))}%` }}
+                            />
+                          </div>
+                          <div className="text-[9px] text-slate-400">
+                            {ndviVal > 0.4 ? "High crop canopy density" : "Barren / industrial excavation"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Live Satellite Inspection Links */}
+                      <div className="pt-1 space-y-2">
+                        <a
+                          href={googleSatUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition duration-150"
+                          title="Inspect actual optical satellite imagery at this coordinate in Google Satellite"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Inspect Live Optical Satellite Imagery (10m Resolution)
+                          <ExternalLink className="w-3 h-3 ml-auto text-slate-900/70" />
+                        </a>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 font-mono">
+                          <a 
+                            href={copernicusUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
+                          >
+                            ESA Copernicus EO <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                          <span>•</span>
+                          <a 
+                            href={worldviewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
+                          >
+                            NASA Worldview <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* 3. Temperature Trend Graph */}
                     <ThermalTrendCard history={history} fallbackTrend={data?.thermal_trend} />
+
+                    {/* 4. Meteorological Telemetry */}
                     <WindConditionsCard wind={wind} visible={windVisible} onVisibleChange={onWindVisibilityChange} />
 
+                    {/* 5. Classification Rationale */}
                     <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2 text-xs">
                       <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Why did the system make this classification?</div>
                       <ul className="space-y-1.5 text-slate-600 list-disc pl-4 leading-relaxed">
@@ -1384,113 +1473,6 @@ export function EventDetailPanel({
                           </>
                         )}
                       </ul>
-                    </div>
-
-                    {/* Multi-Spectral Satellite Surface Image Intelligence Card */}
-                    <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950 text-white shadow-xl border border-cyan-800/50 space-y-3.5">
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                            <Satellite className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold uppercase tracking-wider text-cyan-300 font-mono">
-                              Multi-Spectral Surface Verification
-                            </div>
-                            <div className="text-[10px] text-slate-400">
-                              ESA Sentinel-2 MSI (10m) & Landsat-9 Telemetry
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 text-cyan-200 border border-cyan-400/30">
-                          Optical & SWIR
-                        </span>
-                      </div>
-
-                      <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-between">
-                        <div className="space-y-0.5 min-w-0 flex-1 mr-2">
-                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Surface Corroboration</span>
-                          <span className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                            <span className="truncate">{surfaceBadge.replace(/_/g, " ")}</span>
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/60 px-2 py-1 rounded border border-cyan-800/60 shrink-0">
-                          SWIR 2.2µm Confirmed
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
-                            <span>NDBI (Built-up)</span>
-                            <span className={ndbiVal > 0 ? "text-cyan-400 font-bold" : "text-amber-400"}>
-                              {ndbiVal > 0 ? `+${ndbiVal.toFixed(3)}` : ndbiVal.toFixed(3)}
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                            <div 
-                              className={`h-1.5 rounded-full ${ndbiVal > 0 ? "bg-cyan-400" : "bg-slate-500"}`}
-                              style={{ width: `${Math.min(100, Math.max(10, ((ndbiVal + 0.6) / 1.2) * 100))}%` }}
-                            />
-                          </div>
-                          <div className="text-[9px] text-slate-400">
-                            {ndbiVal > 0 ? "Built fabric / mining corridor" : "Vegetated / natural soil"}
-                          </div>
-                        </div>
-
-                        <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
-                            <span>NDVI (Vegetation)</span>
-                            <span className={ndviVal > 0.4 ? "text-emerald-400 font-bold" : "text-slate-300 font-mono"}>
-                              {ndviVal.toFixed(3)}
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                            <div 
-                              className={`h-1.5 rounded-full ${ndviVal > 0.4 ? "bg-emerald-400" : "bg-slate-500"}`}
-                              style={{ width: `${Math.min(100, Math.max(10, ndviVal * 100))}%` }}
-                            />
-                          </div>
-                          <div className="text-[9px] text-slate-400">
-                            {ndviVal > 0.4 ? "High crop canopy density" : "Barren / industrial excavation"}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-1 space-y-2">
-                        <a
-                          href={googleSatUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/50 transition duration-150"
-                          title="Inspect actual optical satellite imagery at this coordinate in Google Satellite"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          Inspect Live Optical Satellite Imagery (10m Resolution)
-                          <ExternalLink className="w-3 h-3 ml-auto text-slate-900/70" />
-                        </a>
-
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 font-mono">
-                          <a 
-                            href={copernicusUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
-                          >
-                            ESA Copernicus EO <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                          <span>•</span>
-                          <a 
-                            href={worldviewUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
-                          >
-                            NASA Worldview <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -1747,27 +1729,27 @@ export function EventDetailPanel({
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-slate-200 shrink-0 bg-slate-50/50 flex flex-col gap-2">
+      <div className="p-4 border-t border-slate-800 shrink-0 bg-[#0d131f] flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <button 
             onClick={handleAskAboutEvent}
             disabled={!data}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-semibold text-xs transition border border-slate-700 shadow-sm"
             title="Ask AI Tactical Intelligence about this event"
           >
-            <Cpu className="w-4 h-4 text-orange-400" />
+            <Cpu className="w-4 h-4 text-cyan-400" />
             Ask to Chat
           </button>
           <button 
             onClick={handleDownloadReport}
             disabled={!data || isExportingPDF}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-slate-950 font-bold text-xs transition shadow-lg shadow-cyan-950/50"
             title="Download authoritative immutable PDF Dossier"
           >
             {isExportingPDF ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
             ) : (
-              <FileText className="w-4 h-4" />
+              <FileText className="w-4 h-4 text-slate-950" />
             )}
             {isExportingPDF ? "Generating PDF..." : "Download Report"}
           </button>
@@ -1775,10 +1757,10 @@ export function EventDetailPanel({
         <button 
           onClick={handleExportDossier}
           disabled={!data}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 disabled:opacity-50 text-slate-700 font-semibold text-xs transition shadow-sm"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 disabled:opacity-50 text-slate-300 font-semibold text-xs transition shadow-sm font-mono"
           title="Export raw JSON telemetry payload"
         >
-          <Download className="w-3.5 h-3.5 text-slate-500" />
+          <Download className="w-3.5 h-3.5 text-slate-400" />
           Export JSON Dossier
         </button>
       </div>

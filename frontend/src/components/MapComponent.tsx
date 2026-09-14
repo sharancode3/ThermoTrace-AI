@@ -254,7 +254,7 @@ export default function MapComponent({
   const [observationData, setObservationData] = useState<GeoCollection | null>(null);
   const [selectedEventData, setSelectedEventData] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
-  const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
+  const [mapType, setMapType] = useState<"roadmap" | "hybrid">("hybrid");
   const [error, setError] = useState<string | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedFacilityForDrawer, setSelectedFacilityForDrawer] = useState<any | null>(null);
@@ -832,40 +832,38 @@ export default function MapComponent({
           );
         })()}
 
-        {/* Authoritative Geographically-Anchored Selected-Hotspot Wind Direction Sector */}
+        {/* Authoritative Geographically-Anchored Selected-Hotspot Wind Direction Sector (Cyan Plume) */}
         {windConeData && (
           <Source id="selected-event-wind-corridor-fill-source" type="geojson" data={windConeData.corridor.fill as any}>
-            {/* Visible translucent orange fill; underlying map context remains readable. */}
             <Layer
               id="selected-event-wind-corridor-fill"
               type="fill"
               paint={{
-                "fill-color": "#f97316",
-                "fill-opacity": 0.30,
+                "fill-color": "#06b6d4",
+                "fill-opacity": 0.22,
               }}
             />
           </Source>
         )}
         {windConeData && (
           <Source id="selected-event-wind-corridor-outline-source" type="geojson" data={windConeData.corridor.outline as any}>
-            {/* Soft glow separates the sector from pale roadmap and satellite tiles. */}
             <Layer
               id="selected-event-wind-corridor-glow"
               type="line"
               paint={{
-                "line-color": "#f97316",
+                "line-color": "#06b6d4",
                 "line-width": 8,
-                "line-opacity": 0.34,
+                "line-opacity": 0.35,
                 "line-blur": 3,
               }}
             />
-            {/* High-contrast sector boundary. */}
             <Layer
               id="selected-event-wind-corridor-outline"
               type="line"
               paint={{
-                "line-color": "#c2410c",
-                "line-width": 3.2,
+                "line-color": "#38bdf8",
+                "line-width": 2,
+                "line-dasharray": [3, 2],
                 "line-opacity": 1,
               }}
             />
@@ -873,47 +871,37 @@ export default function MapComponent({
         )}
         {windConeData && (
           <Source id="selected-event-wind-corridor-cues-source" type="geojson" data={windConeData.corridor.cues as any}>
-            {/* Directional centerline and chevrons point downwind. */}
             <Layer
               id="selected-event-wind-corridor-cues"
               type="line"
               paint={{
-                "line-color": "#9a3412",
-                "line-width": 2.4,
-                "line-opacity": 1,
+                "line-color": "#0284c7",
+                "line-width": 1.8,
+                "line-opacity": 0.9,
               }}
             />
           </Source>
         )}
 
-        {/* Compact Map-Linked Wind Information Badge */}
+        {/* Compact Glass Pill Wind Information Badge matching Reference Image 3 */}
         {windConeData && (
           <Marker
             key={`selected-event-wind-overlay-${activeSelectedId || selectedEventId}`}
             longitude={windConeData.lon}
             latitude={windConeData.lat}
-            anchor="bottom"
+            anchor="bottom-left"
+            offset={[14, -14]}
             style={{ zIndex: 35, pointerEvents: "none" }}
           >
             <div
               data-testid="wind-vector-overlay"
-              aria-label={`Wind ${windConeData.fromCardinal} to ${windConeData.toCardinal} at ${windConeData.speed} kilometres per hour, bearing ${windConeData.fromDegrees} degrees`}
-              className="pointer-events-none mb-8 rounded-xl border border-orange-500/80 bg-slate-950/90 px-3 py-1.5 shadow-2xl backdrop-blur-md select-none font-mono text-left"
+              aria-label={`Wind ${windConeData.fromCardinal} to ${windConeData.toCardinal} at ${windConeData.speed} kilometres per hour, bearing ${windConeData.toward || windConeData.fromDegrees} degrees`}
+              className="pointer-events-none rounded-lg border border-white/20 bg-black/80 px-2.5 py-1 shadow-xl backdrop-blur-md select-none font-mono text-left flex items-center gap-1.5"
             >
-              <div
-                data-testid="wind-direction-cone"
-                className="text-[9px] font-extrabold tracking-wider text-orange-400 uppercase"
-              >
-                WIND
-              </div>
-              <div className="text-xs font-black tracking-wide text-white">
-                {windConeData.fromCardinal} → {windConeData.toCardinal}
-              </div>
-              <div className="text-[10px] text-slate-300 flex items-center gap-1.5 mt-0.5">
-                <span className="text-orange-300 font-semibold">{windConeData.speed} km/h</span>
-                <span className="text-slate-500">•</span>
-                <span className="text-slate-300">{windConeData.fromDegrees}°</span>
-              </div>
+              <Compass className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="text-[11px] font-bold text-white whitespace-nowrap">
+                wind {Math.round(windConeData.speed)} km/h @ {Math.round(windConeData.toward || windConeData.fromDegrees)}°
+              </span>
             </div>
           </Marker>
         )}
