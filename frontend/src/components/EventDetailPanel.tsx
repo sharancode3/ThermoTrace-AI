@@ -9,7 +9,7 @@ import {
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
   Layers, Compass, Info, Copy, Check, Eye, ExternalLink,
-  Wind, Gauge, Droplets, Thermometer
+  Wind, Gauge, Droplets, Thermometer, Navigation
 } from "lucide-react";
 import { fetchEventHistory, fetchEventIntelligence, WindData } from "@/lib/apiClient";
 import { DetectionFootprintCard } from "./DetectionFootprintCard";
@@ -37,25 +37,18 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
     isProjected?: boolean;
   } | null>(null);
 
-  // Clear selected point if event/history changes
   useEffect(() => {
     setSelectedPoint(null);
   }, [history]);
-  
-  // Resolve effective trend from observation intervals or event fallback
-  const effectiveTrend = isAvailable ? trend.trend : fallbackTrend;
-  const isIncreasing = effectiveTrend === "RISING" || effectiveTrend === "INCREASING";
-  const isDecreasing = effectiveTrend === "FALLING" || effectiveTrend === "DECREASING";
-  const isStable = effectiveTrend === "STABLE";
 
   if (!isAvailable) {
     return (
-      <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 text-slate-200">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center justify-between font-mono">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-slate-800">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center justify-between font-mono">
           <span>TEMPERATURE TREND</span>
-          <span className="text-[10px] text-slate-400 font-normal">INSUFFICIENT PASSES</span>
+          <span className="text-[10px] text-slate-500 font-normal">INSUFFICIENT PASSES</span>
         </h2>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-slate-500">
           Satellite passes are discrete snapshots. Single-pass events require additional orbital revisits to plot rate-of-change.
         </p>
       </section>
@@ -63,8 +56,14 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
   }
 
   const rising = trend.trend === "RISING";
-  const trendArrow = rising ? "↑" : trend.trend === "FALLING" ? "↓" : "→";
-  const trendColor = rising ? "text-amber-400" : trend.trend === "FALLING" ? "text-emerald-400" : "text-slate-300";
+  const falling = trend.trend === "FALLING";
+  const trendArrow = rising ? "▲" : falling ? "▼" : "→";
+  const trendBadgeStyle = rising
+    ? "text-red-700 bg-red-50 border-red-200"
+    : falling
+    ? "text-sky-700 bg-sky-50 border-sky-200"
+    : "text-slate-700 bg-slate-100 border-slate-200";
+
   const points = (history.history || []).filter((item: any) => Number.isFinite(Number(item.brightness_k)) && !Number.isNaN(Date.parse(item.acquired_at)));
   const projected = Number(trend.current_brightness_k) + Number(trend.latest_rate_k_per_hour);
   const observedValues = points.map((item: any) => Number(item.brightness_k));
@@ -102,99 +101,88 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
   };
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 text-slate-200 space-y-3 shadow-xl">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 text-slate-800 space-y-3 shadow-sm">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5 font-mono">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5 font-mono">
           <span>TEMPERATURE TREND</span>
-          <span className="text-slate-500">→</span>
+          <span className="text-slate-400">→</span>
         </h2>
-        <span className={`font-mono text-xs font-bold ${trendColor} flex items-center gap-1`}>
+        <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full border ${trendBadgeStyle} flex items-center gap-1`}>
           <span>{trendArrow}</span>
-          <span>{rising ? "HEATING" : trend.trend === "FALLING" ? "COOLING" : "STABLE"}</span>
-          <span className="text-slate-400 font-normal">· {trend.latest_rate_k_per_hour > 0 ? "+" : ""}{Number(trend.latest_rate_k_per_hour).toFixed(1)} K/hour</span>
-        </span>
-      </div>
-
-      {/* Legend Row matching Reference Image 3 */}
-      <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400 border-b border-slate-800/80 pb-2">
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-0.5 bg-orange-500 inline-block" /> observed FRP
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-1 bg-cyan-950 border border-cyan-500 inline-block" /> regional band
-        </span>
-        <span className="text-slate-500">n={trend.observation_count}</span>
-        <span className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> anomalous pass
+          <span>{rising ? "HEATING" : falling ? "COOLING" : "STABLE"}</span>
+          <span className="font-normal">· {trend.latest_rate_k_per_hour > 0 ? "+" : ""}{Number(trend.latest_rate_k_per_hour).toFixed(1)} K/hour</span>
         </span>
       </div>
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Current Brightness Temp</p>
-          <p className="font-mono font-bold text-slate-100 text-[13px]">{Number(trend.current_brightness_k).toFixed(1)} K <span className="text-[11px] font-normal text-slate-400">({(Number(trend.current_brightness_k) - 273.15).toFixed(1)} °C)</span></p>
+        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200/80">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Current Brightness Temp</p>
+          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+            {Number(trend.current_brightness_k).toFixed(1)} K <span className="text-xs font-normal text-slate-500">({(Number(trend.current_brightness_k) - 273.15).toFixed(1)} °C)</span>
+          </p>
         </div>
-        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Previous Observation</p>
-          <p className="font-mono font-bold text-slate-100 text-[13px]">{Number(trend.previous_brightness_k).toFixed(1)} K</p>
+        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200/80">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Previous Observation</p>
+          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+            {Number(trend.previous_brightness_k).toFixed(1)} K <span className="text-xs font-normal text-slate-500">({(Number(trend.previous_brightness_k) - 273.15).toFixed(1)} °C)</span>
+          </p>
         </div>
-        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Last Observation</p>
-          <p className="font-mono text-slate-300 text-[11px]">{new Date(trend.current_timestamp).toLocaleString()}</p>
+        <div className="p-2 bg-slate-50/60 rounded-lg border border-slate-100">
+          <p className="text-[9.5px] text-slate-400 uppercase tracking-wide">Last Observation</p>
+          <p className="font-mono text-xs text-slate-700 font-semibold truncate mt-0.5">
+            {new Date(trend.current_timestamp).toLocaleString([], { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </p>
         </div>
-        <div className="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Observation Span</p>
-          <p className="font-mono text-slate-300 text-[11px]">{Number(trend.observation_span_hours).toFixed(1)} hours</p>
+        <div className="p-2 bg-slate-50/60 rounded-lg border border-slate-100">
+          <p className="text-[9.5px] text-slate-400 uppercase tracking-wide">Observation Span</p>
+          <p className="font-mono text-xs text-slate-700 font-semibold mt-0.5">
+            {Number(trend.observation_span_hours).toFixed(1)} hours
+          </p>
         </div>
       </div>
 
-      {/* Interactive Dark SVG Chart */}
-      <div className="relative">
-        <svg
-          viewBox="0 0 100 56"
-          preserveAspectRatio="none"
-          className="h-28 w-full select-none rounded-xl border border-slate-800 bg-slate-950 shadow-inner"
-          role="img"
-          aria-label="Observed brightness temperature chart. Hover over any dot to view temperature and timestamp."
-        >
+      {/* SVG Chart */}
+      <div className="relative pt-1">
+        <svg viewBox="0 0 100 56" className="h-24 w-full overflow-visible" role="img" aria-label="Observed brightness temperature trend graph">
           <defs>
-            <linearGradient id="temperature-trend-fill-dark" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#ea580c" stopOpacity="0.38" />
-              <stop offset="100%" stopColor="#ea580c" stopOpacity="0.01" />
+            <linearGradient id="temperature-trend-fill-light" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ea580c" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#ea580c" stopOpacity="0.02" />
             </linearGradient>
           </defs>
-          {[12, 24, 36, 48].map((y) => (
-            <line key={y} x1="8" y1={y} x2="94" y2={y} stroke="#1e293b" strokeWidth="0.6" strokeDasharray="2 2" />
-          ))}
-          <line x1="8" y1="50" x2="94" y2="50" stroke="#334155" strokeWidth="1" />
-          <line x1="8" y1="6" x2="8" y2="50" stroke="#334155" strokeWidth="1" />
-          <path d={observedArea} fill="url(#temperature-trend-fill-dark)" />
-          <polyline points={plot} fill="none" stroke="#f97316" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
-          <line x1={lastPlot[0]} y1={lastPlot[1]} x2="92" y2={projectedY} stroke="#94a3b8" strokeWidth="1.6" strokeDasharray="3 2" />
 
+          {/* Grid lines */}
+          <line x1="8" y1="14" x2="94" y2="14" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
+          <line x1="8" y1="30" x2="94" y2="30" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
+          <line x1="8" y1="50" x2="94" y2="50" stroke="#cbd5e1" strokeWidth="1" />
+          <line x1="8" y1="6" x2="8" y2="50" stroke="#cbd5e1" strokeWidth="1" />
+
+          {/* Area Fill */}
+          <path d={observedArea} fill="url(#temperature-trend-fill-light)" />
+
+          {/* Main Line */}
+          <polyline points={plot} fill="none" stroke="#ea580c" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+
+          {/* Extrapolation Line */}
+          <line x1={lastPlot[0]} y1={lastPlot[1]} x2="92" y2={projectedY} stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="3 2" />
+
+          {/* Cursor Indicator */}
           {selectedPoint && (
             <line
               x1={selectedPoint.x}
               y1="4"
               x2={selectedPoint.x}
               y2="50"
-              stroke="#475569"
+              stroke="#cbd5e1"
               strokeDasharray="2 2"
               strokeWidth="1"
             />
           )}
 
+          {/* Points */}
           {parsedPoints.map((pt: any) => {
             const isPtSelected = selectedPoint && !selectedPoint.isProjected && Math.abs(selectedPoint.x - pt.x) < 0.1;
-            const timeLabel = new Date(pt.acquired_at).toLocaleString([], {
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-            const tooltipText = `${Number(pt.brightness_k).toFixed(1)} K (${(Number(pt.brightness_k) - 273.15).toFixed(1)} °C) · ${timeLabel}`;
-
             return (
               <g
                 key={pt.id}
@@ -203,77 +191,62 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
                 onMouseLeave={() => setSelectedPoint(null)}
                 onClick={() => setSelectedPoint(pt)}
               >
-                <title>{tooltipText}</title>
-                <circle cx={pt.x} cy={pt.y} r="12" fill="transparent" />
+                <circle cx={pt.x} cy={pt.y} r="10" fill="transparent" />
                 {isPtSelected && (
-                  <circle cx={pt.x} cy={pt.y} r="6" fill="none" stroke="#f97316" strokeWidth="1.5" opacity="0.6" />
+                  <circle cx={pt.x} cy={pt.y} r="5.5" fill="none" stroke="#ea580c" strokeWidth="1.5" opacity="0.4" />
                 )}
                 <circle
                   cx={pt.x}
                   cy={pt.y}
-                  r={isPtSelected ? "4.5" : "3"}
-                  fill="#f97316"
+                  r={isPtSelected ? "4" : "2.8"}
+                  fill="#ea580c"
                   stroke="#ffffff"
-                  strokeWidth={isPtSelected ? "1.5" : "1"}
+                  strokeWidth="1.5"
                   className="transition-all duration-150"
                 />
               </g>
             );
           })}
 
+          {/* Projected Point */}
           <g
             className="cursor-pointer"
             onMouseEnter={() => setSelectedPoint(projectedPt)}
             onMouseLeave={() => setSelectedPoint(null)}
             onClick={() => setSelectedPoint(projectedPt)}
           >
-            <title>{`${Number(projected).toFixed(1)} K · Next-hour projection`}</title>
-            <circle cx="92" cy={projectedY} r="12" fill="transparent" />
-            {selectedPoint?.isProjected && (
-              <circle cx="92" cy={projectedY} r="6" fill="none" stroke="#94a3b8" strokeWidth="1.5" opacity="0.6" />
-            )}
+            <circle cx="92" cy={projectedY} r="10" fill="transparent" />
             <circle
               cx="92"
               cy={projectedY}
-              r={selectedPoint?.isProjected ? "4" : "2.8"}
-              fill="#fff"
-              stroke="#94a3b8"
-              strokeWidth={selectedPoint?.isProjected ? "2" : "1"}
-              className="transition-all duration-150"
+              r="2.8"
+              fill="#ffffff"
+              stroke="#64748b"
+              strokeWidth="1.5"
             />
           </g>
         </svg>
 
         {selectedPoint && (
           <div
-            className="absolute z-30 pointer-events-none rounded-lg border border-slate-700 bg-slate-900/95 px-2.5 py-1.5 shadow-2xl backdrop-blur-md transition-opacity duration-150 text-slate-100"
+            className="absolute z-30 pointer-events-none rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 shadow-xl text-white text-xs"
             style={{
               left: `${Math.min(78, Math.max(22, selectedPoint.x))}%`,
               top: selectedPoint.y < 26 ? "55%" : "0%",
               transform: selectedPoint.y < 26 ? "translate(-50%, 0)" : "translate(-50%, -95%)",
             }}
           >
-            <div className="text-xs font-mono font-bold text-white whitespace-nowrap">
-              {Number(selectedPoint.brightness_k).toFixed(1)} K
-              <span className="ml-1 text-[10px] font-normal text-slate-400 font-sans">
-                ({(Number(selectedPoint.brightness_k) - 273.15).toFixed(1)} °C)
-              </span>
+            <div className="font-mono font-bold whitespace-nowrap">
+              {Number(selectedPoint.brightness_k).toFixed(1)} K ({(Number(selectedPoint.brightness_k) - 273.15).toFixed(1)} °C)
             </div>
             <div className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">
-              {selectedPoint.isProjected
-                ? "Next-hour projection"
-                : new Date(selectedPoint.acquired_at).toLocaleString([], {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+              {selectedPoint.isProjected ? "Next-hour projection" : new Date(selectedPoint.acquired_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </div>
           </div>
         )}
       </div>
 
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[11px] text-slate-500">
         Based on {trend.observation_count} satellite readings. The solid line is measured temperature; the dashed line shows the next-hour direction if this rate continues.
       </p>
     </section>
@@ -291,17 +264,17 @@ function WindConditionsCard({
 }) {
   if (!wind) {
     return (
-      <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 space-y-2 text-slate-200">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-2 text-slate-800 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5 font-mono">
-            <Compass className="w-3.5 h-3.5 text-cyan-400" />
-            <span>WIND CONDITIONS</span>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5 font-mono">
+            <Compass className="w-4 h-4 text-cyan-600" />
+            <span>WIND & WEATHER TELEMETRY</span>
           </h2>
-          <span className="text-[10px] font-mono text-cyan-400 animate-pulse font-semibold">
+          <span className="text-[10px] font-mono text-cyan-600 animate-pulse font-semibold">
             Loading…
           </span>
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500">
           Loading provider-backed meteorological telemetry from Open-Meteo…
         </p>
       </section>
@@ -310,18 +283,18 @@ function WindConditionsCard({
 
   if (!wind.available) {
     return (
-      <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 space-y-2 text-slate-200">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-2 text-slate-800 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 font-mono">
-            <Compass className="w-3.5 h-3.5 text-slate-400" />
-            <span>WIND CONDITIONS</span>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5 font-mono">
+            <Compass className="w-4 h-4 text-slate-500" />
+            <span>WIND & WEATHER TELEMETRY</span>
           </h2>
-          <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/60 border border-amber-800 px-2 py-0.5 rounded">
+          <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
             UNAVAILABLE
           </span>
         </div>
-        <p className="text-xs font-bold text-slate-300">{wind.status || "METEOROLOGICAL DATA UNAVAILABLE"}</p>
-        <p className="text-[11px] text-slate-400 leading-relaxed">
+        <p className="text-xs font-bold text-slate-700">{wind.status || "METEOROLOGICAL DATA UNAVAILABLE"}</p>
+        <p className="text-[11px] text-slate-500 leading-relaxed">
           {wind.reason || "Provider meteorological wind measurements could not be retrieved."}
         </p>
       </section>
@@ -332,29 +305,25 @@ function WindConditionsCard({
   const fromCard = wind.direction_from_cardinal || "N/A";
   const toCard = wind.direction_toward_cardinal || "N/A";
   const speed = typeof wind.speed_kmh === "number" ? `${wind.speed_kmh} km/h` : "Unavailable";
-  const fromDeg = Number(wind.direction_from_degrees);
   const towardDeg = Number(wind.direction_toward_degrees);
-  const bearingText = Number.isFinite(fromDeg)
-    ? `${fromDeg}° (${fromCard}) → ${Number.isFinite(towardDeg) ? towardDeg : (fromDeg + 180) % 360}° (${toCard})`
-    : "Unavailable";
   const timestampText = wind.timestamp ? new Date(wind.timestamp).toLocaleString() : "Unavailable";
   const sourceText = wind.source || (wind.data_kind === "FORECAST_MODEL" ? "Open-Meteo forecast model" : "Open-Meteo archive (ERA5 reanalysis)");
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-[#0d131f] p-4 space-y-3.5 text-slate-200 shadow-xl">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-3.5 text-slate-800 shadow-sm">
       {/* Header with Title, Status Badges & Toggle */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100 flex items-center gap-1.5 font-mono">
-            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5 font-mono">
+            <Compass className="w-4 h-4 text-cyan-600" />
             <span>WIND & WEATHER TELEMETRY</span>
           </h2>
           {isStale && (
-            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700">
+            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
               STALE
             </span>
           )}
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-semibold">
+          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 font-semibold">
             {wind.data_kind === "FORECAST_MODEL" ? "OPEN-METEO FORECAST" : "ERA5 REANALYSIS"}
           </span>
         </div>
@@ -362,10 +331,10 @@ function WindConditionsCard({
         <button
           type="button"
           onClick={() => onVisibleChange(!visible)}
-          className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded-lg border transition flex items-center gap-1.5 cursor-pointer ${
+          className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded-lg border transition flex items-center gap-1 cursor-pointer ${
             visible
-              ? "bg-cyan-600 text-slate-950 border-cyan-500 hover:bg-cyan-500 shadow-sm"
-              : "bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800"
+              ? "bg-cyan-600 text-white border-cyan-600 hover:bg-cyan-700 shadow-sm"
+              : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
           }`}
           title={visible ? "Hide wind direction cone on map" : "Show wind direction cone on map"}
         >
@@ -375,22 +344,22 @@ function WindConditionsCard({
       </div>
 
       {/* Main Direction & Speed Visual Row */}
-      <div className="flex items-center gap-3.5 p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 shadow-inner">
+      <div className="flex items-center gap-3.5 p-3 bg-cyan-50/50 rounded-xl border border-cyan-200/70">
         <div
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-cyan-950/80 border-2 border-cyan-400 text-sm font-black text-cyan-300 shadow-inner"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-base font-black text-cyan-700 shadow-sm"
           style={{ transform: `rotate(${Number.isFinite(towardDeg) ? towardDeg : 0}deg)` }}
           title={`Wind blowing toward ${toCard} (${towardDeg}°)`}
         >
-          ↑
+          <Navigation className="w-5 h-5 text-cyan-600 fill-cyan-500" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            Wind Direction
+          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+            Wind Direction & Bearing
           </div>
-          <div className="font-mono font-black text-white text-sm">
+          <div className="font-mono font-black text-slate-900 text-base">
             {fromCard} → {toCard} ({Number.isFinite(towardDeg) ? `${towardDeg}°` : ""})
           </div>
-          <div className="text-xs font-mono font-bold text-cyan-400">
+          <div className="text-xs font-mono font-bold text-cyan-700">
             {speed}
           </div>
         </div>
@@ -398,40 +367,40 @@ function WindConditionsCard({
 
       {/* Full Meteorological 4-Metric Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
-          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Wind Gusts</p>
-          <p className="font-mono font-bold text-slate-100 text-[12px]">
+        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Wind Gusts</p>
+          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.gusts_kmh !== undefined ? `${wind.gusts_kmh.toFixed(1)} km/h` : "N/A"}
           </p>
         </div>
-        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
-          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Surface Temp</p>
-          <p className="font-mono font-bold text-slate-100 text-[12px]">
+        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Surface Temp</p>
+          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.temperature_c !== undefined ? `${wind.temperature_c.toFixed(1)} °C` : "N/A"}
           </p>
         </div>
-        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
-          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Humidity</p>
-          <p className="font-mono font-bold text-slate-100 text-[12px]">
+        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Humidity</p>
+          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.relative_humidity_pct !== undefined ? `${wind.relative_humidity_pct}%` : "N/A"}
           </p>
         </div>
-        <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800">
-          <p className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wide">Pressure</p>
-          <p className="font-mono font-bold text-slate-100 text-[12px]">
+        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Pressure</p>
+          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.surface_pressure_hpa !== undefined ? `${wind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
           </p>
         </div>
       </div>
 
       {/* Source and Timestamp footer */}
-      <div className="p-2 bg-slate-900/50 rounded-lg border border-slate-800/80 text-[10px] font-mono text-slate-400 flex items-center justify-between">
+      <div className="p-2 bg-slate-50 rounded-lg border border-slate-200/60 text-[10px] font-mono text-slate-500 flex items-center justify-between">
         <span className="truncate max-w-[200px]" title={sourceText}>{sourceText}</span>
         <span>{timestampText}</span>
       </div>
 
-      <p className="text-[10px] text-slate-400 leading-tight">
-        Direction describes air moving from <strong className="text-slate-200 font-semibold">{fromCard}</strong> toward <strong className="text-slate-200 font-semibold">{toCard}</strong>. Visual cone on the map is aligned with the wind-toward vector.
+      <p className="text-[11px] text-slate-500 leading-snug">
+        Air flow moving from <strong className="text-slate-800 font-semibold">{fromCard}</strong> toward <strong className="text-slate-800 font-semibold">{toCard}</strong>. Visual cone on map aligns with the wind-toward dispersion corridor.
       </p>
     </section>
   );
@@ -667,44 +636,44 @@ export function EventDetailPanel({
       className={`fixed top-0 h-full ${
         isExpanded 
           ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
-          : 'w-full sm:w-[520px] md:w-[540px] max-w-[95vw]'
-      } ${hasOverlay ? 'z-40' : 'z-50'} bg-[#0a0f18] border-l border-slate-800 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-200`}
+          : 'w-full sm:w-[480px] md:w-[500px] max-w-[95vw]'
+      } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-slate-200 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-800`}
     >
-      {/* Tactical Header matching Reference Image 3 */}
-      <div className="py-3 px-4 sm:px-5 border-b border-slate-800 shrink-0 bg-[#0d131f] text-slate-100 flex flex-col gap-2">
+      {/* Sleek Light Header matching Site UI */}
+      <div className="py-3 px-4 sm:px-5 border-b border-slate-200 shrink-0 bg-white text-slate-900 flex flex-col gap-2">
         <div className="flex items-start justify-between gap-3 min-w-0">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            {/* Prominent Threat Score Metric */}
+            {/* Threat Score Metric */}
             <div className={`font-mono text-3xl font-black shrink-0 ${
-              isCritical ? "text-red-400" : isAbnormal ? "text-amber-400" : "text-emerald-400"
+              isCritical ? "text-red-600" : isAbnormal ? "text-amber-600" : "text-emerald-600"
             }`}>
               {Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)))}
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-white text-base sm:text-lg flex items-center gap-1.5">
-                  <Flame className={`w-4 h-4 ${isWildfire ? "text-teal-400" : isAgricultural ? "text-amber-400" : "text-orange-500"}`} />
+                <span className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-1.5">
+                  <Flame className={`w-4 h-4 ${isWildfire ? "text-teal-600" : isAgricultural ? "text-amber-600" : "text-orange-600"}`} />
                   <span>{isIndustrial ? "Industrial Facility" : isAgricultural ? "Agricultural Burn" : isWildfire ? "Wildfire" : "Thermal Anomaly"}</span>
                 </span>
                 <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${
-                  isCritical ? "bg-red-950/80 text-red-300 border-red-800" :
-                  isAbnormal ? "bg-amber-950/80 text-amber-300 border-amber-800" :
-                  "bg-emerald-950/80 text-emerald-300 border-emerald-800"
+                  isCritical ? "bg-red-50 text-red-700 border-red-200" :
+                  isAbnormal ? "bg-amber-50 text-amber-700 border-amber-200" :
+                  "bg-emerald-50 text-emerald-700 border-emerald-200"
                 }`}>
                   {isCritical ? "CRITICAL" : isAbnormal ? "ELEVATED" : isWildfire ? "MEDIUM" : "ROUTINE"}
                 </span>
               </div>
 
               {/* Coordinate + Time Subtitle */}
-              <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
-                <span className="text-slate-300 truncate">{data?.event_id || eventId}</span>
+              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5 mt-0.5 truncate">
+                <span className="text-slate-700 font-semibold truncate">{data?.event_id || eventId}</span>
                 <span>·</span>
                 <span>{data?.latitude ? `${data.latitude.toFixed(4)}°N` : ""}{data?.longitude ? ` ${data.longitude.toFixed(4)}°E` : ""}</span>
                 <span>·</span>
                 <span>{data?.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Active"}</span>
                 <span>·</span>
-                <span className="text-emerald-400 font-semibold">active</span>
+                <span className="text-emerald-600 font-semibold">active</span>
               </div>
             </div>
           </div>
@@ -712,33 +681,33 @@ export function EventDetailPanel({
           <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={handleCopyId}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition"
               title="Copy Event ID"
               type="button"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
             </button>
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-[11px] font-semibold text-slate-300 transition"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition shadow-sm"
               title={isExpanded ? "Collapse to side panel" : "Expand to multi-column tactical command dossier"}
               type="button"
             >
               {isExpanded ? (
                 <>
-                  <Minimize2 className="w-3.5 h-3.5 text-slate-400" />
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-500" />
                   <span className="hidden sm:inline">Collapse</span>
                 </>
               ) : (
                 <>
-                  <Maximize2 className="w-3.5 h-3.5 text-orange-400" />
+                  <Maximize2 className="w-3.5 h-3.5 text-orange-500" />
                   <span className="hidden sm:inline">Enlarge</span>
                 </>
               )}
             </button>
             <button 
               onClick={onClose}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition"
               title="Close Dossier"
               type="button"
             >
@@ -747,48 +716,48 @@ export function EventDetailPanel({
           </div>
         </div>
 
-        {/* Fallback notice banner matching Image 3 */}
+        {/* Fallback notice banner */}
         {isInsufficient && (
-          <div className="p-2 rounded-lg bg-amber-950/30 border border-amber-800/60 text-amber-200/90 text-[11px] font-mono leading-relaxed">
+          <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-mono leading-relaxed">
             Band is a regional fallback averaged across sites of this type — not this facility's own history.
           </div>
         )}
       </div>
 
-      {/* Navigation Tabs (Tactical Dark Styling) */}
+      {/* Navigation Tabs (Clean Light Styling) */}
       {!isExpanded && (
-        <div className="flex border-b border-slate-800 px-3 py-1 bg-slate-950 text-xs font-semibold shrink-0 gap-1 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#334155_transparent]">
+        <div className="flex border-b border-slate-200 px-3 py-1.5 bg-slate-50 text-xs font-semibold shrink-0 gap-1 overflow-x-auto [scrollbar-width:thin]">
           <button 
             onClick={() => setActiveTab("overview")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
+            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             Overview
           </button>
           <button 
             onClick={() => setActiveTab("telemetry")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
+            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
           >
             <Activity className="w-3.5 h-3.5" />
             ML & 14-D Vector
           </button>
           <button 
             onClick={() => setActiveTab("baseline")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
+            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
             Baseline Anomaly
           </button>
           <button 
             onClick={() => setActiveTab("geography")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
+            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
           >
             <MapPin className="w-3.5 h-3.5" />
             Facility & Terrain
           </button>
           <button 
             onClick={() => setActiveTab("ai_brief")}
-            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-slate-900 text-cyan-300 border border-slate-700 font-bold" : "text-slate-400 hover:bg-slate-900/60"}`}
+            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
           >
             <Cpu className="w-3.5 h-3.5" />
             Grounded Brief
@@ -1257,53 +1226,53 @@ export function EventDetailPanel({
                     </div>
 
                     {/* Dedicated Satellite Cadence & Progression Card */}
-                    <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white shadow-lg border border-slate-700/80 space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-orange-400 flex items-center gap-1.5 font-mono">
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-orange-600 flex items-center gap-1.5 font-mono">
                           <Clock className="w-3.5 h-3.5" /> Satellite Cadence & Progression
                         </span>
-                        <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
                           {data.observation_count || 1} Passes Logged
                         </span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="space-y-0.5">
-                          <div className="text-[10px] text-slate-400 font-medium">Initial Detection</div>
-                          <div className="font-mono font-bold text-slate-100 text-xs">
+                          <div className="text-[10px] text-slate-500 font-medium">Initial Detection</div>
+                          <div className="font-mono font-bold text-slate-900 text-xs">
                             {data.first_detected_utc ? new Date(data.first_detected_utc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }) : "Initial Pass"}
                           </div>
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-slate-500">
                             {data.first_detected_utc ? new Date(data.first_detected_utc).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : "Today"}
                           </div>
                         </div>
 
                         <div className="space-y-0.5">
-                          <div className="text-[10px] text-slate-400 font-medium">Latest Pass</div>
-                          <div className="font-mono font-bold text-orange-400 text-xs flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                          <div className="text-[10px] text-slate-500 font-medium">Latest Pass</div>
+                          <div className="font-mono font-bold text-orange-600 text-xs flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
                             {data.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Just now"}
                           </div>
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-slate-500">
                             {data.latest_detected_utc ? new Date(data.latest_detected_utc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }) : "Active"}
                           </div>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-mono">
-                        <span className="text-slate-400 text-[11px]">Temperature Trend:</span>
+                      <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs font-mono">
+                        <span className="text-slate-500 text-[11px]">Temperature Trend:</span>
                         <span className="font-bold flex items-center gap-1">
                           {(() => {
                             const eff = history?.thermal_trend?.status === "AVAILABLE" ? history.thermal_trend.trend : data.thermal_trend;
                             if (eff === "INCREASING" || eff === "RISING") {
-                              return <span className="text-red-400 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> ↑ INCREASING</span>;
+                              return <span className="text-red-600 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> ↑ INCREASING</span>;
                             }
                             if (eff === "DECREASING" || eff === "FALLING") {
-                              return <span className="text-emerald-400 flex items-center gap-1"><TrendingDown className="w-3.5 h-3.5" /> ↓ DECREASING</span>;
+                              return <span className="text-emerald-600 flex items-center gap-1"><TrendingDown className="w-3.5 h-3.5" /> ↓ DECREASING</span>;
                             }
-                            return <span className="text-emerald-400 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> {data.thermal_trend || "STABLE"}</span>;
+                            return <span className="text-emerald-600 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> {data.thermal_trend || "STABLE"}</span>;
                           })()}
-                          <span className="text-slate-400 font-normal">(Peak {data.peak_frp_mw?.toFixed(1)} MW)</span>
+                          <span className="text-slate-500 font-normal">(Peak {data.peak_frp_mw?.toFixed(1)} MW)</span>
                         </span>
                       </div>
                     </div>
@@ -1340,24 +1309,24 @@ export function EventDetailPanel({
                     />
 
                     {/* 2. Before / After Imagery with Sentinel-2 Revisit Latency Notice */}
-                    <section className="rounded-2xl border border-slate-800 bg-[#0d131f] text-slate-200 overflow-hidden shadow-2xl p-4 space-y-3.5">
-                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                    <section className="rounded-xl border border-slate-200 bg-white text-slate-800 overflow-hidden shadow-sm p-4 space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold tracking-wider uppercase text-slate-100 text-xs">
+                          <span className="font-mono font-bold tracking-wider uppercase text-slate-900 text-xs">
                             BEFORE / AFTER IMAGERY
                           </span>
                         </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 font-semibold">
                           Sentinel-2 MSI · 10m
                         </span>
                       </div>
 
                       {/* Revisit Latency Notice matching Reference Image 3 */}
-                      <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-start gap-2.5">
-                        <Satellite className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-2.5">
+                        <Satellite className="w-4 h-4 text-cyan-600 shrink-0 mt-0.5" />
                         <div className="space-y-1 text-xs">
-                          <div className="font-bold text-slate-200">No optical pass tasked for this window</div>
-                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                          <div className="font-bold text-slate-800">No optical pass tasked for this window</div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
                             Sentinel-2 revisit is 5 days and cloud-dependent. Thermal detection does not wait on imagery — a brief can be raised without optical confirmation.
                           </p>
                         </div>
@@ -1365,38 +1334,38 @@ export function EventDetailPanel({
 
                       {/* Surface Corroboration & Spectral Indices */}
                       <div className="grid grid-cols-2 gap-2.5">
-                        <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] text-slate-600 font-mono">
                             <span>NDBI (Built-up)</span>
-                            <span className={ndbiVal > 0 ? "text-cyan-400 font-bold" : "text-amber-400"}>
+                            <span className={ndbiVal > 0 ? "text-cyan-700 font-bold" : "text-amber-700"}>
                               {ndbiVal > 0 ? `+${ndbiVal.toFixed(3)}` : ndbiVal.toFixed(3)}
                             </span>
                           </div>
-                          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                             <div 
-                              className={`h-1.5 rounded-full ${ndbiVal > 0 ? "bg-cyan-400" : "bg-slate-600"}`}
+                              className={`h-1.5 rounded-full ${ndbiVal > 0 ? "bg-cyan-600" : "bg-slate-400"}`}
                               style={{ width: `${Math.min(100, Math.max(10, ((ndbiVal + 0.6) / 1.2) * 100))}%` }}
                             />
                           </div>
-                          <div className="text-[9px] text-slate-400">
+                          <div className="text-[9px] text-slate-500">
                             {ndbiVal > 0 ? "Built fabric / mining corridor" : "Vegetated / natural soil"}
                           </div>
                         </div>
 
-                        <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1">
-                          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] text-slate-600 font-mono">
                             <span>NDVI (Vegetation)</span>
-                            <span className={ndviVal > 0.4 ? "text-emerald-400 font-bold" : "text-slate-300 font-mono"}>
+                            <span className={ndviVal > 0.4 ? "text-emerald-700 font-bold" : "text-slate-600 font-mono"}>
                               {ndviVal.toFixed(3)}
                             </span>
                           </div>
-                          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                             <div 
-                              className={`h-1.5 rounded-full ${ndviVal > 0.4 ? "bg-emerald-400" : "bg-slate-600"}`}
+                              className={`h-1.5 rounded-full ${ndviVal > 0.4 ? "bg-emerald-600" : "bg-slate-400"}`}
                               style={{ width: `${Math.min(100, Math.max(10, ndviVal * 100))}%` }}
                             />
                           </div>
-                          <div className="text-[9px] text-slate-400">
+                          <div className="text-[9px] text-slate-500">
                             {ndviVal > 0.4 ? "High crop canopy density" : "Barren / industrial excavation"}
                           </div>
                         </div>
@@ -1408,20 +1377,20 @@ export function EventDetailPanel({
                           href={googleSatUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition duration-150"
+                          className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition duration-150"
                           title="Inspect actual optical satellite imagery at this coordinate in Google Satellite"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           Inspect Live Optical Satellite Imagery (10m Resolution)
-                          <ExternalLink className="w-3 h-3 ml-auto text-slate-900/70" />
+                          <ExternalLink className="w-3 h-3 ml-auto text-white/80" />
                         </a>
 
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 font-mono">
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 px-1 font-mono">
                           <a 
                             href={copernicusUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
+                            className="hover:text-cyan-700 underline underline-offset-2 flex items-center gap-1"
                           >
                             ESA Copernicus EO <ExternalLink className="w-2.5 h-2.5" />
                           </a>
@@ -1430,7 +1399,7 @@ export function EventDetailPanel({
                             href={worldviewUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1"
+                            className="hover:text-cyan-700 underline underline-offset-2 flex items-center gap-1"
                           >
                             NASA Worldview <ExternalLink className="w-2.5 h-2.5" />
                           </a>
@@ -1728,28 +1697,28 @@ export function EventDetailPanel({
         )}
       </div>
 
-      {/* Footer Actions */}
-      <div className="p-4 border-t border-slate-800 shrink-0 bg-[#0d131f] flex flex-col gap-2">
+      {/* Footer Actions matching site UI */}
+      <div className="p-4 border-t border-slate-200 shrink-0 bg-white flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <button 
             onClick={handleAskAboutEvent}
             disabled={!data}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-semibold text-xs transition border border-slate-700 shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
             title="Ask AI Tactical Intelligence about this event"
           >
-            <Cpu className="w-4 h-4 text-cyan-400" />
+            <Cpu className="w-4 h-4 text-orange-400" />
             Ask to Chat
           </button>
           <button 
             onClick={handleDownloadReport}
             disabled={!data || isExportingPDF}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-slate-950 font-bold text-xs transition shadow-lg shadow-cyan-950/50"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
             title="Download authoritative immutable PDF Dossier"
           >
             {isExportingPDF ? (
-              <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
             ) : (
-              <FileText className="w-4 h-4 text-slate-950" />
+              <FileText className="w-4 h-4 text-white" />
             )}
             {isExportingPDF ? "Generating PDF..." : "Download Report"}
           </button>
@@ -1757,10 +1726,10 @@ export function EventDetailPanel({
         <button 
           onClick={handleExportDossier}
           disabled={!data}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 disabled:opacity-50 text-slate-300 font-semibold text-xs transition shadow-sm font-mono"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 disabled:opacity-50 text-slate-700 font-semibold text-xs transition shadow-sm"
           title="Export raw JSON telemetry payload"
         >
-          <Download className="w-3.5 h-3.5 text-slate-400" />
+          <Download className="w-3.5 h-3.5 text-slate-500" />
           Export JSON Dossier
         </button>
       </div>

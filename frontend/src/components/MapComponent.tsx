@@ -239,8 +239,8 @@ export default function MapComponent({
     zoom: 4.8,
   });
 
-  // Unified Filter States (Default to 30-day operational retention window)
-  const [windowHours, setWindowHours] = useState<number | null>(720);
+  // Unified Filter States (Default to 6h filter as requested)
+  const [windowHours, setWindowHours] = useState<number | null>(6);
   const [showAllDetections, setShowAllDetections] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [classFilter, setClassFilter] = useState<string>("");
@@ -254,7 +254,7 @@ export default function MapComponent({
   const [observationData, setObservationData] = useState<GeoCollection | null>(null);
   const [selectedEventData, setSelectedEventData] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
-  const [mapType, setMapType] = useState<"roadmap" | "hybrid">("hybrid");
+  const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
   const [error, setError] = useState<string | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedFacilityForDrawer, setSelectedFacilityForDrawer] = useState<any | null>(null);
@@ -319,7 +319,7 @@ export default function MapComponent({
   }, [windowHours]);
 
   const handleClearFilters = () => {
-    setWindowHours(null);
+    setWindowHours(6);
     setShowAllDetections(true);
     setSeverityFilter("");
     setClassFilter("");
@@ -534,7 +534,7 @@ export default function MapComponent({
   }, [selectedEventId]);
 
   const eventCount = geoData?.features.length || 0;
-  const isFilterActive = windowHours !== 720 || !showAllDetections || severityFilter !== "" || classFilter !== "";
+  const isFilterActive = windowHours !== 6 || !showAllDetections || severityFilter !== "" || classFilter !== "";
 
   // Selected marker feature
   const selectedFeature = useMemo(() => {
@@ -883,7 +883,7 @@ export default function MapComponent({
           </Source>
         )}
 
-        {/* Compact Glass Pill Wind Information Badge matching Reference Image 3 */}
+        {/* Compact Glass Pill Wind Information Badge */}
         {windConeData && (
           <Marker
             key={`selected-event-wind-overlay-${activeSelectedId || selectedEventId}`}
@@ -896,11 +896,16 @@ export default function MapComponent({
             <div
               data-testid="wind-vector-overlay"
               aria-label={`Wind ${windConeData.fromCardinal} to ${windConeData.toCardinal} at ${windConeData.speed} kilometres per hour, bearing ${windConeData.toward || windConeData.fromDegrees} degrees`}
-              className="pointer-events-none rounded-lg border border-white/20 bg-black/80 px-2.5 py-1 shadow-xl backdrop-blur-md select-none font-mono text-left flex items-center gap-1.5"
+              className="pointer-events-none rounded-lg border border-slate-700/80 bg-slate-900/90 px-2.5 py-1 shadow-xl backdrop-blur-md select-none font-mono text-left flex items-center gap-1.5"
             >
-              <Compass className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span className="text-[11px] font-bold text-white whitespace-nowrap">
-                wind {Math.round(windConeData.speed)} km/h @ {Math.round(windConeData.toward || windConeData.fromDegrees)}°
+              <div 
+                className="w-3.5 h-3.5 rounded-full bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center text-cyan-400 shrink-0"
+                style={{ transform: `rotate(${windConeData.toward || windConeData.fromDegrees}deg)` }}
+              >
+                <Navigation className="w-2 h-2 text-cyan-400 fill-cyan-400" />
+              </div>
+              <span className="text-[10.5px] font-bold text-white whitespace-nowrap">
+                wind {Math.round(windConeData.speed)} km/h · {windConeData.fromCardinal} → {windConeData.toCardinal} ({Math.round(windConeData.toward || windConeData.fromDegrees)}°)
               </span>
             </div>
           </Marker>
@@ -1074,7 +1079,7 @@ export default function MapComponent({
               </select>
 
               {/* Dynamic Reset Filters Button */}
-              {(classFilter || severityFilter || !showAllDetections || windowHours !== 24) && (
+              {(classFilter || severityFilter || !showAllDetections || windowHours !== 6) && (
                 <button
                   onClick={handleClearFilters}
                   type="button"

@@ -4,7 +4,7 @@ import { useMemo, useRef } from "react";
 import Map, { Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { WindData } from "@/lib/apiClient";
-import { Compass, Users, Layers, ExternalLink } from "lucide-react";
+import { Users, Navigation } from "lucide-react";
 
 // ESRI World Imagery (High-Res Defense Aerial Basemap with zero commercial labels)
 const ESRI_SATELLITE_STYLE: any = {
@@ -54,9 +54,7 @@ interface DetectionFootprintCardProps {
  * Builds 375m x 375m square bounding polygon for a VIIRS footprint centered at lat/lon
  */
 function buildFootprintPolygon(lon: number, lat: number) {
-  // 375m in degrees latitude (~111,320m per degree)
   const degLat = 375 / 111320;
-  // 375m in degrees longitude accounting for latitude cosine
   const degLon = 375 / (111320 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
 
   const halfLat = degLat / 2;
@@ -72,7 +70,7 @@ function buildFootprintPolygon(lon: number, lat: number) {
 }
 
 /**
- * Builds cyan dashed downwind dispersion cone (Image 3 reference)
+ * Builds cyan dashed downwind dispersion cone
  */
 function buildPlumeCone(
   lon: number,
@@ -82,10 +80,8 @@ function buildPlumeCone(
 ) {
   const angle = (towardDeg * Math.PI) / 180;
   const lonScale = Math.max(0.2, Math.cos((lat * Math.PI) / 180));
-  // 32 degree total dispersion corridor
   const halfAngle = (16 * Math.PI) / 180;
 
-  // Reach in degrees: roughly 1.8km to 3.5km downwind
   const reachM = Math.min(3500, Math.max(1600, 1400 + speedKmh * 80));
   const reachDeg = reachM / 111320;
 
@@ -105,10 +101,37 @@ function buildPlumeCone(
 
   const polygon = [origin, ...arcPoints, origin];
   return {
-    type: "Feature",
+    type: "Feature" as const,
     geometry: {
-      type: "Polygon",
+      type: "Polygon" as const,
       coordinates: [polygon],
+    },
+    properties: {},
+  };
+}
+
+/**
+ * Builds central downwind vector centerline
+ */
+function buildPlumeCenterline(
+  lon: number,
+  lat: number,
+  towardDeg: number,
+  speedKmh: number = 15
+) {
+  const angle = (towardDeg * Math.PI) / 180;
+  const lonScale = Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+  const reachM = Math.min(3200, Math.max(1500, 1300 + speedKmh * 75));
+  const reachDeg = reachM / 111320;
+
+  const endLon = lon + (Math.sin(angle) * reachDeg) / lonScale;
+  const endLat = lat + Math.cos(angle) * reachDeg;
+
+  return {
+    type: "Feature" as const,
+    geometry: {
+      type: "LineString" as const,
+      coordinates: [[lon, lat], [endLon, endLat]],
     },
     properties: {},
   };
@@ -124,7 +147,7 @@ export function DetectionFootprintCard({
 }: DetectionFootprintCardProps) {
   const mapRef = useRef<any>(null);
 
-  // Normalize constituent observation coordinates (at least 1, max recent 10 for clean display)
+  // Normalize constituent observation coordinates
   const validObs = useMemo(() => {
     if (observations && observations.length > 0) {
       return observations
@@ -157,11 +180,16 @@ export function DetectionFootprintCard({
   // Wind Plume Conical Corridor GeoJSON
   const towardDeg = Number(wind?.direction_toward_degrees);
   const speedKmh = Number(wind?.speed_kmh) || 0;
-  const hasWind = Number.isFinite(towardDeg) && wind?.available;
+  const hasWind = Number.isFinite(towardDeg) && Boolean(wind?.available);
 
   const plumeGeoJson = useMemo(() => {
     if (!hasWind) return null;
     return buildPlumeCone(longitude, latitude, towardDeg, speedKmh);
+  }, [longitude, latitude, towardDeg, speedKmh, hasWind]);
+
+  const plumeCenterlineGeoJson = useMemo(() => {
+    if (!hasWind) return null;
+    return buildPlumeCenterline(longitude, latitude, towardDeg, speedKmh);
   }, [longitude, latitude, towardDeg, speedKmh, hasWind]);
 
   // Approximate population density within 5km buffer
@@ -175,29 +203,29 @@ export function DetectionFootprintCard({
   return (
     <section 
       aria-label="Detection Footprint"
-      className="rounded-2xl border border-slate-800 bg-[#0d131f] text-slate-200 overflow-hidden shadow-2xl space-y-2.5 p-3.5"
+      className="rounded-xl border border-slate-200 bg-white text-slate-800 overflow-hidden shadow-sm space-y-2.5 p-3.5"
     >
-      {/* Header matching Reference Image 3 */}
+      {/* Header matching site light theme */}
       <div className="flex items-center justify-between text-xs px-0.5">
         <div className="flex items-center gap-1.5">
-          <span className="font-mono font-bold tracking-wider uppercase text-slate-100 text-[11px] sm:text-xs">
+          <span className="font-mono font-bold tracking-wider uppercase text-slate-900 text-xs">
             DETECTION FOOTPRINT
           </span>
         </div>
-        <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
-          <Users className="w-3 h-3 text-slate-500" />
+        <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
+          <Users className="w-3.5 h-3.5 text-slate-400" />
           <span>{populationEstimate}</span>
         </div>
       </div>
 
       {/* Embedded High-Resolution Aerial Viewport */}
-      <div className="relative w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-inner group">
+      <div className="relative w-full h-52 sm:h-60 rounded-xl overflow-hidden border border-slate-200 bg-slate-900 shadow-inner group">
         <Map
           ref={mapRef}
           initialViewState={{
             longitude,
             latitude,
-            zoom: 13.8,
+            zoom: 13.2,
             pitch: 0,
           }}
           mapStyle={ESRI_SATELLITE_STYLE}
@@ -215,7 +243,7 @@ export function DetectionFootprintCard({
                 type="fill"
                 paint={{
                   "fill-color": "#06b6d4",
-                  "fill-opacity": 0.22,
+                  "fill-opacity": 0.28,
                 }}
               />
               <Layer
@@ -223,9 +251,35 @@ export function DetectionFootprintCard({
                 type="line"
                 paint={{
                   "line-color": "#38bdf8",
-                  "line-width": 1.8,
+                  "line-width": 2,
                   "line-dasharray": [3, 2],
+                  "line-opacity": 0.95,
+                }}
+              />
+            </Source>
+          )}
+
+          {/* Central Downwind Vector Line */}
+          {plumeCenterlineGeoJson && (
+            <Source id="footprint-plume-centerline-source" type="geojson" data={plumeCenterlineGeoJson as any}>
+              <Layer
+                id="footprint-plume-centerline-glow"
+                type="line"
+                paint={{
+                  "line-color": "#06b6d4",
+                  "line-width": 4,
+                  "line-opacity": 0.4,
+                  "line-blur": 2,
+                }}
+              />
+              <Layer
+                id="footprint-plume-centerline"
+                type="line"
+                paint={{
+                  "line-color": "#e0f2fe",
+                  "line-width": 1.5,
                   "line-opacity": 0.9,
+                  "line-dasharray": [2, 2],
                 }}
               />
             </Source>
@@ -233,16 +287,14 @@ export function DetectionFootprintCard({
 
           {/* 375m VIIRS Constituent Footprint Squares */}
           <Source id="footprint-squares-source" type="geojson" data={footprintGeoJson as any}>
-            {/* Soft Green Fill */}
             <Layer
               id="footprint-squares-fill"
               type="fill"
               paint={{
                 "fill-color": "#22c55e",
-                "fill-opacity": 0.18,
+                "fill-opacity": 0.22,
               }}
             />
-            {/* Crisp Green Outline */}
             <Layer
               id="footprint-squares-outline"
               type="line"
@@ -255,13 +307,19 @@ export function DetectionFootprintCard({
           </Source>
         </Map>
 
-        {/* Floating Glass Pill Badge: "wind 22 km/h @ 240°" (Exact match to Image 3) */}
+        {/* Floating Wind Information Badge with Rotating Direction Arrow */}
         {hasWind && (
-          <div className="absolute top-3 right-3 z-10 pointer-events-none">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/20 bg-black/75 backdrop-blur-md text-white font-mono text-[11px] sm:text-xs font-semibold shadow-xl">
-              <Compass className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span>
-                wind {Math.round(speedKmh)} km/h @ {Math.round(towardDeg)}°
+          <div className="absolute top-2.5 right-2.5 z-10 pointer-events-none">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-950/85 backdrop-blur-md text-white font-mono text-[10.5px] font-semibold shadow-lg">
+              <div 
+                className="w-4 h-4 rounded-full bg-cyan-500/20 border border-cyan-400/80 flex items-center justify-center text-cyan-400 shrink-0"
+                style={{ transform: `rotate(${towardDeg}deg)` }}
+                title={`Wind vector toward ${towardDeg}°`}
+              >
+                <Navigation className="w-2.5 h-2.5 text-cyan-400 fill-cyan-400" />
+              </div>
+              <span className="text-white">
+                wind {Math.round(speedKmh)} km/h @ {Math.round(towardDeg)}° ({wind?.direction_from_cardinal}→{wind?.direction_toward_cardinal})
               </span>
             </div>
           </div>
@@ -269,13 +327,13 @@ export function DetectionFootprintCard({
 
         {/* Centroid Crosshair Marker */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 border border-white shadow-lg animate-ping opacity-75" />
+          <div className="w-3 h-3 rounded-full bg-cyan-400 border border-white shadow-lg animate-ping opacity-75" />
           <div className="w-2 h-2 rounded-full bg-cyan-300 border border-black absolute" />
         </div>
 
         {/* Footer Bar on Aerial Canvas */}
-        <div className="absolute bottom-2.5 left-3 z-10 pointer-events-none">
-          <div className="font-mono text-[9.5px] sm:text-[10px] tracking-wider uppercase font-bold text-slate-300 drop-shadow-md bg-black/60 px-2 py-0.5 rounded border border-white/10">
+        <div className="absolute bottom-2 left-2.5 z-10 pointer-events-none">
+          <div className="font-mono text-[9px] sm:text-[10px] tracking-wider uppercase font-bold text-slate-200 drop-shadow-md bg-black/70 px-2 py-0.5 rounded border border-white/15 backdrop-blur-sm">
             {validObs.length} × 375 M FOOTPRINTS · ESRI SATELLITE
           </div>
         </div>
