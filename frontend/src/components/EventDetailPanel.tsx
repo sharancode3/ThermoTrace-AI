@@ -9,7 +9,7 @@ import {
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
   Layers, Compass, Info, Copy, Check, Eye, ExternalLink,
-  Wind, Gauge, Droplets, Thermometer, Navigation
+  Wind, Gauge, Droplets, Thermometer, Navigation as NavigationIcon
 } from "lucide-react";
 import { fetchEventHistory, fetchEventIntelligence, WindData } from "@/lib/apiClient";
 import { DetectionFootprintCard } from "./DetectionFootprintCard";
@@ -350,7 +350,7 @@ function WindConditionsCard({
           style={{ transform: `rotate(${Number.isFinite(towardDeg) ? towardDeg : 0}deg)` }}
           title={`Wind blowing toward ${toCard} (${towardDeg}°)`}
         >
-          <Navigation className="w-5 h-5 text-cyan-600 fill-cyan-500" />
+          <NavigationIcon className="w-5 h-5 text-cyan-600 fill-cyan-500" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">

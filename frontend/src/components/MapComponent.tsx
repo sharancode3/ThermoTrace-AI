@@ -18,7 +18,7 @@ import {
 } from "@/lib/apiClient";
 import {
   Layers,
-  Navigation,
+  Navigation as NavigationIcon,
   Eye,
   EyeOff,
   Info,
@@ -36,6 +36,32 @@ import { ThermalMapMarker } from "./ThermalMapMarker";
 import FacilityDetailDrawer from "./FacilityDetailDrawer";
 import { NearbyAlertCenter } from "./NearbyAlertCenter";
 import { requestCurrentPosition } from "@/lib/geolocation";
+import { updateAlertLocation } from "@/lib/nearbyAlerts";
+
+function createGeoCircle(lon: number, lat: number, radiusMeters: number, points = 64) {
+  const coords: [number, number][] = [];
+  const km = radiusMeters / 1000;
+  const distanceX = km / (111.32 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+  const distanceY = km / 110.574;
+
+  for (let i = 0; i <= points; i++) {
+    const theta = (i / points) * (2 * Math.PI);
+    const x = distanceX * Math.cos(theta);
+    const y = distanceY * Math.sin(theta);
+    coords.push([lon + x, lat + y]);
+  }
+
+  return {
+    type: "Feature" as const,
+    geometry: {
+      type: "Polygon" as const,
+      coordinates: [coords],
+    },
+    properties: {
+      radiusKm: radiusMeters / 1000,
+    },
+  };
+}
 
 // Google Maps Roadmap raster style
 const GOOGLE_ROADMAP: any = {
@@ -348,20 +374,56 @@ export default function MapComponent({
 
   const [locationError, setLocationError] = useState<string | null>(null);
 
+  const userGeofenceCircle = useMemo(() => {
+    if (!userLocation) return null;
+    return createGeoCircle(userLocation.lon, userLocation.lat, 25000); // 25 km safety shield
+  }, [userLocation]);
+
+  useEffect(() => {
+    try {
+      const savedLat = localStorage.getItem("thermotrace_user_lat");
+      const savedLon = localStorage.getItem("thermotrace_user_lon");
+      if (savedLat && savedLon) {
+        const lat = parseFloat(savedLat);
+        const lon = parseFloat(savedLon);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          setUserLocation({ lat, lon });
+        }
+      }
+    } catch {}
+
+    const handleLocationSynced = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && Number.isFinite(detail.lat) && Number.isFinite(detail.lon)) {
+        setUserLocation({ lat: detail.lat, lon: detail.lon });
+      }
+    };
+    window.addEventListener("thermotrace-location-synced", handleLocationSynced);
+    return () => window.removeEventListener("thermotrace-location-synced", handleLocationSynced);
+  }, []);
+
   const handleMyLocation = () => {
-    requestCurrentPosition().then((position) => {
+    requestCurrentPosition()
+      .then((position) => {
         const coords = {
           lat: position.coords.latitude,
           lon: position.coords.longitude,
         };
         setUserLocation(coords);
         setLocationError(null);
+        try {
+          localStorage.setItem("thermotrace_user_lat", String(coords.lat));
+          localStorage.setItem("thermotrace_user_lon", String(coords.lon));
+        } catch {}
+        updateAlertLocation(coords.lat, coords.lon).catch(() => {});
+        window.dispatchEvent(new CustomEvent("thermotrace-location-synced", { detail: coords }));
         mapRef.current?.flyTo({
           center: [coords.lon, coords.lat],
-          zoom: 13.5,
+          zoom: 11.5,
           duration: 1800,
         });
-      }).catch((error) => {
+      })
+      .catch((error) => {
         setLocationError(error instanceof Error ? error.message : "Unable to retrieve location");
         setTimeout(() => setLocationError(null), 4000);
       });
@@ -902,11 +964,68 @@ export default function MapComponent({
                 className="w-3.5 h-3.5 rounded-full bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center text-cyan-400 shrink-0"
                 style={{ transform: `rotate(${windConeData.toward || windConeData.fromDegrees}deg)` }}
               >
-                <Navigation className="w-2 h-2 text-cyan-400 fill-cyan-400" />
+                <NavigationIcon className="w-2 h-2 text-cyan-400 fill-cyan-400" />
               </div>
               <span className="text-[10.5px] font-bold text-white whitespace-nowrap">
                 wind {Math.round(windConeData.speed)} km/h · {windConeData.fromCardinal} → {windConeData.toCardinal} ({Math.round(windConeData.toward || windConeData.fromDegrees)}°)
               </span>
+            </div>
+          </Marker>
+        )}
+
+        {/* User Proximity Safety Geofence Layer (25km Contextual Shield) */}
+        {userGeofenceCircle && (
+          <Source id="user-geofence-source" type="geojson" data={userGeofenceCircle as any}>
+            <Layer
+              id="user-geofence-fill"
+              type="fill"
+              paint={{
+                "fill-color": "#3b82f6",
+                "fill-opacity": 0.07,
+              }}
+            />
+            <Layer
+              id="user-geofence-glow"
+              type="line"
+              paint={{
+                "line-color": "#60a5fa",
+                "line-width": 4,
+                "line-opacity": 0.25,
+                "line-blur": 2,
+              }}
+            />
+            <Layer
+              id="user-geofence-outline"
+              type="line"
+              paint={{
+                "line-color": "#2563eb",
+                "line-width": 1.6,
+                "line-dasharray": [3, 2],
+                "line-opacity": 0.75,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* User Alert Location Pulse Beacon Marker */}
+        {userLocation && (
+          <Marker
+            key="user-alert-location-marker"
+            longitude={userLocation.lon}
+            latitude={userLocation.lat}
+            anchor="center"
+            style={{ zIndex: 40 }}
+          >
+            <div 
+              className="relative flex items-center justify-center group pointer-events-auto cursor-pointer select-none"
+              title="Your Alert Location (Monitoring 25 km Safety Shield)"
+            >
+              <div className="absolute -top-7 px-2 py-0.5 rounded-md bg-slate-900/90 text-white text-[10px] font-mono whitespace-nowrap border border-blue-400/50 shadow-md flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+                <span>My Location · 25km Shield</span>
+              </div>
+              <span className="absolute w-8 h-8 rounded-full bg-blue-500/30 animate-ping pointer-events-none" />
+              <span className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-lg ring-2 ring-blue-400" />
             </div>
           </Marker>
         )}
@@ -1211,7 +1330,7 @@ export default function MapComponent({
               title="Google Vector Roadmap"
               type="button"
             >
-              <Navigation className="w-3.5 h-3.5" />
+              <NavigationIcon className="w-3.5 h-3.5" />
               Roadmap
             </button>
             <button

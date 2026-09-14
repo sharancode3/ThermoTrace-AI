@@ -43,6 +43,7 @@ backend/data/reports/*.pdf
 backend/backend/
 *.pdf
 *.db
+*.pem
 scratch/
 test-results/
 .system_generated/

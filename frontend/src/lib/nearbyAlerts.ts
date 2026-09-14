@@ -2,7 +2,9 @@ export type NearbyAlert = {
   id: string; event_id: string; title: string; message: string;
   severity: "CRITICAL" | "ABNORMAL"; classification?: string | null;
   peak_frp_mw?: number | null; latitude?: number | null; longitude?: number | null;
-  distance_km?: number | null; is_read: boolean; created_at?: string | null;
+  distance_km?: number | null; bearing_cardinal?: string | null;
+  is_downwind_hazard?: boolean | null;
+  is_read: boolean; created_at?: string | null;
 };
 
 export type NearbyPreferences = {

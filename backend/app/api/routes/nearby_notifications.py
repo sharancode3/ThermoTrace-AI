@@ -54,16 +54,39 @@ def current_user(x_thermotrace_user_id: str = Header(...), db: Session = Depends
     return user
 
 
+import math
+
+def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_lambda = math.radians(lon2 - lon1)
+    y = math.sin(delta_lambda) * math.cos(phi2)
+    x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(delta_lambda)
+    theta = math.atan2(y, x)
+    return (math.degrees(theta) + 360) % 360
+
+def bearing_to_cardinal(bearing: float) -> str:
+    cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                 "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+    idx = round(bearing / 22.5) % 16
+    return cardinals[idx]
+
 def serialize_notification(db: Session, notification: Notification) -> dict:
     event = db.get(ThermalEvent, notification.event_id)
     distance_m = None
     user = db.get(User, notification.user_id)
+    bearing_cardinal = None
+    bearing_deg = None
     if event and user and user.alert_location is not None:
         distance_m = db.execute(text("""
             SELECT ST_Distance(u.alert_location::geography, e.centroid::geography)
             FROM users u JOIN thermal_events e ON e.id = :event_id
             WHERE u.id = :user_id
         """), {"event_id": event.id, "user_id": user.id}).scalar()
+        if user.alert_latitude is not None and user.alert_longitude is not None and event.latitude is not None and event.longitude is not None:
+            deg = calculate_bearing(float(user.alert_latitude), float(user.alert_longitude), float(event.latitude), float(event.longitude))
+            bearing_deg = round(deg, 1)
+            bearing_cardinal = bearing_to_cardinal(deg)
     return {
         "id": str(notification.id), "event_id": event.event_id if event else None,
         "notification_type": notification.notification_type, "title": notification.title,
@@ -72,6 +95,8 @@ def serialize_notification(db: Session, notification: Notification) -> dict:
         "peak_frp_mw": float(event.peak_frp_mw) if event and event.peak_frp_mw is not None else None,
         "latitude": float(event.latitude) if event else None, "longitude": float(event.longitude) if event else None,
         "distance_km": round(float(distance_m) / 1000, 1) if distance_m is not None else None,
+        "bearing_cardinal": bearing_cardinal,
+        "bearing_deg": bearing_deg,
         "is_read": notification.is_read,
         "created_at": notification.created_at.isoformat() if notification.created_at else None,
     }

@@ -63,14 +63,22 @@ def _send_web_push(session: Session, user: User, notification: Notification,
     except ImportError:
         return
     payload = json.dumps(_build_web_push_payload(notification, event, distance_m, location_name))
-    claims = {"sub": os.getenv("VAPID_SUBJECT", "mailto:admin@thermotrace.local")}
+    claims = {"sub": os.getenv("VAPID_SUBJECT", "mailto:admin@thermotrace.gov.in")}
+    key_val = os.environ["VAPID_PRIVATE_KEY"]
+    if os.path.isfile(key_val):
+        resolved_key = key_val
+    elif os.path.isfile(os.path.join(os.path.dirname(__file__), "..", "..", key_val)):
+        resolved_key = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", key_val))
+    else:
+        resolved_key = key_val
+
     for subscription in session.query(PushSubscription).filter_by(user_id=user.id, is_active=True).all():
         try:
             webpush(
                 subscription_info={"endpoint": subscription.endpoint,
                                    "keys": {"p256dh": subscription.p256dh, "auth": subscription.auth}},
                 data=payload,
-                vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
+                vapid_private_key=resolved_key,
                 vapid_claims=claims,
             )
         except WebPushException as exc:
