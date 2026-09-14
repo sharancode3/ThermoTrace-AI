@@ -253,6 +253,29 @@ function ThermalTrendCard({ history, fallbackTrend }: { history: any; fallbackTr
   );
 }
 
+function getFullCardinalName(cardinal?: string | null): string {
+  if (!cardinal) return "Unknown Direction";
+  const map: Record<string, string> = {
+    N: "North",
+    NNE: "North-Northeast",
+    NE: "Northeast",
+    ENE: "East-Northeast",
+    E: "East",
+    ESE: "East-Southeast",
+    SE: "Southeast",
+    SSE: "South-Southeast",
+    S: "South",
+    SSW: "South-Southwest",
+    SW: "Southwest",
+    WSW: "West-Southwest",
+    W: "West",
+    WNW: "West-Northwest",
+    NW: "Northwest",
+    NNW: "North-Northwest",
+  };
+  return map[cardinal.toUpperCase()] || cardinal;
+}
+
 function WindConditionsCard({
   wind,
   visible,
@@ -304,6 +327,8 @@ function WindConditionsCard({
   const isStale = Boolean(wind.stale);
   const fromCard = wind.direction_from_cardinal || "N/A";
   const toCard = wind.direction_toward_cardinal || "N/A";
+  const fromFullName = getFullCardinalName(fromCard);
+  const toFullName = getFullCardinalName(toCard);
   const speed = typeof wind.speed_kmh === "number" ? `${wind.speed_kmh} km/h` : "Unavailable";
   const towardDeg = Number(wind.direction_toward_degrees);
   const timestampText = wind.timestamp ? new Date(wind.timestamp).toLocaleString() : "Unavailable";
@@ -343,53 +368,72 @@ function WindConditionsCard({
         </button>
       </div>
 
-      {/* Main Direction & Speed Visual Row */}
-      <div className="flex items-center gap-3.5 p-3 bg-cyan-50/50 rounded-xl border border-cyan-200/70">
+      {/* Main Direction & Speed Visual Row with Full Expanded Names */}
+      <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 rounded-xl border border-cyan-200/80">
         <div
-          className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-base font-black text-cyan-700 shadow-sm"
+          className="grid h-13 w-13 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-base font-black text-cyan-700 shadow-sm"
           style={{ transform: `rotate(${Number.isFinite(towardDeg) ? towardDeg : 0}deg)` }}
-          title={`Wind blowing toward ${toCard} (${towardDeg}°)`}
+          title={`Wind blowing toward ${toFullName} (${toCard} · ${towardDeg}°)`}
         >
-          <NavigationIcon className="w-5 h-5 text-cyan-600 fill-cyan-500" />
+          <NavigationIcon className="w-6 h-6 text-cyan-600 fill-cyan-500" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-            Wind Direction & Bearing
+            Wind Trajectory & Dispersion Corridor
           </div>
-          <div className="font-mono font-black text-slate-900 text-base">
-            {fromCard} → {toCard} ({Number.isFinite(towardDeg) ? `${towardDeg}°` : ""})
+          <div className="font-mono font-black text-slate-900 text-base leading-snug">
+            Blowing toward {toFullName}
           </div>
-          <div className="text-xs font-mono font-bold text-cyan-700">
-            {speed}
+          <div className="text-xs font-mono font-semibold text-slate-600 mt-0.5 flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-cyan-700">{speed}</span>
+            <span className="text-slate-300">•</span>
+            <span>Bearing: {Number.isFinite(towardDeg) ? `${towardDeg}° (${toCard})` : "N/A"}</span>
+            <span className="text-slate-300">•</span>
+            <span>Origin: {fromFullName} ({fromCard})</span>
           </div>
         </div>
       </div>
 
-      {/* Full Meteorological 4-Metric Grid */}
+      {/* Detailed Operational Plume Dispersion Description */}
+      <div className="p-3 bg-cyan-50/50 rounded-xl border border-cyan-200/60 space-y-1 text-xs">
+        <div className="font-bold text-cyan-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+          <Wind className="w-3.5 h-3.5 text-cyan-600" />
+          <span>Plume Dispersion & Smoke Trajectory</span>
+        </div>
+        <p className="text-[11.5px] text-slate-700 leading-relaxed">
+          Surface winds are blowing from the <strong className="font-semibold text-slate-900">{fromFullName} ({fromCard})</strong> toward the <strong className="font-semibold text-cyan-950">{toFullName} ({toCard} at {towardDeg}°)</strong> at <strong className="font-semibold text-slate-900">{speed}</strong>. Any thermal emissions, particulate plumes, or smoke from this facility will disperse along this corridor. The conical layer on the map visualizes this downwind path.
+        </p>
+      </div>
+
+      {/* Full Meteorological 4-Metric Grid with Clarifying Subtitles */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
           <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Wind Gusts</p>
           <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.gusts_kmh !== undefined ? `${wind.gusts_kmh.toFixed(1)} km/h` : "N/A"}
           </p>
+          <p className="text-[9px] text-slate-400 mt-0.5">Peak surface gusts</p>
         </div>
         <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
           <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Surface Temp</p>
           <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.temperature_c !== undefined ? `${wind.temperature_c.toFixed(1)} °C` : "N/A"}
           </p>
+          <p className="text-[9px] text-slate-400 mt-0.5">Ground air temp</p>
         </div>
         <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
           <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Humidity</p>
           <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.relative_humidity_pct !== undefined ? `${wind.relative_humidity_pct}%` : "N/A"}
           </p>
+          <p className="text-[9px] text-slate-400 mt-0.5">Relative moisture</p>
         </div>
         <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
           <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Pressure</p>
           <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
             {wind.surface_pressure_hpa !== undefined ? `${wind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
           </p>
+          <p className="text-[9px] text-slate-400 mt-0.5">Sea-level pressure</p>
         </div>
       </div>
 
@@ -398,10 +442,6 @@ function WindConditionsCard({
         <span className="truncate max-w-[200px]" title={sourceText}>{sourceText}</span>
         <span>{timestampText}</span>
       </div>
-
-      <p className="text-[11px] text-slate-500 leading-snug">
-        Air flow moving from <strong className="text-slate-800 font-semibold">{fromCard}</strong> toward <strong className="text-slate-800 font-semibold">{toCard}</strong>. Visual cone on map aligns with the wind-toward dispersion corridor.
-      </p>
     </section>
   );
 }
@@ -643,12 +683,30 @@ export function EventDetailPanel({
       <div className="py-3 px-4 sm:px-5 border-b border-slate-200 shrink-0 bg-white text-slate-900 flex flex-col gap-2">
         <div className="flex items-start justify-between gap-3 min-w-0">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            {/* Threat Score Metric */}
-            <div className={`font-mono text-3xl font-black shrink-0 ${
-              isCritical ? "text-red-600" : isAbnormal ? "text-amber-600" : "text-emerald-600"
-            }`}>
-              {Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)))}
-            </div>
+            {/* Thermal Severity Threat Score Badge with Clear '/100 Threat Score' Label */}
+            {(() => {
+              const threatScore = Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)));
+              return (
+                <div 
+                  className={`flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl border shrink-0 min-w-[62px] shadow-sm ${
+                    isCritical 
+                      ? "bg-red-50 border-red-200 text-red-700" 
+                      : isAbnormal 
+                      ? "bg-amber-50 border-amber-200 text-amber-700" 
+                      : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  }`}
+                  title={`Thermal Severity Score: ${threatScore} / 100 (Calculated from satellite Fire Radiative Power of ${data?.peak_frp_mw?.toFixed(1) || "18.0"} MW)`}
+                >
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="font-mono text-2xl font-black leading-none">{threatScore}</span>
+                    <span className="text-[10px] font-bold opacity-60">/100</span>
+                  </div>
+                  <span className="text-[8px] font-extrabold uppercase tracking-wider mt-0.5 leading-none opacity-80 whitespace-nowrap">
+                    Threat Score
+                  </span>
+                </div>
+              );
+            })()}
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
