@@ -689,120 +689,130 @@ export function EventDetailPanel({
       className={`fixed top-0 h-full ${
         isExpanded 
           ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
-          : 'w-full sm:w-[480px]'
+          : 'w-full sm:w-[520px] md:w-[540px] max-w-[95vw]'
       } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-slate-200 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-700`}
     >
-      {/* Header */}
-      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 shrink-0 bg-slate-50/95 backdrop-blur-sm">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className={`p-2 rounded-xl border shrink-0 ${sourceBadgeStyle}`}>
-            <SourceIcon className="w-5 h-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-slate-900 text-sm tracking-tight font-mono">{data?.event_id || eventId}</span>
+      {/* Header - Adaptive 2-Row Layout with Zero Text Overflow */}
+      <div className="min-h-[4.75rem] py-3 px-4 sm:px-5 border-b border-slate-200 shrink-0 bg-slate-50/95 backdrop-blur-sm flex flex-col justify-center gap-1.5">
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className={`p-1.5 sm:p-2 rounded-xl border shrink-0 ${sourceBadgeStyle}`}>
+              <SourceIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <span className="font-bold text-slate-900 text-xs sm:text-sm font-mono truncate max-w-[200px] sm:max-w-[280px]" title={data?.event_id || eventId}>
+                {data?.event_id || eventId}
+              </span>
               <button 
                 onClick={handleCopyId}
-                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition"
+                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition shrink-0"
                 title="Copy Event ID"
+                type="button"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
-              {(() => {
-                const effTrend = history?.thermal_trend?.status === "AVAILABLE" 
-                  ? history.thermal_trend.trend 
-                  : data?.thermal_trend;
-                const isInc = effTrend === "RISING" || effTrend === "INCREASING";
-                const isDec = effTrend === "FALLING" || effTrend === "DECREASING";
-                if (isInc) {
-                  return (
-                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 font-bold text-[10px]" title="Temperature is increasing at the moment">
-                      <span className="text-xs">↑</span> Temp Increasing
-                    </span>
-                  );
-                }
-                if (isDec) {
-                  return (
-                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]" title="Temperature is decreasing at the moment">
-                      <span className="text-xs">↓</span> Temp Decreasing
-                    </span>
-                  );
-                }
-                return null;
-              })()}
-              {data && (
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${sourcePillStyle}`}>
-                  {isIndustrial ? "Industrial" : isAgricultural ? "Agriculture" : isWildfire ? "Wildfire" : "Uncertain"}
-                </span>
-              )}
             </div>
-            <span className="text-xs text-slate-500 font-medium truncate block mt-0.5">
-              {data?.facility_name || data?.location_name || "Indian Thermal Incident"}
-            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] sm:text-xs font-semibold text-slate-700 shadow-sm transition"
+              title={isExpanded ? "Collapse to side panel" : "Expand to multi-column tactical command dossier"}
+              type="button"
+            >
+              {isExpanded ? (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-600" />
+                  <span className="hidden sm:inline">Collapse</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-orange-600" />
+                  <span className="hidden sm:inline">Enlarge Dossier</span>
+                </>
+              )}
+            </button>
+            <button 
+              onClick={onClose}
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition"
+              title="Close Dossier"
+              type="button"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 ml-3">
-          <button 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 shadow-sm transition"
-            title={isExpanded ? "Collapse to side panel" : "Expand to multi-column tactical command dossier"}
-          >
-            {isExpanded ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5 text-slate-600" />
-                <span className="hidden sm:inline">Collapse</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5 text-orange-600" />
-                <span className="hidden sm:inline">Enlarge Dossier</span>
-              </>
-            )}
-          </button>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        {/* Sub-header with badges and facility/location */}
+        <div className="flex items-center gap-2 flex-wrap pl-9 sm:pl-10">
+          {data && (
+            <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${sourcePillStyle}`}>
+              {isIndustrial ? "Industrial" : isAgricultural ? "Agriculture" : isWildfire ? "Wildfire" : "Uncertain"}
+            </span>
+          )}
+          {(() => {
+            const effTrend = history?.thermal_trend?.status === "AVAILABLE" 
+              ? history.thermal_trend.trend 
+              : data?.thermal_trend;
+            const isInc = effTrend === "RISING" || effTrend === "INCREASING";
+            const isDec = effTrend === "FALLING" || effTrend === "DECREASING";
+            if (isInc) {
+              return (
+                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 font-bold text-[9px] sm:text-[10px] shrink-0" title="Temperature is increasing at the moment">
+                  <span className="text-xs font-bold">↑</span> Temp Increasing
+                </span>
+              );
+            }
+            if (isDec) {
+              return (
+                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[9px] sm:text-[10px] shrink-0" title="Temperature is decreasing at the moment">
+                  <span className="text-xs font-bold">↓</span> Temp Decreasing
+                </span>
+              );
+            }
+            return null;
+          })()}
+          <span className="text-[11px] sm:text-xs text-slate-500 font-medium truncate flex-1 min-w-[120px]" title={data?.facility_name || data?.location_name || "Indian Thermal Incident"}>
+            {data?.facility_name || data?.location_name || "Indian Thermal Incident"}
+          </span>
         </div>
       </div>
 
       {/* Navigation Tabs (Only in standard drawer view) */}
       {!isExpanded && (
-        <div className="flex border-b border-slate-200 px-4 py-1.5 bg-slate-50/80 text-xs font-semibold shrink-0 gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex border-b border-slate-200 px-3 py-1 bg-slate-50/90 text-xs font-semibold shrink-0 gap-1 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
           <button 
             onClick={() => setActiveTab("overview")}
-            className={`px-3 py-2 rounded-lg flex items-center gap-1.5 transition shrink-0 ${activeTab === "overview" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             Overview
           </button>
           <button 
             onClick={() => setActiveTab("telemetry")}
-            className={`px-3 py-2 rounded-lg flex items-center gap-1.5 transition shrink-0 ${activeTab === "telemetry" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
           >
             <Activity className="w-3.5 h-3.5" />
             ML & 14-D Vector
           </button>
           <button 
             onClick={() => setActiveTab("baseline")}
-            className={`px-3 py-2 rounded-lg flex items-center gap-1.5 transition shrink-0 ${activeTab === "baseline" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
             Baseline Anomaly
           </button>
           <button 
             onClick={() => setActiveTab("geography")}
-            className={`px-3 py-2 rounded-lg flex items-center gap-1.5 transition shrink-0 ${activeTab === "geography" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
           >
             <MapPin className="w-3.5 h-3.5" />
             Facility & Terrain
           </button>
           <button 
             onClick={() => setActiveTab("ai_brief")}
-            className={`px-3 py-2 rounded-lg flex items-center gap-1.5 transition shrink-0 ${activeTab === "ai_brief" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white text-orange-600 shadow-sm border border-slate-200 font-bold" : "text-slate-600 hover:bg-slate-100"}`}
           >
             <Cpu className="w-3.5 h-3.5" />
             Grounded Brief

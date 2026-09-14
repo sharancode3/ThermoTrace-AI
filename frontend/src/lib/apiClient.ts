@@ -179,10 +179,34 @@ export async function fetchGisEvents(
 ): Promise<GeoCollection> {
   const cachedFeatures = await getAllCachedFeatures();
 
-  // An event is a rolling, server-owned entity. Do not merge a delta into a
-  // browser snapshot indefinitely: retention/formation can remove or replace
-  // IDs at any ingestion cadence (5, 30, or other minutes).
   try {
+    const lastSync = await getLastSyncUtc();
+
+    // Incremental Delta Sync: If we have cached events and aren't forcing a hard refresh,
+    // only fetch events detected after lastSyncUtc. This saves network egress on Render & Supabase free tier!
+    if (!forceRefresh && cachedFeatures.length > 0 && lastSync) {
+      const deltaParams: Record<string, any> = {
+        show_all: true,
+        since_utc: lastSync,
+        ...viewport,
+        ...filters,
+      };
+
+      const deltaResp = await get<GeoCollection>("/gis/events", deltaParams, true);
+      const newOrUpdated = deltaResp.features || [];
+
+      if (newOrUpdated.length > 0) {
+        await saveFeaturesToCache(newOrUpdated);
+        const allCached = await getAllCachedFeatures();
+        return filterCachedFeatures(allCached, viewport, filters);
+      } else {
+        // No new events formed since last sync. Return fast local cached data with 0 KB egress!
+        await setLastSyncMeta(lastSync, Date.now());
+        return filterCachedFeatures(cachedFeatures, viewport, filters);
+      }
+    }
+
+    // Baseline Full Load (Initial cold load or forced manual refresh)
     const params: Record<string, any> = {
       show_all: true,
       ...viewport,
@@ -190,9 +214,12 @@ export async function fetchGisEvents(
     };
 
     const resp = await get<GeoCollection>("/gis/events", params, true);
-    await clearEventCache();
+    if (forceRefresh) {
+      await clearEventCache();
+    }
     await saveFeaturesToCache(resp.features || []);
-    return resp;
+    const updatedFeatures = await getAllCachedFeatures();
+    return filterCachedFeatures(updatedFeatures.length > 0 ? updatedFeatures : (resp.features || []), viewport, filters);
   } catch (err) {
     console.warn("[DeltaSync] Background sync failed, serving cached dataset:", err);
     if (cachedFeatures.length > 0) {

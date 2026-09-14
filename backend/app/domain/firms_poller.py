@@ -234,7 +234,7 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
         session.execute(text("""
             DELETE FROM thermal_observations
             WHERE id NOT IN (SELECT observation_id FROM event_observations)
-              AND observation_timestamp_utc < NOW() - INTERVAL '14 days';
+              AND observation_timestamp_utc < NOW() - INTERVAL '30 days';
         """))
         session.execute(text("""
             DELETE FROM ingestion_jobs

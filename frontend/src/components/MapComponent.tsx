@@ -977,7 +977,7 @@ export default function MapComponent({
         )}
 
         {/* UNIFIED TACTICAL RADAR TOOLBAR (TOP-LEFT) */}
-        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[92vw] sm:max-w-none">
+        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg">
           {/* Main Control Card */}
           <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl text-white flex flex-col gap-2.5">
             {/* Header + Time Window */}
@@ -1021,10 +1021,10 @@ export default function MapComponent({
             </div>
 
             {/* 30-Minute Storage-Optimized Telemetry Cadence Notice */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-tight">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-snug">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
               <span>
-                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry is polled on an optimized 30-minute cadence. A curated prototype dataset is active for live deployment & cloud storage constraints; the full nationwide telemetry stream will be continuously ingested during the hackathon evaluation.
+                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry is refreshed on an active 30-minute cadence across a 30-day operational retention window.
               </span>
             </div>
 

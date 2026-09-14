@@ -99,9 +99,9 @@ def get_gis_events(
     elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
     elif not show_all:
-        # Default rolling 6-day retention window to eliminate unbounded DB egress
-        six_days_ago = datetime.now(timezone.utc) - timedelta(days=6)
-        query = query.filter(ThermalEvent.latest_detected_utc >= six_days_ago)
+        # Default rolling 30-day retention window
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        query = query.filter(ThermalEvent.latest_detected_utc >= thirty_days_ago)
 
     if end_time is not None:
         query = query.filter(ThermalEvent.first_detected_utc <= end_time)
@@ -1081,10 +1081,10 @@ def get_national_summary(target_date: Optional[str] = Query(None, description="O
     from app.domain.geocoding import resolve_indian_location
 
     from app.domain.sovereign_geofencing import is_within_sovereign_india
-    six_days_ago = datetime.now(timezone.utc) - timedelta(days=6)
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     raw_events = db.query(ThermalEvent).filter(
         ThermalEvent.lifecycle_status != "CLOSED",
-        ThermalEvent.latest_detected_utc >= six_days_ago
+        ThermalEvent.latest_detected_utc >= thirty_days_ago
     ).all()
     all_active_events = [e for e in raw_events if is_within_sovereign_india(float(e.latitude), float(e.longitude))]
     total_active_dataset = len(all_active_events)
