@@ -1,6 +1,7 @@
 # Environments
 .env
 .env.local
+backend/.vapid/
 .venv
 env/
 venv/

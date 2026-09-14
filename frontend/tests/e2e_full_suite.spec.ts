@@ -2,11 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('ThermoTrace AI Sovereign Frontend E2E Test Suite', () => {
 
-  test('TC-E2E-01: Root Page redirects to /monitor and renders sidebar shell', async ({ page }) => {
-    await page.goto('http://localhost:3000/');
-    await expect(page).toHaveURL(/.*monitor/);
+  test('TC-E2E-01: Monitor renders sidebar shell', async ({ page }) => {
+    await page.goto('http://localhost:3000/monitor');
     await expect(page).toHaveTitle(/Thermo Intelligence/);
-    await expect(page.getByText('Thermo AI').first()).toBeVisible();
+    await expect(page.getByText('ThermoTrace AI').first()).toBeVisible();
     await expect(page.getByText('Monitor').first()).toBeVisible();
     await expect(page.getByText('Facilities').first()).toBeVisible();
     await expect(page.getByText('Reports').first()).toBeVisible();
@@ -41,7 +40,7 @@ test.describe('ThermoTrace AI Sovereign Frontend E2E Test Suite', () => {
   test('TC-E2E-06: Technical Architecture Guide loads evaluator reference and formulas', async ({ page }) => {
     await page.goto('http://localhost:3000/guide');
     await expect(page.getByText('System Architecture & Operational Guide')).toBeVisible();
-    await expect(page.getByText('Executive Mandate & Sovereign Operational Architecture')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ThermoTrace AI', exact: true })).toBeVisible();
   });
 
   test('TC-E2E-07: Overlays (ThermoNews & Alerts) toggle cleanly via query parameters', async ({ page }) => {

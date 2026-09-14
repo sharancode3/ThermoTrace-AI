@@ -61,8 +61,9 @@ def calculate_dynamic_day_range(session: Session) -> int:
         
     gap_seconds = (now - latest_ts).total_seconds()
     gap_days = int(gap_seconds / 86400) + 1
-    # Dynamic day range clamped strictly to 1-2 days to preserve Render bandwidth & Supabase quota
-    return max(1, min(2, gap_days))
+    # Recover missed orbital passes after downtime, within the FIRMS API's
+    # supported short-range window.
+    return max(1, min(5, gap_days))
 
 def fetch_sensor_telemetry(sensor: str, day_range: int) -> pd.DataFrame:
     """Fetches satellite telemetry for Indian bounding box."""
@@ -222,6 +223,10 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
         )
         for ev in recent_events:
             process_event_intelligence(session, ev.event_id)
+    except Exception as e:
+        session.rollback()
+        print(f"Error refreshing event intelligence in poller: {e}")
+
     # Database Optimization: Maintain only data visible & necessary in the application
     try:
         session.execute(text("""

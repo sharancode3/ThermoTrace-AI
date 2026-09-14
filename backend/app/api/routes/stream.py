@@ -1,7 +1,7 @@
 import json
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from starlette.responses import StreamingResponse
 from redis import Redis
 
@@ -19,7 +19,7 @@ def _build_minimal_payload(raw_event: dict) -> dict:
         "type": raw_event.get("type"),
     }
 
-    for key in ("event_id", "news_id", "notification_id", "id"):
+    for key in ("event_id", "news_id", "notification_id", "notification_type", "user_id", "id"):
         if key in raw_event and raw_event[key] is not None:
             payload[key] = raw_event[key]
 
@@ -31,7 +31,7 @@ def _build_minimal_payload(raw_event: dict) -> dict:
 
 
 @router.get("/stream/news", tags=["Stream"])
-async def stream_news():
+async def stream_news(user_id: str | None = Query(None)):
     """Subscribe to the thermo:events channel and emit minimal SSE events."""
     redis_url = os.getenv("REDIS_URL") or os.getenv("REDIS_HOST") or "redis://localhost:6379/0"
 
@@ -56,6 +56,10 @@ async def stream_news():
 
                 event_type = payload.get("type")
                 if event_type not in SUPPORTED_EVENT_TYPES:
+                    continue
+
+                target_user = payload.get("user_id")
+                if target_user is not None and target_user != user_id:
                     continue
 
                 minimal_payload = _build_minimal_payload(payload)

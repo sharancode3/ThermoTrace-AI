@@ -179,6 +179,11 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     role = Column(String(32), default="ANALYST", nullable=False)
     notification_preferences = Column(JSONB, default={"critical_only": True, "push_enabled": True}, nullable=False)
+    nearby_alerts_enabled = Column(Boolean, default=False, nullable=False)
+    alert_latitude = Column(Numeric(8, 5))
+    alert_longitude = Column(Numeric(8, 5))
+    alert_location = Column(Geometry('POINT', srid=4326))
+    alert_location_updated_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -188,12 +193,31 @@ class Notification(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
     event_id = Column(UUID(as_uuid=True), ForeignKey("thermal_events.id", ondelete="CASCADE"), nullable=False)
+    notification_type = Column(String(64), default="OPERATIONAL", nullable=False)
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     severity = Column(String(32), nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)
     read_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "event_id", "notification_type", name="uq_notification_user_event_type"),
+    )
+
+
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    endpoint = Column(Text, unique=True, nullable=False)
+    p256dh = Column(Text, nullable=False)
+    auth = Column(Text, nullable=False)
+    user_agent = Column(String(512))
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 class Report(Base):
     __tablename__ = "reports"
