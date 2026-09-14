@@ -25,7 +25,7 @@ from app.schemas.events import (
     EventResponse, GeoJSONFeatureCollection, GeoJSONFeature,
     NewsItemResponse, FirmsStatusResponse
 )
-from app.domain.features import get_thermal_trend, get_evidence_completeness, get_evidence_strength
+from app.domain.features import get_thermal_trend, batch_get_thermal_trends, get_evidence_completeness, get_evidence_strength
 from app.domain.llm_humanizer import humanize_intelligence
 from app.domain.geocoding import resolve_indian_location
 from app.domain.sovereign_geofencing import is_within_sovereign_india
@@ -45,6 +45,9 @@ def health_check():
 def get_zoom_limit(zoom: float) -> int:
     # Full sovereign event dataset delivery across all zoom levels
     return 5000
+
+_GIS_CACHE = {}
+_GIS_CACHE_TTL = 20.0 # 20s in-memory cache to eliminate redundant Supabase free-tier egress
 
 @router.get("/gis/events", response_model=GeoJSONFeatureCollection)
 def get_gis_events(
@@ -69,6 +72,17 @@ def get_gis_events(
         raise HTTPException(status_code=422, detail="west must be less than east")
     if south >= north:
         raise HTTPException(status_code=422, detail="south must be less than north")
+
+    cache_key = (
+        round(west, 2), round(south, 2), round(east, 2), round(north, 2), round(zoom, 1),
+        str(start_time), str(end_time), str(since_utc), classification, anomaly_tier,
+        include_closed, show_all, focus_event_id, hours, limit
+    )
+    now_ts = datetime.now(timezone.utc).timestamp()
+    if cache_key in _GIS_CACHE:
+        cached_ts, cached_result = _GIS_CACHE[cache_key]
+        if now_ts - cached_ts < _GIS_CACHE_TTL:
+            return cached_result
 
     query = db.query(ThermalEvent)
 
@@ -168,6 +182,10 @@ def get_gis_events(
             deduped_events.append(evt)
     events = deduped_events
 
+    # High-performance batch resolution: 1 single DB query instead of N individual queries
+    event_db_ids = [evt.id for evt in events]
+    trend_map = batch_get_thermal_trends(db, event_db_ids)
+
     features = []
 
     for evt in events:
@@ -183,7 +201,7 @@ def get_gis_events(
                 "event_id": evt.event_id,
                 "classification": evt.classification,
                 "anomaly_tier": evt.anomaly_tier,
-                "thermal_trend": get_thermal_trend(db, str(evt.id)),
+                "thermal_trend": trend_map.get(str(evt.id), "INSUFFICIENT_DATA"),
 
                 "peak_frp_mw": float(evt.peak_frp_mw)
                 if evt.peak_frp_mw is not None
@@ -253,9 +271,11 @@ def get_gis_events(
 
         features.append(feature)
 
-    return GeoJSONFeatureCollection(
+    result = GeoJSONFeatureCollection(
         features=features
     )
+    _GIS_CACHE[cache_key] = (now_ts, result)
+    return result
 
 
 @router.get("/gis/events/timeline")

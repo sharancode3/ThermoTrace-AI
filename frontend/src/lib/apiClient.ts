@@ -177,51 +177,25 @@ export async function fetchGisEvents(
   filters: EventFilters = {},
   forceRefresh: boolean = false
 ): Promise<GeoCollection> {
-  const cachedFeatures = await getAllCachedFeatures();
+  const params: Record<string, any> = {
+    show_all: true,
+    ...viewport,
+    ...filters,
+  };
 
   try {
-    const lastSync = await getLastSyncUtc();
-
-    // Incremental Delta Sync: If we have cached events and aren't forcing a hard refresh,
-    // only fetch events detected after lastSyncUtc. This saves network egress on Render & Supabase free tier!
-    if (!forceRefresh && cachedFeatures.length > 0 && lastSync) {
-      const deltaParams: Record<string, any> = {
-        show_all: true,
-        since_utc: lastSync,
-        ...viewport,
-        ...filters,
-      };
-
-      const deltaResp = await get<GeoCollection>("/gis/events", deltaParams, true);
-      const newOrUpdated = deltaResp.features || [];
-
-      if (newOrUpdated.length > 0) {
-        await saveFeaturesToCache(newOrUpdated);
-        const allCached = await getAllCachedFeatures();
-        return filterCachedFeatures(allCached, viewport, filters);
-      } else {
-        // No new events formed since last sync. Return fast local cached data with 0 KB egress!
-        await setLastSyncMeta(lastSync, Date.now());
-        return filterCachedFeatures(cachedFeatures, viewport, filters);
-      }
+    // 1. Utilize query-level client caching (sessionStorage & memory, 60s TTL)
+    // Avoids redundant network traffic when panning, switching tabs, or resizing
+    const resp = await get<GeoCollection>("/gis/events", params, forceRefresh);
+    
+    // 2. Persist to local IndexedDB for offline resilience
+    if (resp?.features && resp.features.length > 0) {
+      void saveFeaturesToCache(resp.features);
     }
-
-    // Baseline Full Load (Initial cold load or forced manual refresh)
-    const params: Record<string, any> = {
-      show_all: true,
-      ...viewport,
-      ...filters,
-    };
-
-    const resp = await get<GeoCollection>("/gis/events", params, true);
-    if (forceRefresh) {
-      await clearEventCache();
-    }
-    await saveFeaturesToCache(resp.features || []);
-    const updatedFeatures = await getAllCachedFeatures();
-    return filterCachedFeatures(updatedFeatures.length > 0 ? updatedFeatures : (resp.features || []), viewport, filters);
+    return resp;
   } catch (err) {
-    console.warn("[DeltaSync] Background sync failed, serving cached dataset:", err);
+    console.warn("[ClientCache] Network query failed, falling back to local cached dataset:", err);
+    const cachedFeatures = await getAllCachedFeatures();
     if (cachedFeatures.length > 0) {
       return filterCachedFeatures(cachedFeatures, viewport, filters);
     }

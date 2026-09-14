@@ -239,8 +239,8 @@ export default function MapComponent({
     zoom: 4.8,
   });
 
-  // Unified Filter States
-  const [windowHours, setWindowHours] = useState<number | null>(24);
+  // Unified Filter States (Default to 30-day operational retention window)
+  const [windowHours, setWindowHours] = useState<number | null>(720);
   const [showAllDetections, setShowAllDetections] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [classFilter, setClassFilter] = useState<string>("");
@@ -534,7 +534,7 @@ export default function MapComponent({
   }, [selectedEventId]);
 
   const eventCount = geoData?.features.length || 0;
-  const isFilterActive = windowHours !== 24 || !showAllDetections || severityFilter !== "" || classFilter !== "";
+  const isFilterActive = windowHours !== 720 || !showAllDetections || severityFilter !== "" || classFilter !== "";
 
   // Selected marker feature
   const selectedFeature = useMemo(() => {
