@@ -10,39 +10,67 @@ function MonitorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const selectedEventId = searchParams.get("eventId");
+  const [selectedEventId, setSelectedEventIdState] = useState<string | null>(() => searchParams.get("eventId"));
   const [wind, setWind] = useState<WindData | null>(null);
   const [windVisible, setWindVisible] = useState(true);
 
-  const setSelectedEventId = (id: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (id) {
-      params.set("eventId", id);
-    } else {
-      params.delete("eventId");
+  // Sync state if URL searchParams changes externally
+  useEffect(() => {
+    const urlEventId = searchParams.get("eventId");
+    if (urlEventId !== selectedEventId) {
+      setSelectedEventIdState(urlEventId);
     }
-    const newQuery = params.toString();
-    router.replace(`${pathname}${newQuery ? "?" + newQuery : ""}`);
+  }, [searchParams]);
+
+  const setSelectedEventId = (id: string | null) => {
+    setSelectedEventIdState(id);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (id) {
+        params.set("eventId", id);
+      } else {
+        params.delete("eventId");
+      }
+      const newQuery = params.toString();
+      const newUrl = `${pathname}${newQuery ? "?" + newQuery : ""}`;
+      window.history.pushState({}, "", newUrl);
+      try {
+        router.replace(newUrl);
+      } catch {
+        // ignore navigation errors
+      }
+    }
   };
 
   useEffect(() => {
-    if (!selectedEventId) { setWind(null); return; }
+    if (!selectedEventId) {
+      setWind(null);
+      return;
+    }
     let cancelled = false;
     setWind(null);
-    fetchEventWind(selectedEventId).then((result) => {
-      if (!cancelled) setWind(result);
-    }).catch((error) => {
-      if (cancelled) return;
-      if (error instanceof Error && error.message.includes("(404)")) {
-        void clearEventCache().finally(() => {
-          if (!cancelled) setSelectedEventId(null);
+    fetchEventWind(selectedEventId)
+      .then((result) => {
+        if (!cancelled) setWind(result);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        if (error instanceof Error && error.message.includes("(404)")) {
+          void clearEventCache().finally(() => {
+            if (!cancelled) setSelectedEventId(null);
+          });
+          return;
+        }
+        setWind({
+          available: false,
+          status: "WIND_DATA_UNAVAILABLE",
+          reason: error instanceof Error ? error.message : "Wind provider request failed",
         });
-        return;
-      }
-      setWind({ available: false, status: "WIND_DATA_UNAVAILABLE", reason: error instanceof Error ? error.message : "Wind provider request failed" });
-    });
-    return () => { cancelled = true; };
-  }, [selectedEventId, pathname, router, searchParams]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEventId]);
 
   return (
     <div className="relative w-full h-full">

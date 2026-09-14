@@ -903,9 +903,15 @@ export function OverlayManager() {
                 >
                   {/* Top Row: Location & Relative Time */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 text-slate-900 font-bold text-xs truncate">
+                    <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs truncate">
                       <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
                       <span className="truncate">{cleanLocationName(item.location_name, item.latitude, item.longitude)}</span>
+                      {(item.thermal_trend === "INCREASING" || item.thermal_trend === "RISING") && (
+                        <span className="text-red-600 font-extrabold text-xs shrink-0" title="Temperature increasing at the moment">↑</span>
+                      )}
+                      {(item.thermal_trend === "DECREASING" || item.thermal_trend === "FALLING") && (
+                        <span className="text-emerald-600 font-extrabold text-xs shrink-0" title="Temperature decreasing at the moment">↓</span>
+                      )}
                     </div>
                     <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-400" />
@@ -944,7 +950,15 @@ export function OverlayManager() {
                       {item.brightness_temp_k ? (
                         <>
                           <span className="text-slate-300">·</span>
-                          <span className="text-slate-600 font-semibold">{formatTemp(item.brightness_temp_k)}</span>
+                          <span className="text-slate-600 font-semibold flex items-center gap-0.5">
+                            {formatTemp(item.brightness_temp_k)}
+                            {(item.thermal_trend === "INCREASING" || item.thermal_trend === "RISING") && (
+                              <span className="text-red-600 font-bold ml-0.5" title="Temperature increasing">↑</span>
+                            )}
+                            {(item.thermal_trend === "DECREASING" || item.thermal_trend === "FALLING") && (
+                              <span className="text-emerald-600 font-bold ml-0.5" title="Temperature decreasing">↓</span>
+                            )}
+                          </span>
                         </>
                       ) : null}
                     </div>

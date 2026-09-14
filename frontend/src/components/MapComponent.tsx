@@ -9,6 +9,7 @@ import {
   fetchGisFacilities,
   fetchGisObservations,
   fetchEventDetail,
+  fetchEventWind,
   clearEventCache,
   GeoCollection,
   GeoFeature,
@@ -96,26 +97,85 @@ type MapComponentProps = {
   windVisible?: boolean;
 };
 
-function buildWindCorridor(longitude: number, latitude: number, towardDegrees: number, speedKmh: number): any {
-  const angle = towardDegrees * Math.PI / 180;
-  const longitudeScale = Math.max(0.25, Math.cos(latitude * Math.PI / 180));
-  // A compact, speed-scaled tactical context corridor; it is not a plume model.
-  const reach = Math.min(0.07, Math.max(0.025, 0.025 + speedKmh * 0.002));
-  const halfWidth = reach * 0.35;
+function buildWindCorridor(
+  longitude: number,
+  latitude: number,
+  towardDegrees: number,
+  speedKmh: number,
+  zoom: number = 5
+): any {
+  // Meteorological TOWARD angle: 0 is North (latitude+), 90 is East (longitude+)
+  const angle = (towardDegrees * Math.PI) / 180;
+  const longitudeScale = Math.max(0.25, Math.cos((latitude * Math.PI) / 180));
+
+  // Controlled 32° total beam width (16° half-angle), compliant with 25°–40° specification
+  const halfAngle = (16 * Math.PI) / 180;
+
+  // Zoom-adaptive reach: keep the sector clearly legible without losing its
+  // geographic anchoring. A 120–145px beam remains recognizable over both
+  // pale roadmap tiles and dark satellite imagery.
+  // across all zoom levels while remaining 100% geographically anchored to the hotspot
+  const targetScreenPx = Math.min(145, Math.max(120, 120 + Math.min(25, speedKmh * 0.7)));
+  const effectiveZoom = Math.max(2, Math.min(18, zoom));
+  const degPerPx = 360 / (256 * Math.pow(2, effectiveZoom));
+  const reach = targetScreenPx * degPerPx;
+
+  // Projects forward along wind-toward and lateral (perpendicular) in geographic degrees
   const point = (forward: number, lateral: number): [number, number] => [
     longitude + (Math.sin(angle) * forward + Math.cos(angle) * lateral) / longitudeScale,
     latitude + Math.cos(angle) * forward - Math.sin(angle) * lateral,
   ];
-  const origin = point(-0.005, 0);
-  const left = point(reach, -halfWidth);
-  const right = point(reach, halfWidth);
+
+  // 1. Fan sector polygon originating exactly at hotspot coordinates
+  const origin: [number, number] = [longitude, latitude];
+  const arcSegments = 24;
+  const arcPoints: [number, number][] = [];
+
+  // Smooth circular arc along outer boundary from -halfAngle to +halfAngle
+  for (let i = -arcSegments / 2; i <= arcSegments / 2; i++) {
+    const phi = (i / (arcSegments / 2)) * halfAngle;
+    arcPoints.push(point(reach * Math.cos(phi), reach * Math.sin(phi)));
+  }
+
+  // CCW closed polygon ring: origin -> outer arc -> origin
+  const polygonCoords: [number, number][] = [origin, ...arcPoints, origin];
+
+  // 2. Subtle directional cue features inside the cone (centerline + directional tick)
+  const axisStart = point(reach * 0.18, 0);
+  const axisEnd = point(reach * 0.90, 0);
+
+  const arrowApex = point(reach * 0.78, 0);
+  const arrowLeft = point(reach * 0.68, reach * 0.07);
+  const arrowRight = point(reach * 0.68, -reach * 0.07);
+
+  // Keep geometry types in separate sources. This avoids renderer/filter
+  // ambiguity when a GeoJSON collection mixes polygon and line features.
   return {
-    type: "FeatureCollection",
-    features: [{
+    fill: {
       type: "Feature",
-      geometry: { type: "Polygon", coordinates: [[origin, left, right, origin]] },
+      geometry: { type: "Polygon", coordinates: [polygonCoords] },
       properties: {},
-    }],
+    },
+    outline: {
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: polygonCoords },
+      properties: {},
+    },
+    cues: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: [axisStart, axisEnd] },
+          properties: {},
+        },
+        {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: [arrowLeft, arrowApex, arrowRight] },
+          properties: {},
+        },
+      ],
+    },
   };
 }
 
@@ -205,6 +265,43 @@ export default function MapComponent({
     y: number;
   } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Wind & Selection States
+  const [internalWind, setInternalWind] = useState<WindData | null>(null);
+  const [activeSelectedId, setActiveSelectedId] = useState<string | null>(selectedEventId || null);
+
+  useEffect(() => {
+    setActiveSelectedId(selectedEventId || null);
+    if (selectedEventId) {
+      fetchEventWind(selectedEventId).then((w) => {
+        if (w) setInternalWind(w);
+      }).catch(() => {});
+    } else {
+      setInternalWind(null);
+    }
+  }, [selectedEventId]);
+
+  const activeWind = wind || internalWind;
+  const activeWindVisible = windVisible;
+
+  const handleHotspotClick = (id: string, lon?: number, lat?: number) => {
+    setActiveSelectedId(id);
+    if (onEventClick) {
+      onEventClick(id);
+    }
+    fetchEventWind(id).then((w) => {
+      if (w) setInternalWind(w);
+    }).catch(() => {});
+
+    if (lon !== undefined && lat !== undefined) {
+      mapRef.current?.flyTo({
+        center: [lon, lat],
+        zoom: 12.5,
+        duration: 1200,
+        essential: true,
+      });
+    }
+  };
 
   // Listen to background FIRMS ingestion refresh events
   useEffect(() => {
@@ -510,7 +607,48 @@ export default function MapComponent({
     }
 
     return list;
-  }, [geoData, selectedEventData, selectedEventId]);
+  }, [geoData, selectedEventData, selectedEventId, activeSelectedId]);
+
+  // Selected hotspot coordinates for authoritative overlays
+  const selectedCoords = useMemo<[number, number] | null>(() => {
+    const targetId = activeSelectedId || selectedEventId;
+    if (!targetId) return null;
+    const feat = displayFeatures.find((f) => f.properties?.event_id === targetId);
+    if (feat && Array.isArray(feat.geometry?.coordinates)) {
+      return [feat.geometry.coordinates[0], feat.geometry.coordinates[1]];
+    }
+    const lon = Number(selectedEventData?.longitude ?? selectedEventData?.centroid?.coordinates?.[0]);
+    const lat = Number(selectedEventData?.latitude ?? selectedEventData?.centroid?.coordinates?.[1]);
+    if (Number.isFinite(lon) && Number.isFinite(lat)) {
+      return [lon, lat];
+    }
+    return null;
+  }, [activeSelectedId, selectedEventId, displayFeatures, selectedEventData]);
+
+  // Conical Wind Direction Indicator data
+  const windConeData = useMemo(() => {
+    if (!activeWindVisible || !activeWind?.available || !selectedCoords) return null;
+    const [lon, lat] = selectedCoords;
+    const toward = Number(activeWind.direction_toward_degrees);
+    const fromDeg = Number(activeWind.direction_from_degrees);
+    if (!Number.isFinite(toward)) return null;
+
+    const speed = Number(activeWind.speed_kmh) || 0;
+    const corridor = buildWindCorridor(lon, lat, toward, speed, viewport.zoom);
+
+    return {
+      lon,
+      lat,
+      toward,
+      fromDegrees: Number.isFinite(fromDeg)
+        ? Math.round(fromDeg)
+        : Math.round(((toward - 180) % 360 + 360) % 360),
+      speed,
+      corridor,
+      fromCardinal: activeWind.direction_from_cardinal || "",
+      toCardinal: activeWind.direction_toward_cardinal || "",
+    };
+  }, [activeWindVisible, activeWind, selectedCoords, viewport.zoom]);
 
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
@@ -625,7 +763,7 @@ export default function MapComponent({
         {displayFeatures.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
-          const isSelected = selectedEventId === event_id;
+          const isSelected = (activeSelectedId || selectedEventId) === event_id;
           const isCooled = lifecycle_status === "EXTINGUISHED" || lifecycle_status === "COOLING";
 
           return (
@@ -634,16 +772,17 @@ export default function MapComponent({
               longitude={lon}
               latitude={lat}
               anchor="center"
+              style={{ zIndex: isSelected ? 40 : 10 }}
               onClick={(e) => {
                 e.originalEvent?.stopPropagation();
-                onEventClick(event_id);
+                handleHotspotClick(event_id, lon, lat);
               }}
             >
               <div 
                 className="relative group cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEventClick(event_id);
+                  handleHotspotClick(event_id, lon, lat);
                 }}
               >
                 <ThermalMapMarker
@@ -653,7 +792,7 @@ export default function MapComponent({
                   peakFrp={Number(peak_frp_mw || 0)}
                   maxBrightnessK={Number(max_brightness_k || 0)}
                   isCooled={isCooled}
-                  onClick={() => onEventClick(event_id)}
+                  onClick={() => handleHotspotClick(event_id, lon, lat)}
                 />
                 <div className="absolute left-1/2 -translate-x-1/2 -top-8 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-xl border border-slate-700 z-50 flex items-center gap-1.5 backdrop-blur-md">
                   <span className={`font-bold ${
@@ -668,7 +807,15 @@ export default function MapComponent({
                   {max_brightness_k && (
                     <>
                       <span className="text-slate-500">·</span>
-                      <span className="text-slate-300">{Number(max_brightness_k).toFixed(1)} K</span>
+                      <span className="text-slate-300 flex items-center gap-0.5">
+                        {Number(max_brightness_k).toFixed(1)} K
+                        {(feature.properties?.thermal_trend === "INCREASING" || feature.properties?.thermal_trend === "RISING") && (
+                          <span className="text-red-400 font-bold ml-0.5" title="Temperature increasing">↑</span>
+                        )}
+                        {(feature.properties?.thermal_trend === "DECREASING" || feature.properties?.thermal_trend === "FALLING") && (
+                          <span className="text-emerald-400 font-bold ml-0.5" title="Temperature decreasing">↓</span>
+                        )}
+                      </span>
                     </>
                   )}
                   {isCooled && (
@@ -716,34 +863,91 @@ export default function MapComponent({
           );
         })()}
 
-        {/* Selected-event only: contextual prevailing-wind vector. It is never a dispersion model. */}
-        {windVisible && wind?.available && selectedEventData && (() => {
-          const longitude = Number(selectedEventData.longitude ?? selectedEventData.centroid?.coordinates?.[0]);
-          const latitude = Number(selectedEventData.latitude ?? selectedEventData.centroid?.coordinates?.[1]);
-          const toward = Number(wind.direction_toward_degrees);
-          if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !Number.isFinite(toward)) return null;
-          const corridor = buildWindCorridor(longitude, latitude, toward, Number(wind.speed_kmh) || 0);
-          const angle = toward * Math.PI / 180;
-          const positions = [0.010, 0.022, 0.034].map((distance, index) => ({
-            longitude: longitude + Math.sin(angle) * distance,
-            latitude: latitude + Math.cos(angle) * distance,
-            index,
-          }));
-          return <>
-            <Source id="selected-event-wind-corridor" type="geojson" data={corridor}>
-              <Layer id="selected-event-wind-corridor-fill" type="fill" paint={{ "fill-color": "#0891b2", "fill-opacity": 0.16 }} />
-              <Layer id="selected-event-wind-corridor-outline" type="line" paint={{ "line-color": "#67e8f9", "line-width": 1.5, "line-opacity": 0.8, "line-dasharray": [2, 2] }} />
-            </Source>
-            {positions.map((position) => <Marker key={`wind-arrow-${position.index}`} longitude={position.longitude} latitude={position.latitude} anchor="center">
-              <div className="pointer-events-none text-cyan-200 drop-shadow-[0_1px_2px_rgba(15,23,42,.9)]" style={{ transform: `rotate(${toward}deg)` }} aria-hidden="true">↑</div>
-            </Marker>)}
-            <Marker longitude={longitude} latitude={latitude} anchor="bottom">
-              <div data-testid="wind-vector-overlay" aria-label={`Wind from ${wind.direction_from_cardinal} toward ${wind.direction_toward_cardinal} at ${wind.speed_kmh} kilometres per hour`} className="pointer-events-none mb-7 rounded-lg border border-cyan-300/50 bg-slate-950/90 px-2 py-1.5 text-[10px] text-cyan-50 shadow-lg backdrop-blur-sm">
-                <div className="font-bold tracking-wide">WIND TOWARD {wind.direction_toward_cardinal}</div><div>{wind.speed_kmh} km/h · from {wind.direction_from_cardinal}</div>
+        {/* Authoritative Geographically-Anchored Selected-Hotspot Wind Direction Sector */}
+        {windConeData && (
+          <Source id="selected-event-wind-corridor-fill-source" type="geojson" data={windConeData.corridor.fill as any}>
+            {/* Visible translucent orange fill; underlying map context remains readable. */}
+            <Layer
+              id="selected-event-wind-corridor-fill"
+              type="fill"
+              paint={{
+                "fill-color": "#f97316",
+                "fill-opacity": 0.30,
+              }}
+            />
+          </Source>
+        )}
+        {windConeData && (
+          <Source id="selected-event-wind-corridor-outline-source" type="geojson" data={windConeData.corridor.outline as any}>
+            {/* Soft glow separates the sector from pale roadmap and satellite tiles. */}
+            <Layer
+              id="selected-event-wind-corridor-glow"
+              type="line"
+              paint={{
+                "line-color": "#f97316",
+                "line-width": 8,
+                "line-opacity": 0.34,
+                "line-blur": 3,
+              }}
+            />
+            {/* High-contrast sector boundary. */}
+            <Layer
+              id="selected-event-wind-corridor-outline"
+              type="line"
+              paint={{
+                "line-color": "#c2410c",
+                "line-width": 3.2,
+                "line-opacity": 1,
+              }}
+            />
+          </Source>
+        )}
+        {windConeData && (
+          <Source id="selected-event-wind-corridor-cues-source" type="geojson" data={windConeData.corridor.cues as any}>
+            {/* Directional centerline and chevrons point downwind. */}
+            <Layer
+              id="selected-event-wind-corridor-cues"
+              type="line"
+              paint={{
+                "line-color": "#9a3412",
+                "line-width": 2.4,
+                "line-opacity": 1,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Compact Map-Linked Wind Information Badge */}
+        {windConeData && (
+          <Marker
+            key={`selected-event-wind-overlay-${activeSelectedId || selectedEventId}`}
+            longitude={windConeData.lon}
+            latitude={windConeData.lat}
+            anchor="bottom"
+            style={{ zIndex: 35, pointerEvents: "none" }}
+          >
+            <div
+              data-testid="wind-vector-overlay"
+              aria-label={`Wind ${windConeData.fromCardinal} to ${windConeData.toCardinal} at ${windConeData.speed} kilometres per hour, bearing ${windConeData.fromDegrees} degrees`}
+              className="pointer-events-none mb-8 rounded-xl border border-orange-500/80 bg-slate-950/90 px-3 py-1.5 shadow-2xl backdrop-blur-md select-none font-mono text-left"
+            >
+              <div
+                data-testid="wind-direction-cone"
+                className="text-[9px] font-extrabold tracking-wider text-orange-400 uppercase"
+              >
+                WIND
               </div>
-            </Marker>
-          </>;
-        })()}
+              <div className="text-xs font-black tracking-wide text-white">
+                {windConeData.fromCardinal} → {windConeData.toCardinal}
+              </div>
+              <div className="text-[10px] text-slate-300 flex items-center gap-1.5 mt-0.5">
+                <span className="text-orange-300 font-semibold">{windConeData.speed} km/h</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-slate-300">{windConeData.fromDegrees}°</span>
+              </div>
+            </div>
+          </Marker>
+        )}
 
         {/* Focused Target Facility Location Beacon */}
         {focusedFacility && (

@@ -98,7 +98,7 @@ def get_gis_events(
         query = query.filter(ThermalEvent.latest_detected_utc >= cutoff)
     elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
-    else:
+    elif not show_all:
         # Default rolling 6-day retention window to eliminate unbounded DB egress
         six_days_ago = datetime.now(timezone.utc) - timedelta(days=6)
         query = query.filter(ThermalEvent.latest_detected_utc >= six_days_ago)
@@ -183,6 +183,7 @@ def get_gis_events(
                 "event_id": evt.event_id,
                 "classification": evt.classification,
                 "anomaly_tier": evt.anomaly_tier,
+                "thermal_trend": get_thermal_trend(db, str(evt.id)),
 
                 "peak_frp_mw": float(evt.peak_frp_mw)
                 if evt.peak_frp_mw is not None
@@ -936,6 +937,7 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
             evidence_rationale=get_evidence_strength(evt.observation_count, 0, evt.associated_facility_id is not None, fac.name if fac else None)[1],
             peak_frp_mw=evt.peak_frp_mw,
             brightness_temp_k=evt.max_brightness_k,
+            thermal_trend=get_thermal_trend(db, str(evt.id)),
             is_industrial=is_ind,
             location_name=geo["location_formatted"],
             coordinates=[centroid_shape.x, centroid_shape.y],
