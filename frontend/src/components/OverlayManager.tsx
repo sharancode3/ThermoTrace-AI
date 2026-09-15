@@ -285,11 +285,18 @@ export function OverlayManager() {
   };
 
   return (
-    <div className={`fixed top-0 right-0 h-full ${
-      isEnlarged 
-        ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
-        : "w-full sm:w-[450px]"
-    } bg-white border-l border-slate-200 shadow-2xl z-40 flex flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right`}>
+    <>
+      {/* Backdrop blur overlay over main content area only (left-0 md:left-20 lg:left-64 to preserve left nav bar clarity) */}
+      <div 
+        onClick={closeOverlay}
+        className="fixed inset-0 left-0 md:left-20 lg:left-64 z-30 bg-slate-900/40 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
+        aria-label="Close overlay backdrop"
+      />
+      <div className={`fixed top-0 right-0 h-full ${
+        isEnlarged 
+          ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
+          : "w-full sm:w-[450px]"
+      } bg-white border-l border-slate-200 shadow-2xl z-40 flex flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right`}>
 
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-slate-50 shrink-0">
@@ -1336,5 +1343,6 @@ export function OverlayManager() {
         </div>
       )}
     </div>
+    </>
   );
 }
