@@ -88,13 +88,13 @@ export function Sidebar() {
       <button
         onClick={toggleCollapse}
         title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
-        className="absolute top-1/2 -translate-y-1/2 -right-4 z-[60] w-8 h-8 rounded-full bg-orange-600 hover:bg-orange-500 border border-orange-500 shadow-md shadow-orange-600/30 ring-2 ring-white dark:ring-slate-950 flex items-center justify-center text-white dark:text-black transition-all hover:scale-110 active:scale-95 cursor-pointer"
+        className="absolute top-1/2 -translate-y-1/2 -right-4 z-[60] w-8 h-8 rounded-full bg-orange-600 hover:bg-orange-500 shadow-md shadow-orange-600/30 flex items-center justify-center text-white dark:text-black transition-all hover:scale-110 active:scale-95 cursor-pointer"
         type="button"
       >
         {isCollapsed ? (
-          <ChevronRight className="w-5 h-5 stroke-[2.5]" />
+          <ChevronRight className="w-5 h-5" />
         ) : (
-          <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+          <ChevronLeft className="w-5 h-5" />
         )}
       </button>
 
