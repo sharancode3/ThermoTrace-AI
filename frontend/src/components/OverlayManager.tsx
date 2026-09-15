@@ -14,6 +14,7 @@ import {
   askThermalChat, fetchNews, fetchNotifications, markNotificationRead, 
   markAllNotificationsRead, fetchFirmsStatus, fetchNationalAnalytics 
 } from "@/lib/apiClient";
+import { cn } from "@/lib/utils";
 
 
 function formatTemp(kelvin?: number | null) {
@@ -56,6 +57,8 @@ export function OverlayManager() {
 
   const [mounted, setMounted] = useState(false);
   const [isEnlarged, setIsEnlarged] = useState(false);
+  const [isChatMobileExpanded, setIsChatMobileExpanded] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [news, setNews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [firmsStatus, setFirmsStatus] = useState<any>(null);
@@ -765,7 +768,142 @@ export function OverlayManager() {
 
       {/* CHAT OVERLAY */}
       {overlay === "chat" && (
-        <div className="flex-1 flex flex-col min-h-0 bg-white">
+        <>
+          {/* Mobile Bottom Sheet Layout (< md) */}
+          <div className={cn(
+            "fixed inset-x-0 bottom-0 z-[60] bg-white border-t border-slate-200 shadow-2xl rounded-t-2xl flex flex-col md:hidden transition-all duration-300 ease-in-out",
+            isChatMobileExpanded ? "h-[90vh]" : "h-[65vh]"
+          )}>
+            {/* Mobile Top Grab Handle Bar */}
+            <div 
+              onClick={() => setIsChatMobileExpanded((prev) => !prev)}
+              onTouchStart={(e) => setTouchStartY(e.touches[0].clientY)}
+              onTouchEnd={(e) => {
+                if (touchStartY === null) return;
+                const diffY = e.changedTouches[0].clientY - touchStartY;
+                if (diffY > 50) {
+                  if (isChatMobileExpanded) setIsChatMobileExpanded(false);
+                  else closeOverlay();
+                } else if (diffY < -50) {
+                  if (!isChatMobileExpanded) setIsChatMobileExpanded(true);
+                }
+                setTouchStartY(null);
+              }}
+              className="flex md:hidden items-center justify-between px-4.5 py-2.5 bg-slate-100/90 border-b border-slate-200 rounded-t-2xl cursor-pointer select-none shrink-0 active:bg-slate-200 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-orange-600 animate-pulse" />
+                <span className="text-xs font-bold text-slate-900">Thermo AI Chat</span>
+                {searchParams.get("eventId") && (
+                  <span className="text-[10px] font-mono text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded font-bold truncate max-w-[100px]">
+                    {searchParams.get("eventId")}
+                  </span>
+                )}
+              </div>
+
+              {/* Center Grab Bar Indicator */}
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="w-10 h-1.5 rounded-full bg-slate-400 hover:bg-slate-500 active:bg-orange-600 transition-colors shadow-xs" />
+                <span className="text-[9px] text-slate-400 font-medium">{isChatMobileExpanded ? "Drag down to collapse" : "Drag up to expand"}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); closeOverlay(); }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                title="Close Chat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Chat Body for Mobile */}
+            <div className="flex-1 flex flex-col min-h-0 bg-white">
+              <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 shrink-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                    <Flame className="w-3.5 h-3.5 text-orange-600" />
+                    <span>Grounded Event Analysis</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold uppercase bg-orange-50 border border-orange-200 text-orange-700 px-1.5 py-0.5 rounded">Live PostGIS</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {(searchParams.get("eventId") ? [
+                    `What is abnormal about ${searchParams.get("eventId")}?`,
+                    "Explain classification drivers"
+                  ] : quickPrompts.slice(0, 2)).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setChatDraft(p)}
+                      className="px-2 py-0.5 text-[10px] font-medium rounded-full border border-slate-200 bg-white text-slate-700 hover:border-orange-400 transition truncate max-w-[200px]"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Messages Container */}
+              <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 min-h-0 bg-slate-50/40">
+                {chatMessages.map((msg) => (
+                  <div key={`mob-${msg.id}`} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[90%] rounded-2xl border px-3 py-2.5 shadow-xs text-xs ${
+                      msg.role === "user" ? "bg-slate-900 text-white border-slate-800" : "bg-white text-slate-800 border-slate-200"
+                    }`}>
+                      {msg.role === "assistant" && (
+                        <div className="flex items-center gap-1 mb-1 text-[9.5px] uppercase tracking-wider text-orange-600 font-bold font-mono">
+                          <Flame className="w-3 h-3" />
+                          <span>+</span> Thermo AI
+                        </div>
+                      )}
+                      <p className="leading-relaxed whitespace-pre-wrap break-words text-xs">{msg.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[90%] rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-xs text-xs">
+                      <div className="flex items-center gap-1 text-[10px] text-orange-600 font-bold font-mono">
+                        <LoaderCircle className="w-3 h-3 animate-spin" /> Thermo AI Querying PostGIS...
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input Footer */}
+              <div className="p-2.5 border-t border-slate-200 bg-white shrink-0">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 focus-within:border-orange-500 focus-within:bg-white transition">
+                  <textarea
+                    value={chatDraft}
+                    onChange={(e) => setChatDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleChatSubmit();
+                      }
+                    }}
+                    rows={1}
+                    placeholder="Ask Thermo AI..."
+                    className="flex-1 resize-none bg-transparent text-xs text-slate-900 placeholder-slate-400 outline-none min-h-[32px] max-h-[80px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleChatSubmit()}
+                    disabled={chatLoading || !chatDraft.trim()}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-orange-600 text-white disabled:bg-slate-200 disabled:text-slate-400 transition hover:bg-orange-500 shrink-0"
+                    aria-label="Send query"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Side Panel Layout (>= md) */}
+          <div className="hidden md:flex flex-1 flex-col min-h-0 bg-white">
           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 shrink-0">
             {/* Scoped Event Context Banner */}
             {searchParams.get("eventId") && (
@@ -894,6 +1032,7 @@ export function OverlayManager() {
 
           </div>
         </div>
+      </>
       )}
 
       {/* THERMO NEWS OVERLAY (Strictly Time-Ordered, Past 24h) */}
