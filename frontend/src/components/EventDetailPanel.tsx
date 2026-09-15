@@ -686,10 +686,11 @@ export function EventDetailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 px-3.5 py-2 rounded-xl border border-orange-500 transition cursor-pointer active:scale-95 shadow-md group"
+            className="p-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl border border-orange-500 transition cursor-pointer active:scale-95 shadow-md flex items-center justify-center shrink-0"
+            title="Back to Monitor Map"
+            aria-label="Back to Monitor Map"
           >
-            <ArrowLeft className="w-4 h-4 text-white group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Monitor</span>
+            <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] text-slate-300 font-bold bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
