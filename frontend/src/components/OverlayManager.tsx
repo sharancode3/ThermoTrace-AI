@@ -1098,7 +1098,7 @@ export function OverlayManager() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">ThermoTrace AI (Thermo Intelligence)</h3>
-                <span className="text-[10px] font-mono text-slate-500">National Sovereign Early Warning System</span>
+                <span className="text-[10px] text-slate-500">National Sovereign Early Warning System</span>
               </div>
             </div>
             <p className="text-slate-600 leading-relaxed text-[11px] pt-1 border-t border-slate-100">
@@ -1301,7 +1301,7 @@ export function OverlayManager() {
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Polling Interval:</span>
                   <div className="text-right">
-                    <span className="text-slate-900 font-semibold font-mono">Autonomous (Every 15 min)</span>
+                    <span className="text-slate-900 font-semibold">Autonomous (Every 15 min)</span>
                   </div>
                 </div>
                 <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-lg text-[10px] text-blue-900 space-y-1">
