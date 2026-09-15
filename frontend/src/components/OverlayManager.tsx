@@ -292,7 +292,7 @@ export function OverlayManager() {
         className="fixed inset-0 left-0 md:left-20 lg:left-64 z-30 bg-slate-900/40 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
         aria-label="Close overlay backdrop"
       />
-      <div className={`fixed top-0 right-0 h-full ${
+      <div className={`fixed top-0 right-0 bottom-12 sm:bottom-0 h-[calc(100vh-3rem)] sm:h-full ${
         isEnlarged 
           ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
           : "w-full sm:w-[450px]"
