@@ -686,10 +686,10 @@ export function EventDetailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-2 text-xs font-bold text-orange-400 hover:text-orange-300 transition cursor-pointer"
+            className="flex items-center gap-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 px-3.5 py-2 rounded-xl border border-slate-700 transition cursor-pointer active:scale-95 shadow-sm group"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Radar Map</span>
+            <ArrowLeft className="w-4 h-4 text-orange-400 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Monitor</span>
           </button>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
@@ -927,7 +927,17 @@ export function EventDetailPanel({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-600 rounded-xl font-bold text-xs border border-slate-200 hover:border-orange-200 transition shadow-2xs group cursor-pointer"
+              title="Close hotspot dossier and return to Monitor map"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform text-orange-600" />
+              <span>Back to Monitor</span>
+            </button>
+
             <button 
               onClick={handleCopyId}
               className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition"
@@ -960,7 +970,7 @@ export function EventDetailPanel({
               title="Close Dossier"
               type="button"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-slate-600" />
             </button>
           </div>
         </div>
