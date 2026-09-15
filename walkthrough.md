@@ -177,27 +177,43 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
 ---
 
 ### B. 5-Phase Mobile & Responsive UI Implementation
-1. **Phase 1 (`ui: collapsible nav`)** — [`344f051`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/Sidebar.tsx):
-   - Added user-controlled collapse/expand state (`PanelLeftOpen`/`PanelLeftClose`) with width transition (`w-20` vs `w-64`).
-   - LocalStorage persistence for user sidebar preferences.
-2. **Phase 2 (`ui: mobile filter icon`)** — [`dc46ab4`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MapComponent.tsx):
-   - Added dedicated floating mobile filter button (`Filter` icon) on small viewports `< md`.
-   - Toggles mobile filter drawer without obstructing map canvas.
-3. **Phase 3 (`ui: mobile event detail`)** — [`fb5fc5c`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/EventDetailPanel.tsx):
-   - Transformed `EventDetailPanel` on mobile into a responsive bottom sheet with rounded top corners (`rounded-t-2xl`).
-   - Touch drag grab handle bar (`w-12 h-1.5 bg-slate-300 rounded-full mx-auto my-1`).
-4. **Phase 4 (`ui: mobile nav redesign`)** — [`d93d0b0`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileBottomNav.tsx):
-   - Created `MobileBottomNav` component with fixed bottom tab bar for small viewports (`flex md:hidden`).
-   - Direct tab access to Monitor, Facilities, Reports, Analytics, Thermo News, Alerts, and Chat.
-5. **Phase 5 (`ui: mobile panel trimming`)** — [`fd7c9b5`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
-   - Trimmed mobile container padding and bounds (`px-2.5 py-2.5`, `bottom-12 sm:bottom-0`).
-   - Maximized mobile map canvas area while drawer panels are active.
+1. **Phase 1 (`ui: collapsible nav`)** — [`8af814c`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/Sidebar.tsx):
+   - User-controlled collapse/expand state (`ChevronLeft`/`ChevronRight` toggle) with width transition (`w-16` icon-only rail vs `w-64` full nav).
+   - Single-item floating hover tooltips for icon rail and `localStorage` state persistence.
+2. **Phase 2 (`ui: mobile filter icon`)** — [`56565c3`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MapComponent.tsx):
+   - Single filter icon button on `< md` viewports with active pulsing dot badge (`isFilterActive`).
+   - Bottom sheet filter modal overlay with retained filter state upon close. Desktop full box untouched.
+3. **Phase 3 (`ui: mobile event detail`)** — [`699db94`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/EventDetailPanel.tsx):
+   - Dedicated full-screen mobile view (`< sm`) with sticky top bar & `ArrowLeft` back button.
+   - Preserves exact map camera and filter state on return. Priority information layout with expandable "Read More" accordion for 14-D features and baseline curves.
+4. **Phase 4 (`ui: mobile nav redesign` / Mobile Chat Bottom Sheet)** — [`a509b3d`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+   - "Ask to AI Chat" opens as a mobile bottom sheet component (`z-[60]` layered ON TOP of Phase 3 event detail screen without replacement or navigation).
+   - Drag handle bar with touch drag gesture support (drag up to expand `90vh`, drag down to collapse `65vh` or dismiss).
+   - Preserves desktop side panel (`hidden md:flex`) and untouched chat logic.
+5. **Phase 5 (`ui: mobile panel trimming` / Mobile Top Nav)** — [`aecc1a7`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileTopNav.tsx):
+   - Replaced left side nav on mobile with persistent sticky top bar (`sticky top-0 z-[55]`) containing ThermoTrace AI logo on left and hamburger menu button on right.
+   - Slide-down dropdown menu with direct navigation to Monitor, Facilities, Reports, National Analytics, Thermo News, Operational Alerts (with live unread badge), and Ask AI Chat.
+   - Includes backdrop click and outside-tap auto-closing logic with instant route navigation.
+6. **Phase 6 (`ui: mobile news and alerts full screen`)** — [`050bfce`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+   - Reused Phase 3 full-screen + `ArrowLeft` back-button container pattern for Thermo News (`overlay=news`) and Operational Alerts (`overlay=alerts`) on mobile (`< md`).
+   - Sticky top bar with clear "Back to Monitor Map" button returning to previous map state smoothly. Preserved desktop side panel drawers (`hidden md:flex`).
+7. **Phase 7 (`ui: mobile panel trimming` / Mobile Content Trimming)** — [`5e49b4b`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+   - **Facilities**: Added UI display batching (`mobileLimit = 8`) with "Load More Facilities (+X remaining)" trigger button on mobile. Data fetching logic completely untouched.
+   - **Thermo News Cards**: Single-column card formatting with initial batch limit (`mobileNewsLimit = 5`) and "Show More News Bulletins" trigger.
+   - **Operational Alerts Cards**: Initial batch limit (`mobileAlertsLimit = 5`) and "Show More Operational Alarms" trigger.
+   - **National Analytics**: Responsive grid layout (`grid-cols-1 sm:grid-cols-2 md:grid-cols-4`), flexible territory list height (`h-auto max-h-[480px] lg:h-[700px]`), top 6 territory initial batching with "Show All Territories", and `overflow-x-auto` table protection.
+8. **Phase 1 (`ui: remove mobile bottom nav bar` / Kill Mobile Bottom Nav)** — [`b98b339`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileBottomNav.tsx):
+   - Completely removed the fixed bottom navigation bar (`MobileBottomNav`) from the render tree across all mobile screens.
+   - Removed `pb-12` bottom padding from workspace `layout.tsx` `<main>` element and `OverlayManager` side containers. All mobile navigation now flows exclusively through the sticky top bar (`MobileTopNav`).
+9. **Phase 2 (`ui: rebuild mobile top nav bar` / Rebuild Mobile Top Nav Bar)** — [`MobileTopNav.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileTopNav.tsx):
+   - Redesigned mobile top header bar to contain only: logo (left), short dynamic page title (`ThermoTrace / Monitor`, `ThermoTrace / Facilities`, etc.), and a single right-aligned hamburger menu toggle (`Menu` / `X`).
+   - Removed the separate bell/alerts icon button (`🔔100`) from the top bar. Consolidated alert counts into the dropdown menu under "Operational Alerts" with a badge showing unread count.
+   - Slide-down dropdown menu cleanly displays: Monitor, Facilities, Reports, National Analytics, Thermo News, Operational Alerts (with badge count), and AI Chat Interface.
+   - Top bar remains sticky/persistent (`sticky top-0 z-[55]`) across all mobile viewports.
 
 ---
 
 ## 9. Final System Verification Status
 - **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all 9 static/dynamic routes).
 - **Phase 0 Rules Upheld**: Zero backend, API, DB, env, or ML model changes.
-- **Git Commit Isolation**: 5 separate isolated commits (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`).
-
-  
+- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`).

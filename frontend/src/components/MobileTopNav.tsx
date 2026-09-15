@@ -6,7 +6,7 @@ import {
   Flame, Building2, FileText, LayoutDashboard, Bell, 
   Newspaper, BarChart2, Menu, X, ChevronRight 
 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { fetchNotifications } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +79,17 @@ export function MobileTopNav() {
     router.push(`${pathname}${newQuery ? "?" + newQuery : ""}`);
   };
 
+  const pageTitle = useMemo(() => {
+    if (currentOverlay === "news") return "Thermo News";
+    if (currentOverlay === "alerts") return "Alerts";
+    if (currentOverlay === "chat") return "AI Chat";
+    if (pathname.startsWith("/facilities")) return "Facilities";
+    if (pathname.startsWith("/reports")) return "Reports";
+    if (pathname.startsWith("/analytics")) return "Analytics";
+    if (pathname.startsWith("/guide")) return "Guide";
+    return "Monitor";
+  }, [pathname, currentOverlay]);
+
   return (
     <div ref={menuRef} className="flex md:hidden flex-col w-full sticky top-0 z-[55] bg-white border-b border-slate-200 shadow-sm shrink-0">
       {/* Top Header Bar */}
@@ -86,35 +97,24 @@ export function MobileTopNav() {
         <Link 
           href="/" 
           onClick={() => setIsOpen(false)}
-          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity min-w-0"
         >
-          <Flame className="w-7 h-7 text-orange-600 shrink-0" />
-          <div className="flex flex-col">
-            <span className="font-bold text-base text-slate-900 leading-tight">ThermoTrace AI</span>
-            <span className="text-[10px] text-slate-500 font-mono leading-none">National Thermal Radar</span>
+          <Flame className="w-6 h-6 text-orange-600 shrink-0" />
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="font-bold text-sm text-slate-900 tracking-tight">ThermoTrace</span>
+            <span className="text-slate-300 font-normal text-xs">/</span>
+            <span className="text-xs font-semibold text-orange-600 font-mono truncate">{pageTitle}</span>
           </div>
         </Link>
 
-        <div className="flex items-center gap-2">
-          {unreadAlerts > 0 && (
-            <button
-              onClick={() => handleOverlayClick("alerts")}
-              className="p-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center gap-1 text-xs font-bold"
-              title={`${unreadAlerts} Unread Alerts`}
-            >
-              <Bell className="w-4 h-4 animate-bounce" />
-              <span>{unreadAlerts}</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setIsOpen((prev) => !prev)}
-            className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors border border-slate-200"
-            aria-label="Toggle mobile menu"
-          >
-            {isOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5 text-slate-900" />}
-          </button>
-        </div>
+        {/* Single Right Hamburger Button Only */}
+        <button
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors border border-slate-200 shrink-0"
+          aria-label="Toggle mobile menu"
+        >
+          {isOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5 text-slate-900" />}
+        </button>
       </div>
 
       {/* Slide-Down Dropdown Menu */}
