@@ -630,7 +630,7 @@ export function OverlayManager() {
 
       {/* Desktop & Standard Side Panel Container */}
       <div className={cn(
-        "fixed top-0 right-0 bottom-12 sm:bottom-0 h-[calc(100vh-3rem)] sm:h-full bg-white border-l border-slate-200 shadow-2xl z-40 flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right",
+        "fixed top-0 right-0 bottom-0 h-full bg-white border-l border-slate-200 shadow-2xl z-40 flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right",
         isEnlarged 
           ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
           : "w-full sm:w-[450px]",
