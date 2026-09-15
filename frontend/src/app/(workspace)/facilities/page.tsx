@@ -92,24 +92,8 @@ export default function FacilitiesPage() {
         return <Building2 className="h-4 w-4 text-slate-600" />;
     }
   };
-  const getSectorGradient = (sector: string) => {
-    const s = sector.toLowerCase();
-    if (s.includes("refinery") || s.includes("petroleum")) {
-      return "from-amber-500 via-orange-600 to-rose-600";
-    }
-    if (s.includes("power") || s.includes("thermal")) {
-      return "from-blue-600 via-indigo-600 to-cyan-500";
-    }
-    if (s.includes("steel") || s.includes("iron")) {
-      return "from-slate-900 via-slate-800 to-indigo-950";
-    }
-    if (s.includes("mining") || s.includes("coal")) {
-      return "from-amber-800 via-orange-900 to-slate-900";
-    }
-    if (s.includes("petrochemical") || s.includes("chemical") || s.includes("lng")) {
-      return "from-indigo-600 via-purple-600 to-pink-600";
-    }
-    return "from-orange-600 via-rose-600 to-indigo-700";
+  const getSectorGradient = (_sector: string) => {
+    return "from-rose-500 via-orange-600 to-amber-500";
   };
 
   return (
