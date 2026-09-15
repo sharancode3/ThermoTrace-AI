@@ -93,7 +93,7 @@ export default function FacilitiesPage() {
     }
   };
   const getSectorGradient = (_sector: string) => {
-    return "from-rose-500 via-orange-600 to-amber-500";
+    return "from-slate-900 via-slate-800 to-amber-950/70";
   };
 
   return (
@@ -256,60 +256,56 @@ export default function FacilitiesPage() {
         </div>
 
         {/* Facility Cards / Directory Listing */}
-        <div className="mt-6">
+        <div className="mt-4">
           {loading ? (
             /* Skeleton Loading Grid */
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className="animate-pulse rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-slate-200" />
+                    <div className="h-8 w-8 rounded-lg bg-slate-200" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-4 w-3/4 rounded bg-slate-200" />
-                      <div className="h-3 w-1/2 rounded bg-slate-100" />
+                      <div className="h-3.5 w-3/4 rounded bg-slate-200" />
+                      <div className="h-2.5 w-1/2 rounded bg-slate-100" />
                     </div>
                   </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="h-3 w-full rounded bg-slate-100" />
-                    <div className="h-3 w-2/3 rounded bg-slate-100" />
+                  <div className="mt-3 space-y-1.5">
+                    <div className="h-2.5 w-full rounded bg-slate-100" />
+                    <div className="h-2.5 w-2/3 rounded bg-slate-100" />
                   </div>
                 </div>
               ))}
             </div>
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
-              /* GRID VIEW */
-              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+              /* GRID VIEW - Compact Muted Cards */
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {data.items.map((facility) => (
                   <div
                     key={facility.id}
                     onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:border-orange-300 cursor-pointer"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs hover:border-slate-300 cursor-pointer"
                   >
-                    {/* Modern Gradient Banner Header */}
-                    <div className={`relative h-20 w-full bg-gradient-to-br ${getSectorGradient(facility.sector_category)} p-3 flex flex-col justify-between text-white overflow-hidden shrink-0`}>
-                      {/* Decorative Ambient Radial Glow */}
-                      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-                      <div className="absolute -left-6 -bottom-6 h-16 w-16 rounded-full bg-black/15 blur-lg pointer-events-none" />
-
+                    {/* Soft Dark Muted Header */}
+                    <div className="relative h-12 w-full bg-slate-900 px-2.5 py-1.5 flex flex-col justify-between text-white overflow-hidden shrink-0">
                       {/* Top Badges (Facility Code & Active Status) */}
-                      <div className="relative z-10 flex items-center justify-between gap-2">
-                        <span className="rounded-full bg-black/30 backdrop-blur-md px-2 py-0.5 font-mono text-[10px] font-bold text-white border border-white/20 shadow-xs">
+                      <div className="relative z-10 flex items-center justify-between gap-1">
+                        <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[8.5px] font-semibold text-slate-300 border border-slate-700/60">
                           {facility.facility_code}
                         </span>
 
-                        <div className="flex items-center gap-1.5">
+                        <div>
                           {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                            <span className="flex items-center gap-1 rounded-full bg-rose-950/70 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-rose-200 border border-rose-400/40 shadow-xs">
-                              <Flame className="h-3 w-3 text-rose-300 animate-pulse" />
+                            <span className="flex items-center gap-0.5 rounded-full bg-amber-950/70 px-1.5 py-0.5 text-[8.5px] font-semibold text-amber-300 border border-amber-800/40">
+                              <Flame className="h-2.5 w-2.5 text-amber-400" />
                               {facility.historical_event_count} Active
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1 rounded-full bg-black/25 backdrop-blur-md px-2 py-0.5 text-[10px] font-semibold text-white/90 border border-white/20 shadow-xs">
-                              <Activity className="h-3 w-3 text-emerald-300" />
+                            <span className="flex items-center gap-0.5 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8.5px] font-medium text-slate-400 border border-slate-700/60">
+                              <Activity className="h-2.5 w-2.5 text-emerald-400" />
                               Monitored
                             </span>
                           )}
@@ -318,66 +314,63 @@ export default function FacilitiesPage() {
 
                       {/* Sector Category Pill */}
                       <div className="relative z-10 flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-extrabold text-white border border-white/30 shadow-xs">
+                        <span className="inline-flex items-center gap-1 rounded bg-slate-800/80 px-1.5 py-0.5 text-[8.5px] font-medium text-slate-300 border border-slate-700/50">
                           {getSectorIcon(facility.sector_category)}
-                          <span>{facility.sector_category}</span>
+                          <span className="truncate max-w-[100px]">{facility.sector_category}</span>
                         </span>
-                        <span className="text-[9px] font-mono font-bold tracking-wider text-white/80 uppercase">
-                          CPCB REGISTRY
+                        <span className="text-[7.5px] font-mono font-medium tracking-wider text-slate-400 uppercase">
+                          CPCB
                         </span>
                       </div>
                     </div>
 
                     {/* Card Body Content */}
-                    <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2.5">
+                    <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1.5">
                       <div>
                         {/* Name & Subtype */}
-                        <h3 className="text-sm font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-orange-600 transition-colors">
+                        <h3 className="text-[11.5px] font-semibold text-slate-800 tracking-tight leading-snug group-hover:text-blue-600 transition-colors line-clamp-1" title={facility.name}>
                           {facility.name}
                         </h3>
                         {facility.sub_type && (
-                          <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                          <p className="mt-0.5 text-[9.5px] font-medium text-slate-500 line-clamp-1">
                             {facility.sub_type}
                           </p>
                         )}
 
                         {/* Meta Info: Location & Operator */}
-                        <div className="mt-2 space-y-1 text-[11px] text-slate-600 border-t border-slate-100 pt-2">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
+                        <div className="mt-1 space-y-0.5 text-[9.5px] text-slate-500 border-t border-slate-100 pt-1">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-2.5 w-2.5 text-slate-400 shrink-0" />
                             <span className="truncate">
                               {facility.district ? `${facility.district}, ` : ""}
-                              <strong className="text-slate-800">{facility.state}</strong>
+                              <strong className="text-slate-700 font-semibold">{facility.state}</strong>
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-slate-500">
-                            <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
+                          <div className="flex items-center gap-1 text-slate-500">
+                            <Building2 className="h-2.5 w-2.5 text-slate-400 shrink-0" />
                             <span className="truncate">
-                              Operator: <strong className="text-slate-700 font-medium">{facility.operator_name || "Independent"}</strong>
+                              <strong className="text-slate-600 font-medium">{facility.operator_name || "Independent"}</strong>
                             </span>
                           </div>
                         </div>
                       </div>
 
                       {/* Precomputed Baseline & Action CTA */}
-                      <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
+                      <div className="border-t border-slate-100 pt-1 flex items-center justify-between">
                         <div>
-                          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">90-Day Baseline</div>
+                          <div className="text-[7.5px] font-semibold uppercase tracking-wider text-slate-400">Baseline</div>
                           {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined ? (
-                            <div className="text-[11px] font-bold text-slate-900 font-mono">
-                              {facility.baseline_frp_mean.toFixed(1)} MW{" "}
-                              <span className="text-[9px] text-slate-400 font-normal">
-                                (±{facility.baseline_frp_std?.toFixed(1) || "15.0"})
-                              </span>
+                            <div className="text-[9.5px] font-semibold text-slate-700 font-mono">
+                              {facility.baseline_frp_mean.toFixed(1)} MW
                             </div>
                           ) : (
-                            <div className="text-[11px] text-slate-400 italic">Pending</div>
+                            <div className="text-[9.5px] text-slate-400 italic">Pending</div>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-0.5 text-[11px] font-bold text-orange-600 group-hover:translate-x-0.5 transition-transform">
+                        <div className="flex items-center gap-0.5 text-[9.5px] font-semibold text-slate-500 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all">
                           <span>Inspect</span>
-                          <ChevronRight className="h-3.5 w-3.5" />
+                          <ChevronRight className="h-2.5 w-2.5" />
                         </div>
                       </div>
                     </div>
