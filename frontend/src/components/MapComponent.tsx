@@ -913,7 +913,7 @@ export default function MapComponent({
               <div
                 data-testid="wind-vector-overlay"
                 aria-label={`Wind ${windGeometry.fromCardinal} to ${windGeometry.toCardinal} at ${Math.round(windGeometry.speed)} kilometres per hour, bearing ${Math.round(windGeometry.toward)} degrees`}
-                className="pointer-events-none rounded-lg border border-slate-700/90 bg-slate-950/90 px-2.5 py-1 shadow-2xl backdrop-blur-md select-none font-mono text-left flex items-center gap-1.5"
+                className="hidden md:flex pointer-events-none rounded-lg border border-slate-700/90 bg-slate-950/90 px-2.5 py-1 shadow-2xl backdrop-blur-md select-none font-mono text-left items-center gap-1.5"
               >
                 <div 
                   className="w-4 h-4 rounded-full bg-cyan-500/20 border border-cyan-400/80 flex items-center justify-center text-cyan-400 shrink-0"

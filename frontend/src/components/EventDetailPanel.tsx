@@ -870,27 +870,8 @@ export function EventDetailPanel({
             : 'w-full sm:w-[480px] md:w-[500px] max-w-[100vw] sm:max-w-[95vw]'
         } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-slate-200 shadow-2xl flex-col transition-all duration-300 ease-in-out text-slate-800`}
       >
-      {/* Mobile Touch Drag Grab Handle Bar */}
-      <div 
-        onClick={() => setMobileSnap(mobileSnap === "peek" ? "expanded" : "peek")}
-        className="flex sm:hidden items-center justify-center pt-2 pb-1 bg-white cursor-pointer select-none rounded-t-2xl border-b border-slate-100"
-      >
-        <div className="w-12 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 active:bg-orange-500 transition-colors" />
-      </div>
-
       {/* Sleek Light Header matching Site UI */}
       <div className="py-2 sm:py-3 px-3.5 sm:px-5 border-b border-slate-200 shrink-0 bg-white text-slate-900 flex flex-col gap-1.5 sm:gap-2">
-        {/* Mobile Snap Status Indicator */}
-        <div className="flex sm:hidden items-center justify-between pb-0.5">
-          <button
-            type="button"
-            onClick={() => setMobileSnap(mobileSnap === "peek" ? "expanded" : "peek")}
-            className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full"
-          >
-            <Compass className="w-3 h-3 text-cyan-600" />
-            <span>{mobileSnap === "peek" ? "Peek Mode (Tap to Expand)" : "Dossier Expanded (Tap to View Map)"}</span>
-          </button>
-        </div>
         <div className="flex items-start justify-between gap-3 min-w-0">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             {/* Thermal Severity Threat Score Badge with Clear '/100 Threat Score' Label */}

@@ -211,9 +211,16 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
    - Slide-down dropdown menu cleanly displays: Monitor, Facilities, Reports, National Analytics, Thermo News, Operational Alerts (with badge count), and AI Chat Interface.
    - Top bar remains sticky/persistent (`sticky top-0 z-[55]`) across all mobile viewports.
 
+10. **Phase 3 (`ui: rebuild mobile monitor screen` / Rebuild Mobile Monitor Screen)** — [`MapComponent.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MapComponent.tsx) & [`EventDetailPanel.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/EventDetailPanel.tsx):
+    - **Layer 1 (Full-Screen Base Map)**: Clean base map rendering with defined safe zones.
+    - **Layer 2 (Single Mobile Top Overlay Strip)**: Contains ONLY Filter icon button (left) + small `Radar: X active` indicator (right). Removed "Dossier Expanded" bubble and floating pills entirely.
+    - **Layer 3 (Bottom-Right Map Controls Stack)**: Single clean vertical stack (`bottom-6 right-4 md:right-6 flex flex-col gap-2.5 z-20`) combining Roadmap/Satellite toggle, Compass re-center, and My Location GPS button with 10px spacing.
+    - **Floating Overlays Removed**: Hidden anchored wind bar badge (`hidden md:flex`) and floating action buttons over the map screen.
+    - **Dedicated Full-Screen Event Detail**: Tapping any marker transitions to dedicated full-screen event detail view (`fixed inset-0 z-50 bg-slate-950`) with sticky "Back to Monitor Map" header, stacked in-flow info sections, and in-flow "Download Report" & "Ask AI Chat" buttons at the bottom.
+
 ---
 
 ## 9. Final System Verification Status
 - **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all 9 static/dynamic routes).
 - **Phase 0 Rules Upheld**: Zero backend, API, DB, env, or ML model changes.
-- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`).
+- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`).
