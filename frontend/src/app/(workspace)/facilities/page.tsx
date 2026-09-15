@@ -18,6 +18,7 @@ import {
   RefreshCw,
   LayoutGrid,
   List,
+  Sparkles,
 } from "lucide-react";
 import {
   fetchFacilities,
@@ -281,97 +282,88 @@ export default function FacilitiesPage() {
             </div>
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
-              /* GRID VIEW - Compact Muted Cards */
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              /* GRID VIEW - Vibrant Warm Flame Cards (Matching User Spec) */
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {data.items.map((facility) => (
                   <div
                     key={facility.id}
                     onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs hover:border-slate-300 cursor-pointer"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-orange-600 p-4 text-white shadow-md shadow-orange-500/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/35 cursor-pointer"
                   >
-                    {/* Soft Dark Muted Header */}
-                    <div className="relative h-12 w-full bg-slate-900 px-2.5 py-1.5 flex flex-col justify-between text-white overflow-hidden shrink-0">
-                      {/* Top Badges (Facility Code & Active Status) */}
-                      <div className="relative z-10 flex items-center justify-between gap-1">
-                        <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[8.5px] font-semibold text-slate-300 border border-slate-700/60">
+                    {/* Decorative Background Glow */}
+                    <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
+
+                    <div>
+                      {/* Top Header Row: Code Badge & Category Tag */}
+                      <div className="relative z-10 flex items-center justify-between">
+                        <span className="rounded-full bg-black/25 backdrop-blur-md px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-white/95 border border-white/20 shadow-xs">
                           {facility.facility_code}
                         </span>
+                        <span className="rounded-full bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white border border-white/25 shadow-xs">
+                          {facility.sector_category}
+                        </span>
+                      </div>
 
-                        <div>
-                          {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                            <span className="flex items-center gap-0.5 rounded-full bg-amber-950/70 px-1.5 py-0.5 text-[8.5px] font-semibold text-amber-300 border border-amber-800/40">
-                              <Flame className="h-2.5 w-2.5 text-amber-400" />
-                              {facility.historical_event_count} Active
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-0.5 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8.5px] font-medium text-slate-400 border border-slate-700/60">
-                              <Activity className="h-2.5 w-2.5 text-emerald-400" />
-                              Monitored
-                            </span>
-                          )}
+                      {/* Center Featured Icon */}
+                      <div className="my-3 flex justify-center">
+                        <div className="rounded-2xl bg-white/20 p-3 backdrop-blur-md border border-white/30 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="h-7 w-7 text-amber-100 fill-amber-100/50" />
                         </div>
                       </div>
 
-                      {/* Sector Category Pill */}
-                      <div className="relative z-10 flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1 rounded bg-slate-800/80 px-1.5 py-0.5 text-[8.5px] font-medium text-slate-300 border border-slate-700/50">
-                          {getSectorIcon(facility.sector_category)}
-                          <span className="truncate max-w-[100px]">{facility.sector_category}</span>
-                        </span>
-                        <span className="text-[7.5px] font-mono font-medium tracking-wider text-slate-400 uppercase">
-                          CPCB
-                        </span>
+                      {/* Main Title & Subtype */}
+                      <div className="text-center px-1">
+                        <h3 className="text-base font-extrabold text-white tracking-tight leading-snug line-clamp-1" title={facility.name}>
+                          {facility.name}
+                        </h3>
+                        <p className="mt-0.5 text-[10.5px] font-medium text-white/85 line-clamp-1">
+                          {facility.sub_type || facility.operator_name || "Independent Operational Baseline"}
+                        </p>
+                      </div>
+
+                      {/* Clean Key-Value Stat Rows */}
+                      <div className="mt-3.5 space-y-1.5 text-xs border-t border-white/20 pt-3">
+                        <div className="flex justify-between items-center text-white/85">
+                          <span>State / District:</span>
+                          <span className="font-semibold text-white truncate max-w-[130px]">
+                            {facility.district ? `${facility.district}, ` : ""}{facility.state}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-white/85">
+                          <span>Operator:</span>
+                          <span className="font-semibold text-white truncate max-w-[130px]">
+                            {facility.operator_name || "Independent"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-white/85">
+                          <span>90-Day Baseline:</span>
+                          <span className="font-bold text-white font-mono">
+                            {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined
+                              ? `${facility.baseline_frp_mean.toFixed(1)} MW`
+                              : "Active"}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Card Body Content */}
-                    <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1.5">
-                      <div>
-                        {/* Name & Subtype */}
-                        <h3 className="text-[11.5px] font-semibold text-slate-800 tracking-tight leading-snug group-hover:text-blue-600 transition-colors line-clamp-1" title={facility.name}>
-                          {facility.name}
-                        </h3>
-                        {facility.sub_type && (
-                          <p className="mt-0.5 text-[9.5px] font-medium text-slate-500 line-clamp-1">
-                            {facility.sub_type}
-                          </p>
+                    {/* Bottom Translucent Glassmorphism Pill & Circular Action Button */}
+                    <div className="mt-4 flex items-center justify-between rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1.5 border border-white/30 shadow-xs">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        {facility.historical_event_count && facility.historical_event_count > 0 ? (
+                          <>
+                            <Flame className="h-3.5 w-3.5 text-amber-200 animate-pulse" />
+                            <span>+{facility.historical_event_count} Active Thermal</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="h-3.5 w-3.5 text-amber-200" />
+                            <span>100% Baseline Active</span>
+                          </>
                         )}
-
-                        {/* Meta Info: Location & Operator */}
-                        <div className="mt-1 space-y-0.5 text-[9.5px] text-slate-500 border-t border-slate-100 pt-1">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-2.5 w-2.5 text-slate-400 shrink-0" />
-                            <span className="truncate">
-                              {facility.district ? `${facility.district}, ` : ""}
-                              <strong className="text-slate-700 font-semibold">{facility.state}</strong>
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-slate-500">
-                            <Building2 className="h-2.5 w-2.5 text-slate-400 shrink-0" />
-                            <span className="truncate">
-                              <strong className="text-slate-600 font-medium">{facility.operator_name || "Independent"}</strong>
-                            </span>
-                          </div>
-                        </div>
                       </div>
 
-                      {/* Precomputed Baseline & Action CTA */}
-                      <div className="border-t border-slate-100 pt-1 flex items-center justify-between">
-                        <div>
-                          <div className="text-[7.5px] font-semibold uppercase tracking-wider text-slate-400">Baseline</div>
-                          {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined ? (
-                            <div className="text-[9.5px] font-semibold text-slate-700 font-mono">
-                              {facility.baseline_frp_mean.toFixed(1)} MW
-                            </div>
-                          ) : (
-                            <div className="text-[9.5px] text-slate-400 italic">Pending</div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-0.5 text-[9.5px] font-semibold text-slate-500 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all">
-                          <span>Inspect</span>
-                          <ChevronRight className="h-2.5 w-2.5" />
-                        </div>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-orange-600 shadow-sm transition-transform duration-200 group-hover:scale-110">
+                        <ChevronRight className="h-3.5 w-3.5 stroke-[3]" />
                       </div>
                     </div>
                   </div>
