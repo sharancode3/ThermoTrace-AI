@@ -907,7 +907,7 @@ export default function MapComponent({
               latitude={windGeometry.lat}
               anchor="bottom-left"
               offset={[14, -14]}
-              style={{ zIndex: 45, pointerEvents: "none" }}
+              style={{ zIndex: 15, pointerEvents: "none" }}
             >
               <div
                 data-testid="wind-vector-overlay"
