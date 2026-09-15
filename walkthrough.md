@@ -168,7 +168,7 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
 
 - **Font System**: Locked system-wide fonts to `Inter` (`--font-sans`) and `ui-monospace` (`--font-mono`).
 - **Facilities Card Styling**:
-  - Soft multi-radial peach/orange mesh gradient (`#fd945b`, `#fba325`, `#fdd9b8`, `#fed29d`, `#fcbe8a`).
+  - Soft multi-radial warm yellow-orange mesh gradient (`#fba325`, `#fdd9b8`, `#fed29d`, `#fcbe8a`).
   - Top white slanted trapezoid header tabs (`clipPath: polygon(...)`).
   - Card corners set to `rounded-2xl`.
   - Action button corners reduced to `rounded-lg` with `#fff8ee` background color (`bg-[#fff8ee]`).
