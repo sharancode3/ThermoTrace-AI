@@ -679,7 +679,7 @@ export function EventDetailPanel({
     <div 
       style={{
         right: hasOverlay ? '450px' : '0px',
-        maxWidth: hasOverlay ? 'calc(100vw - 450px - 80px)' : 'calc(100vw - 80px)'
+        maxWidth: hasOverlay ? 'calc(100vw - 450px - 276px)' : 'calc(100vw - 276px)'
       }}
       className={`fixed ${
         mobileSnap === "peek"

@@ -7,7 +7,7 @@ import {
   Trees,
   CheckCircle2, MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon,
   Send, LoaderCircle, CheckCheck, Clock, Radio, AlertTriangle, AlertOctagon,
-  BarChart2
+  BarChart2, Maximize2, Minimize2
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { 
@@ -55,6 +55,7 @@ export function OverlayManager() {
   const overlay = searchParams.get("overlay");
 
   const [mounted, setMounted] = useState(false);
+  const [isEnlarged, setIsEnlarged] = useState(false);
   const [news, setNews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [firmsStatus, setFirmsStatus] = useState<any>(null);
@@ -284,7 +285,11 @@ export function OverlayManager() {
   };
 
   return (
-    <div className="fixed top-0 right-0 h-full w-full sm:w-[450px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right">
+    <div className={`fixed top-0 right-0 h-full ${
+      isEnlarged 
+        ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
+        : "w-full sm:w-[450px]"
+    } bg-white border-l border-slate-200 shadow-2xl z-40 flex flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right`}>
 
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-slate-50 shrink-0">
@@ -342,6 +347,13 @@ export function OverlayManager() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button 
+            onClick={() => setIsEnlarged(!isEnlarged)} 
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" 
+            title={isEnlarged ? "Collapse panel width" : "Enlarge panel width"}
+          >
+            {isEnlarged ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <button onClick={loadData} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="Refresh Live Data">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-orange-600" : ""}`} />
           </button>
