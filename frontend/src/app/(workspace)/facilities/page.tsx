@@ -308,14 +308,23 @@ export default function FacilitiesPage() {
                     className="group relative flex flex-col justify-between overflow-hidden rounded-[28px] p-4 text-[#2b180d] shadow-[0_15px_40px_rgba(250,147,87,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(250,147,87,0.35)] cursor-pointer border-0"
                   >
                     <div className="relative z-10 space-y-3">
-                      {/* Top Header Row: Code & Category Tag */}
-                      <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-white/75 backdrop-blur-md px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-[#4a2712] border border-white/40 shadow-xs">
+                      {/* Top Slanted White Trapezoid Header Tabs (Matching User Image Spec) */}
+                      <div className="-mx-4 -mt-4 flex items-start justify-between">
+                        {/* Left Slanted White Tab: Facility Code */}
+                        <div
+                          style={{ clipPath: 'polygon(0 0, 100% 0, 84% 100%, 0 100%)' }}
+                          className="bg-white/95 backdrop-blur-md pl-4 pr-6 py-1.5 font-mono text-[10px] font-bold text-[#3b2313] shadow-xs shrink-0"
+                        >
                           {facility.facility_code}
-                        </span>
-                        <span className="rounded-full bg-white/75 backdrop-blur-md px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#4a2712] border border-white/40 shadow-xs">
+                        </div>
+
+                        {/* Right Slanted White Tab: Sector Category */}
+                        <div
+                          style={{ clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 0 100%)' }}
+                          className="bg-white/95 backdrop-blur-md pl-6 pr-4 py-1.5 text-[9.5px] font-black uppercase tracking-wider text-[#3b2313] shadow-xs text-right truncate max-w-[170px]"
+                        >
                           {facility.sector_category}
-                        </span>
+                        </div>
                       </div>
 
                       {/* Main Hero Title & Subtype */}
