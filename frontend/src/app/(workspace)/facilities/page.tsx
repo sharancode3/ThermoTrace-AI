@@ -288,12 +288,12 @@ export default function FacilitiesPage() {
                   <div
                     key={facility.id}
                     onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-amber-200/60 bg-gradient-to-br from-amber-100/70 via-orange-100/50 to-amber-200/60 backdrop-blur-md p-4 text-slate-900 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-orange-300 hover:shadow-md cursor-pointer"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-[#FFA756]/40 bg-gradient-to-br from-amber-100/70 via-orange-100/50 to-amber-200/60 backdrop-blur-md p-4 text-slate-900 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-[#FFA756] hover:shadow-md cursor-pointer"
                   >
-                    {/* Soft Translucent Radial Light Flares */}
-                    <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-amber-200/50 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
-                    <div className="absolute top-1/4 -left-12 h-32 w-32 rounded-full bg-orange-300/40 blur-2xl pointer-events-none" />
-                    <div className="absolute -bottom-10 right-4 h-28 w-28 rounded-full bg-amber-300/40 blur-xl pointer-events-none" />
+                    {/* Uneven Radial Light Flares (#FFA756) */}
+                    <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-[#FFA756]/50 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
+                    <div className="absolute top-1/4 -left-12 h-32 w-32 rounded-full bg-[#FFA756]/40 blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-10 right-4 h-28 w-28 rounded-full bg-[#FFA756]/40 blur-xl pointer-events-none" />
 
                     <div className="relative z-10 space-y-3">
                       {/* Top Header Row: Code & Category Tag */}
