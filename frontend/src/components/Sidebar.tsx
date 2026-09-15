@@ -67,8 +67,8 @@ export function Sidebar() {
         <span className="hidden lg:block ml-3 font-bold text-lg text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors">ThermoTrace AI</span>
       </Link>
       
-      <nav className="flex-1 py-4 flex flex-col gap-2 px-3 overflow-y-auto">
-        <div className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider hidden lg:block px-3">Main</div>
+      <nav className="flex-1 py-3 flex flex-col gap-1 px-3 overflow-y-auto">
+        <div className="text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider hidden lg:block px-3">Main</div>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname?.startsWith(item.href);
           return (
@@ -76,7 +76,7 @@ export function Sidebar() {
               key={item.label}
               href={item.href}
               className={cn(
-                "flex items-center p-3 rounded-lg transition-colors group",
+                "flex items-center py-2 px-3 rounded-lg transition-colors group",
                 isActive 
                   ? "bg-slate-100 text-orange-600 font-medium" 
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -88,13 +88,13 @@ export function Sidebar() {
           );
         })}
 
-        <div className="text-xs font-semibold text-slate-400 mt-6 mb-2 uppercase tracking-wider hidden lg:block px-3">Intelligence</div>
+        <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider hidden lg:block px-3">Intelligence</div>
         
         {/* Thermo News with NRT Live Reminder Indicator */}
         <button 
           onClick={() => toggleOverlay("news")}
           className={cn(
-            "flex items-center justify-between p-3 rounded-lg transition-colors group w-full text-left relative", 
+            "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
             currentOverlay === "news" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           )}
           title="Live 24h NASA FIRMS Thermal News Feed"
@@ -113,7 +113,7 @@ export function Sidebar() {
         <button 
           onClick={() => toggleOverlay("alerts")}
           className={cn(
-            "flex items-center justify-between p-3 rounded-lg transition-colors group w-full text-left relative", 
+            "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
             currentOverlay === "alerts" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           )}
           title="Critical, Abnormal & Industrial Operational Alerts"
@@ -132,19 +132,19 @@ export function Sidebar() {
         {/* Chat Interface */}
         <button 
           onClick={() => toggleOverlay("chat")}
-          className={cn("flex items-center p-3 rounded-lg transition-colors group w-full text-left", currentOverlay === "chat" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}
+          className={cn("flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left", currentOverlay === "chat" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}
         >
           <FlamePlusIcon active={currentOverlay === "chat"} />
           <span className="hidden lg:block ml-3">Chat Interface</span>
         </button>
 
-        <div className="text-xs font-semibold text-slate-400 mt-6 mb-2 uppercase tracking-wider hidden lg:block px-3">System & Guide</div>
+        <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider hidden lg:block px-3">System & Guide</div>
 
         {/* System Guide & Architecture Manual (Dedicated Full Page) */}
         <Link
           href="/guide"
           className={cn(
-            "flex items-center p-3 rounded-lg transition-colors group w-full text-left",
+            "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left",
             pathname === "/guide"
               ? "bg-slate-100 text-orange-600 font-semibold"
               : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
