@@ -84,8 +84,22 @@ export function Sidebar() {
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Sidebar Header & Chevron Collapse Toggle Arrow */}
-      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
+      {/* Vertically Centered Sidebar Collapse Toggle Arrow */}
+      <button
+        onClick={toggleCollapse}
+        title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
+        className="absolute top-1/2 -translate-y-1/2 -right-3.5 z-[60] w-7 h-7 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-500 hover:text-orange-600 hover:bg-slate-50 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+        type="button"
+      >
+        {isCollapsed ? (
+          <ChevronRight className="w-4 h-4 text-slate-700 stroke-[2.5]" />
+        ) : (
+          <ChevronLeft className="w-4 h-4 text-slate-700 stroke-[2.5]" />
+        )}
+      </button>
+
+      {/* Sidebar Header */}
+      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0", isCollapsed ? "justify-center px-2" : "justify-start px-4")}>
         <Link 
           href="/" 
           title="Return to ThermoTrace AI Landing Page" 
@@ -98,19 +112,6 @@ export function Sidebar() {
             </span>
           )}
         </Link>
-        
-        <button
-          onClick={toggleCollapse}
-          title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
-          type="button"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="w-5 h-5 text-slate-600" />
-          ) : (
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
-          )}
-        </button>
       </div>
       
       <nav className="flex-1 py-3 flex flex-col gap-1 px-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
