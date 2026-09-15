@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { 
   FileText, Download, Plus, RefreshCw, CheckCircle2, ShieldCheck, 
   Flame, AlertTriangle, Search, Filter, ExternalLink, ArrowDownToLine, 
-  Loader2, UserCheck, Settings2, Sliders, CheckSquare, Square, Building2
+  Loader2, UserCheck, Settings2, Sliders, CheckSquare, Square, Building2,
+  ChevronDown, ChevronUp
 } from "lucide-react";
 import { fetchReports, generateReport, fetchGisEvents } from "@/lib/apiClient";
 
@@ -104,6 +105,12 @@ export default function ReportsPage() {
     }
   };
 
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const filteredReports = reports.filter((r) => {
     const q = searchQuery.toLowerCase();
     return (
@@ -116,17 +123,17 @@ export default function ReportsPage() {
   const criticalCount = reports.filter(r => r.anomaly_tier === "CRITICAL").length;
 
   return (
-    <div className="p-8 h-full overflow-y-auto w-full bg-slate-50 text-slate-800">
+    <div className="p-4 md:p-8 h-full overflow-y-auto w-full bg-slate-50 text-slate-800">
       {/* Sovereign Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-6 border-b border-slate-200 gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-orange-100 border border-orange-200 text-orange-600 rounded-lg shadow-sm">
+            <div className="p-2 bg-orange-100 border border-orange-200 text-orange-600 rounded-lg shadow-sm shrink-0">
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Thermal Intelligence Dossiers</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Thermal Intelligence Dossiers</h1>
                 <span className="px-2 py-0.5 bg-orange-100 text-orange-800 border border-orange-200 rounded text-[10px] font-mono font-bold">PERSONALIZED PDF EXPORTER</span>
               </div>
               <p className="text-xs text-slate-500 font-medium">Tailor and generate authoritative forensic PDF intelligence briefs based on your operational profile</p>
@@ -134,7 +141,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
           <button
             onClick={loadData}
             title="Refresh Reports"
@@ -144,7 +151,7 @@ export default function ReportsPage() {
           </button>
           <button
             onClick={openGenerateModal}
-            className="flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold text-xs transition shadow-sm"
+            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold text-xs transition shadow-sm"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             Generate Custom Dossier
@@ -165,7 +172,7 @@ export default function ReportsPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mt-6">
         <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Generated Dossiers</div>
           <div className="text-2xl font-bold text-slate-900">{reports.length}</div>
@@ -187,27 +194,27 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Reports Table & Controls */}
+      {/* Reports Container & Controls */}
       <div className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        {/* Table Search Toolbar */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between gap-4 bg-slate-50/50">
-          <div className="relative flex-1 max-w-md">
+        {/* Table/Card Search Toolbar */}
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
+          <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by Report ID, Event ID, or Title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-orange-500 transition"
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-orange-500 transition"
             />
           </div>
-          <div className="text-xs text-slate-500 font-medium">
+          <div className="text-xs text-slate-500 font-medium self-end sm:self-auto shrink-0">
             Showing {filteredReports.length} of {reports.length} report(s)
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
@@ -238,7 +245,7 @@ export default function ReportsPage() {
                 </tr>
               ) : (
                 filteredReports.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50 transition">
+                  <tr key={r.id || r.report_id} className="hover:bg-slate-50 transition">
                     <td className="py-3.5 px-5 font-bold font-mono text-slate-900">
                       {r.report_id}
                     </td>
@@ -280,6 +287,91 @@ export default function ReportsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Stacked Card View */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="py-12 text-center text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-600" />
+              Loading generated dossiers...
+            </div>
+          ) : filteredReports.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 p-4">
+              <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+              <p className="font-semibold text-slate-700">No reports found</p>
+              <p className="text-xs text-slate-400 mt-1">Click "Generate Custom Dossier" to produce a tailored PDF forensic brief.</p>
+            </div>
+          ) : (
+            filteredReports.map((r) => {
+              const reportKey = r.id || r.report_id;
+              const isExpanded = !!expandedIds[reportKey];
+              return (
+                <div key={reportKey} className="p-4 bg-white space-y-3">
+                  {/* Card Header: Title, Date, Tier */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-slate-900 text-sm leading-snug break-words">
+                        {r.title || "Untitled Dossier"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                        {r.generated_at ? new Date(r.generated_at).toLocaleString() : "N/A"}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                      r.anomaly_tier === "CRITICAL" ? "bg-red-100 text-red-700 border border-red-200" :
+                      r.anomaly_tier === "ABNORMAL" ? "bg-orange-100 text-orange-700 border border-orange-200" :
+                      r.anomaly_tier === "ELEVATED" ? "bg-amber-100 text-amber-700 border border-amber-200" :
+                      "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                    }`}>
+                      {r.anomaly_tier || "NORMAL"}
+                    </span>
+                  </div>
+
+                  {/* Card Actions: Toggle Details & Download PDF */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                    <button
+                      onClick={() => toggleExpand(reportKey)}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 hover:text-orange-600 transition py-1"
+                    >
+                      {isExpanded ? <ChevronUp className="w-4 h-4 text-orange-600" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                      <span>{isExpanded ? "Hide Details" : "Show Details"}</span>
+                    </button>
+
+                    <a
+                      href={r.download_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-orange-600 text-white rounded-xl font-medium text-xs transition shadow-2xs"
+                    >
+                      <ArrowDownToLine className="w-3.5 h-3.5" />
+                      Download PDF
+                    </a>
+                  </div>
+
+                  {/* Expandable Technical Details */}
+                  {isExpanded && (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-[11px] font-mono">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Report ID:</span>
+                        <span className="font-bold text-slate-800">{r.report_id}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Event Ref:</span>
+                        <span className="font-semibold text-orange-600">{r.event_id}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-1">SHA-256 Checksum:</span>
+                        <div className="p-2 bg-white border border-slate-200 rounded-lg text-[10px] text-slate-600 break-all select-all font-mono leading-relaxed">
+                          {r.sha256_hash || "VERIFIED"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

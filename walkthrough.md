@@ -224,15 +224,15 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
     - **Keyboard & Viewport Safe Area Handling**: Pinned input container (`sticky bottom-0 shrink-0`) with safe-area padding (`pb-[env(safe-area-inset-bottom)]`) and dynamic height restriction (`max-h-[90dvh]`). Input field remains 100% visible and accessible above mobile virtual keyboard.
     - **Real-Time Telemetry Query & Auto-Scroll**: Verified message delivery against live PostGIS backend (`/api/v1/chat/query`) with real-time response rendering and smooth `chatMessagesEndRef` auto-scrolling.
 
-12. **Phase 5 (`ui: fix mobile national analytics` / Fix Mobile National Analytics)** — [`analytics/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/analytics/page.tsx):
-    - **Single Full-Width Column Stack**: All sections (Pan-India Sovereign Thermal Baseline, Machine Learning Calibration Rigor, Monitored Territories) stack vertically in one full-width column on mobile (`< lg`).
-    - **Swipeable 9-Day Progression Row**: Converted 9-day historical date grid into a horizontally scrollable (swipeable) row (`flex md:grid overflow-x-auto snap-x scrollbar-none gap-2.5`) on mobile, preventing vertical layout clutter.
-    - **Monitored Territories Detail Toggle**: Monitored territory list and deep-dive detail panel stack with tap navigation on mobile. Tapping any state (e.g. "Tamil Nadu") expands its full detail panel with a prominent top "← Back to All Territories" button.
-    - **Collapsible Stats & Text Wrapping**: Trimming secondary stats behind mobile toggle triggers ("Show All 4 Key Stats", "Model Specs & 14-D Vector") with responsive text wrapping and zero horizontal overflow.
+13. **Phase 6 (`ui: fix mobile reports page` / Fix Mobile Reports/Dossiers Page)** — [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/reports/page.tsx):
+    - **Responsive Mobile Card List**: Below desktop width (`< md`), replaced the un-usable wide data table with a vertically stacked card list (`block md:hidden divide-y divide-slate-100`).
+    - **Essential Default Display**: Cards show essential fields at a glance: Dossier Title, Anomaly Tier Badge, Generated Date, and direct Download PDF action button.
+    - **Expandable Secondary Details**: Secondary metadata (Report ID, Event Ref, SHA-256 Checksum) are tucked behind a clean "Show Details" / "Hide Details" accordion toggle (`ChevronDown` / `ChevronUp`), preventing long SHA-256 string clutter and horizontal overflow on mobile screens.
+    - **Full-Width Search & Stacked Summary Stats**: Top KPI summary cards stack cleanly on mobile (`grid-cols-1 md:grid-cols-3 gap-4 md:gap-5`), and search bar expands full width (`w-full`) for easy mobile filtering.
 
 ---
 
 ## 9. Final System Verification Status
 - **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all 9 static/dynamic routes).
 - **Phase 0 Rules Upheld**: Zero backend, API, DB, env, or ML model changes.
-- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`, `ui: fix mobile ai chat`, `ui: fix mobile national analytics`).
+- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`, `ui: fix mobile ai chat`, `ui: fix mobile national analytics`, `ui: fix mobile reports page`).
