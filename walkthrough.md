@@ -218,9 +218,15 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
     - **Floating Overlays Removed**: Hidden anchored wind bar badge (`hidden md:flex`) and floating action buttons over the map screen.
     - **Dedicated Full-Screen Event Detail**: Tapping any marker transitions to dedicated full-screen event detail view (`fixed inset-0 z-50 bg-slate-950`) with sticky "Back to Monitor Map" header, stacked in-flow info sections, and in-flow "Download Report" & "Ask AI Chat" buttons at the bottom.
 
+11. **Phase 4 (`ui: fix mobile ai chat` / Fix Mobile AI Chat)** — [`OverlayManager.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+    - **In-Flow Navigation & Access**: "Ask AI Chat" triggers chat overlay via in-flow button on full-screen event detail page and top-nav dropdown ("Chat Interface").
+    - **Mobile Bottom Sheet Pattern**: Slides up smoothly from bottom (`fixed inset-x-0 bottom-0 z-[60]`) with top drag handle (drag down to dismiss/collapse, drag up to expand to `90vh`) and top-right `X` close button.
+    - **Keyboard & Viewport Safe Area Handling**: Pinned input container (`sticky bottom-0 shrink-0`) with safe-area padding (`pb-[env(safe-area-inset-bottom)]`) and dynamic height restriction (`max-h-[90dvh]`). Input field remains 100% visible and accessible above mobile virtual keyboard.
+    - **Real-Time Telemetry Query & Auto-Scroll**: Verified message delivery against live PostGIS backend (`/api/v1/chat/query`) with real-time response rendering and smooth `chatMessagesEndRef` auto-scrolling.
+
 ---
 
 ## 9. Final System Verification Status
 - **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all 9 static/dynamic routes).
 - **Phase 0 Rules Upheld**: Zero backend, API, DB, env, or ML model changes.
-- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`).
+- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`, `ui: fix mobile ai chat`).

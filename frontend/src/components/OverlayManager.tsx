@@ -9,7 +9,7 @@ import {
   Send, LoaderCircle, CheckCheck, Clock, Radio, AlertTriangle, AlertOctagon,
   BarChart2, Maximize2, Minimize2, ArrowLeft
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { 
   askThermalChat, fetchNews, fetchNotifications, markNotificationRead, 
   markAllNotificationsRead, fetchFirmsStatus, fetchNationalAnalytics 
@@ -55,6 +55,7 @@ export function OverlayManager() {
   const pathname = usePathname();
   const overlay = searchParams.get("overlay");
 
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [isEnlarged, setIsEnlarged] = useState(false);
   const [isChatMobileExpanded, setIsChatMobileExpanded] = useState(false);
@@ -86,6 +87,13 @@ export function OverlayManager() {
         "Ask about abnormal thermal events, flaring clusters, or industrial facilities across India. I evaluate verified real-time satellite telemetry from PostGIS and answer with zero hallucinations.",
     },
   ]);
+
+  // Auto-scroll messages container on new message
+  useEffect(() => {
+    if (overlay === "chat") {
+      chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, chatLoading, overlay]);
 
     useEffect(() => {
     const handleOpenChatEvent = (e: Event) => {
@@ -1107,7 +1115,7 @@ export function OverlayManager() {
         <>
           {/* Mobile Bottom Sheet Layout (< md) */}
           <div className={cn(
-            "fixed inset-x-0 bottom-0 z-[60] bg-white border-t border-slate-200 shadow-2xl rounded-t-2xl flex flex-col md:hidden transition-all duration-300 ease-in-out",
+            "fixed inset-x-0 bottom-0 z-[60] bg-white border-t border-slate-200 shadow-2xl rounded-t-2xl flex flex-col md:hidden transition-all duration-300 ease-in-out pb-[env(safe-area-inset-bottom)] max-h-[90dvh]",
             isChatMobileExpanded ? "h-[90vh]" : "h-[65vh]"
           )}>
             {/* Mobile Top Grab Handle Bar */}
@@ -1206,10 +1214,11 @@ export function OverlayManager() {
                     </div>
                   </div>
                 )}
+                <div ref={chatMessagesEndRef} />
               </div>
 
               {/* Input Footer */}
-              <div className="p-2.5 border-t border-slate-200 bg-white shrink-0">
+              <div className="p-2.5 border-t border-slate-200 bg-white shrink-0 sticky bottom-0">
                 <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 focus-within:border-orange-500 focus-within:bg-white transition">
                   <textarea
                     value={chatDraft}
