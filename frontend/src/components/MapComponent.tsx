@@ -194,6 +194,7 @@ export default function MapComponent({
   const [showFacilities, setShowFacilities] = useState(true);
   const [showObservations, setShowObservations] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Data States
   const [geoData, setGeoData] = useState<GeoCollection | null>(null);
@@ -1046,156 +1047,162 @@ export default function MapComponent({
         )}
 
         {/* UNIFIED TACTICAL RADAR TOOLBAR (TOP-LEFT) */}
-        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg">
-          {/* Main Control Card */}
-          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl text-white flex flex-col gap-2.5">
-            {/* Header + Time Window */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                <span className="text-xs font-bold font-mono tracking-wider text-slate-200">
-                  THERMAL RADAR // INDIA NRT
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  {eventCount} Hotspots
-                </span>
+        <div className="absolute top-4 left-4 right-4 md:right-auto z-20 max-w-full md:max-w-2xl">
+          <div className="flex flex-col gap-2">
+            {/* Main Control Card */}
+            <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl text-white flex flex-col gap-2.5">
+              {/* Header + Mobile Filter Toggle Button */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-xs font-bold font-mono tracking-wider text-slate-200 truncate">
+                    THERMAL RADAR // INDIA NRT
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 shrink-0">
+                    {eventCount} Hotspots
+                  </span>
+                </div>
+
+                {/* Mobile Filter Toggle Button (visible on mobile < md) */}
+                <button
+                  onClick={() => setIsMobileFilterOpen((prev) => !prev)}
+                  className="md:hidden flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-orange-600/90 text-white border border-orange-500 shadow-sm hover:bg-orange-500 transition cursor-pointer shrink-0"
+                  title="Toggle Mobile Filters"
+                  type="button"
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filters</span>
+                  {(classFilter || severityFilter || windowHours !== 6) && (
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  )}
+                </button>
+
+                {/* Time Window Buttons */}
+                <div className={`items-center gap-1 bg-slate-800/90 p-0.5 rounded-xl border border-slate-700 ${isMobileFilterOpen ? "flex" : "hidden md:flex"}`}>
+                  {([
+                    [6, "6h"],
+                    [24, "24h"],
+                    [168, "7d"],
+                    [720, "30d"],
+                    [null, "All"],
+                  ] as const).map(([hours, label]) => (
+                    <button
+                      key={label}
+                      onClick={() => setWindowHours(hours)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                        windowHours === hours
+                          ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                      }`}
+                      type="button"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Time Window Buttons */}
-              <div className="flex items-center gap-1 bg-slate-800/90 p-0.5 rounded-xl border border-slate-700">
-                {([
-                  [6, "6h"],
-                  [24, "24h"],
-                  [168, "7d"],
-                  [720, "30d"],
-                  [null, "All"],
-                ] as const).map(([hours, label]) => (
+              {/* Filter Body Container (Expandable on Mobile, Always Visible on MD+) */}
+              <div className={`flex-col gap-2.5 ${isMobileFilterOpen ? "flex" : "hidden md:flex"}`}>
+                {/* 30-Minute Cadence Notice */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-snug">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                  <span>
+                    <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS telemetry refreshed on active 30m cadence (30d retention).
+                  </span>
+                </div>
+
+                {/* View Mode + Filters + Layer Checkboxes */}
+                <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-800 text-xs">
+                  {/* Priority vs All Hotspots Toggle */}
                   <button
-                    key={label}
-                    onClick={() => setWindowHours(hours)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                      windowHours === hours
-                        ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                    onClick={() => setShowAllDetections((prev) => !prev)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${
+                      showAllDetections
+                        ? "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
+                        : "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
                     }`}
+                    title="Toggle between all detected thermal events and high-priority anomalies"
                     type="button"
                   >
-                    {label}
+                    {showAllDetections ? <Eye className="w-3.5 h-3.5 text-slate-400" /> : <EyeOff className="w-3.5 h-3.5 text-amber-400" />}
+                    <span>{showAllDetections ? "All Hotspots" : "Priority Only"}</span>
                   </button>
-                ))}
-              </div>
-            </div>
 
-            {/* 30-Minute Storage-Optimized Telemetry Cadence Notice */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-snug">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-              <span>
-                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry is refreshed on an active 30-minute cadence across a 30-day operational retention window.
-              </span>
-            </div>
+                  {/* Severity Dropdown */}
+                  <select
+                    aria-label="Severity Filter"
+                    value={severityFilter}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSeverityFilter(val);
+                      if (val) {
+                        setShowAllDetections(true);
+                        if (val === "CRITICAL" && windowHours === 6) {
+                          setWindowHours(168);
+                        }
+                      }
+                    }}
+                    className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
+                  >
+                    <option value="">All Severities</option>
+                    <option value="CRITICAL">🔴 Critical Only</option>
+                    <option value="ABNORMAL">🟠 Abnormal</option>
+                    <option value="ELEVATED">🟢 Elevated</option>
+                    <option value="NORMAL">⚪ Nominal</option>
+                  </select>
 
-            {/* View Mode + Filters + Layer Checkboxes */}
-            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-800 text-xs">
-              {/* Priority vs All Hotspots Toggle */}
-              <button
-                onClick={() => setShowAllDetections((prev) => !prev)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${
-                  showAllDetections
-                    ? "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
-                    : "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
-                }`}
-                title="Toggle between all detected thermal events and high-priority anomalies"
-                type="button"
-              >
-                {showAllDetections ? <Eye className="w-3.5 h-3.5 text-slate-400" /> : <EyeOff className="w-3.5 h-3.5 text-amber-400" />}
-                <span>{showAllDetections ? "All Hotspots" : "Priority Only"}</span>
-              </button>
+                  {/* Classification Dropdown */}
+                  <select
+                    aria-label="Classification Filter"
+                    value={classFilter}
+                    onChange={(e) => {
+                      setClassFilter(e.target.value);
+                      if (e.target.value) setShowAllDetections(true);
+                    }}
+                    className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
+                  >
+                    <option value="">All Categories</option>
+                    <option value="INDUSTRY">🏭 Industry (All Levels)</option>
+                    <option value="AGRI_BURN">🌾 Agriculture (Crop)</option>
+                    <option value="WILDFIRE">🌲 Forest Wildfire</option>
+                    <option value="OTHER_UNCERTAIN">❓ Other / Uncertain</option>
+                  </select>
 
-              {/* Severity Dropdown */}
-              <select
-                aria-label="Severity Filter"
-                value={severityFilter}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSeverityFilter(val);
-                  if (val) {
-                    setShowAllDetections(true);
-                    if (val === "CRITICAL" && windowHours === 6) {
-                      setWindowHours(168);
-                    }
-                  }
-                }}
-                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
-              >
-                <option value="">All Severities</option>
-                <option value="CRITICAL">🔴 Critical Only</option>
-                <option value="ABNORMAL">🟠 Abnormal</option>
-                <option value="ELEVATED">🟢 Elevated</option>
-                <option value="NORMAL">⚪ Nominal</option>
-              </select>
+                  {/* Dynamic Reset Filters Button */}
+                  {(classFilter || severityFilter || !showAllDetections || windowHours !== 6) && (
+                    <button
+                      onClick={handleClearFilters}
+                      type="button"
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 transition cursor-pointer"
+                      title="Reset all filters to defaults"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset Filters</span>
+                    </button>
+                  )}
 
-              {/* Classification Dropdown */}
-              <select
-                aria-label="Classification Filter"
-                value={classFilter}
-                onChange={(e) => {
-                  setClassFilter(e.target.value);
-                  if (e.target.value) setShowAllDetections(true);
-                }}
-                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
-              >
-                <option value="">All Categories</option>
-                <option value="INDUSTRY">🏭 Industry (All Levels)</option>
-                <option value="AGRI_BURN">🌾 Agriculture (Crop)</option>
-                <option value="WILDFIRE">🌲 Forest Wildfire</option>
-                <option value="OTHER_UNCERTAIN">❓ Other / Uncertain</option>
-              </select>
+                  {/* Symbology Legend Button */}
+                  <button
+                    onClick={() => setShowLegend((prev) => !prev)}
+                    className={`p-1.5 rounded-xl border transition ${
+                      showLegend
+                        ? "bg-orange-600 text-white border-orange-500"
+                        : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white hover:bg-slate-700"
+                    }`}
+                    title="Tactical Symbology Matrix (9-Icon)"
+                    type="button"
+                  >
+                    <Info className="w-4 h-4" />
+                  </button>
 
-              {/* Dynamic Reset Filters Button */}
-              {(classFilter || severityFilter || !showAllDetections || windowHours !== 6) && (
-                <button
-                  onClick={handleClearFilters}
-                  type="button"
-                  className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 transition cursor-pointer"
-                  title="Reset all filters to defaults"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Reset Filters</span>
-                </button>
-              )}
-
-
-
-              {/* Symbology Legend Button */}
-              <button
-                onClick={() => setShowLegend((prev) => !prev)}
-                className={`p-1.5 rounded-xl border transition ${
-                  showLegend
-                    ? "bg-orange-600 text-white border-orange-500"
-                    : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white hover:bg-slate-700"
-                }`}
-                title="Tactical Symbology Matrix (9-Icon)"
-                type="button"
-              >
-                <Info className="w-4 h-4" />
-              </button>
-
-              {/* Clear Filters (if modified) */}
-              {isFilterActive && (
-                <button
-                  onClick={handleClearFilters}
-                  className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 font-medium px-2 py-1 bg-orange-500/10 rounded-lg transition"
-                  type="button"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Reset
-                </button>
-              )}
-              <div className="ml-auto pl-1">
-                <NearbyAlertCenter />
+                  <div className="ml-auto pl-1">
+                    <NearbyAlertCenter />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
