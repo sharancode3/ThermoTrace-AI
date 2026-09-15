@@ -678,7 +678,7 @@ export function EventDetailPanel({
   return (
     <div 
       style={{
-        right: hasOverlay ? '450px' : '0px',
+        right: hasOverlay ? 'clamp(0px, 450px, calc(100vw - 480px))' : '0px',
         maxWidth: hasOverlay ? 'calc(100vw - 450px - 276px)' : 'calc(100vw - 276px)'
       }}
       className={`fixed ${

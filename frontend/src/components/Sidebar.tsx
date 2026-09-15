@@ -67,7 +67,7 @@ export function Sidebar() {
         <span className="hidden lg:block ml-3 font-bold text-lg text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors">ThermoTrace AI</span>
       </Link>
       
-      <nav className="flex-1 py-3 flex flex-col gap-1 px-3 overflow-y-auto">
+      <nav className="flex-1 py-3 flex flex-col gap-1 px-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         <div className="text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider hidden lg:block px-3">Main</div>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname?.startsWith(item.href);
