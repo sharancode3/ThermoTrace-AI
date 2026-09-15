@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from app.domain.anomaly import get_model
 from app.domain.features import resolve_refined_landcover
 
-SUPABASE_URL = "postgresql://postgres.aszeaeszjdshtvstkwmy:Sharan1%40bmsce@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+SUPABASE_URL = "postgresql://postgres.mlkgaoxnvptewcxblmes:Sharan1%40bmsce@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres"
 
 def run_bulk_recalibration(target_db="local"):
     if target_db == "supabase":
