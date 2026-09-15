@@ -282,62 +282,52 @@ export default function FacilitiesPage() {
             </div>
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
-              /* GRID VIEW - Vibrant Warm Flame Cards (Matching User Spec) */
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              /* GRID VIEW - Icon-Free Clean Readable Cards */
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {data.items.map((facility) => (
                   <div
                     key={facility.id}
                     onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-orange-600 p-4 text-white shadow-md shadow-orange-500/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/35 cursor-pointer"
+                    className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md cursor-pointer"
                   >
-                    {/* Decorative Background Glow */}
-                    <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
-
-                    <div>
-                      {/* Top Header Row: Code Badge & Category Tag */}
-                      <div className="relative z-10 flex items-center justify-between">
-                        <span className="rounded-full bg-black/25 backdrop-blur-md px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-white/95 border border-white/20 shadow-xs">
+                    <div className="space-y-3">
+                      {/* Top Header Row: Code & Sector Pills (No Icons) */}
+                      <div className="flex items-center justify-between">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-700 border border-slate-200">
                           {facility.facility_code}
                         </span>
-                        <span className="rounded-full bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white border border-white/25 shadow-xs">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 border border-slate-200">
                           {facility.sector_category}
                         </span>
                       </div>
 
-                      {/* Center Featured Icon */}
-                      <div className="my-3 flex justify-center">
-                        <div className="rounded-2xl bg-white/20 p-3 backdrop-blur-md border border-white/30 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                          <Sparkles className="h-7 w-7 text-amber-100 fill-amber-100/50" />
-                        </div>
-                      </div>
-
                       {/* Main Title & Subtype */}
-                      <div className="text-center px-1">
-                        <h3 className="text-base font-extrabold text-white tracking-tight leading-snug line-clamp-1" title={facility.name}>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 tracking-tight leading-snug group-hover:text-blue-600 transition-colors line-clamp-1" title={facility.name}>
                           {facility.name}
                         </h3>
-                        <p className="mt-0.5 text-[10.5px] font-medium text-white/85 line-clamp-1">
-                          {facility.sub_type || facility.operator_name || "Independent Operational Baseline"}
+                        <p className="mt-0.5 text-xs font-medium text-slate-500 line-clamp-1">
+                          {facility.sub_type || facility.operator_name || "Independent Facility"}
                         </p>
                       </div>
 
-                      {/* Clean Key-Value Stat Rows */}
-                      <div className="mt-3.5 space-y-1.5 text-xs border-t border-white/20 pt-3">
-                        <div className="flex justify-between items-center text-white/85">
-                          <span>State / District:</span>
-                          <span className="font-semibold text-white truncate max-w-[130px]">
+                      {/* Key-Value Details (No Icons) */}
+                      <div className="space-y-1.5 text-xs border-t border-slate-100 pt-2.5">
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Location:</span>
+                          <span className="font-semibold text-slate-800 truncate max-w-[140px]">
                             {facility.district ? `${facility.district}, ` : ""}{facility.state}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-white/85">
+                        <div className="flex justify-between items-center text-slate-500">
                           <span>Operator:</span>
-                          <span className="font-semibold text-white truncate max-w-[130px]">
+                          <span className="font-semibold text-slate-800 truncate max-w-[140px]">
                             {facility.operator_name || "Independent"}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-white/85">
-                          <span>90-Day Baseline:</span>
-                          <span className="font-bold text-white font-mono">
+                        <div className="flex justify-between items-center text-slate-500">
+                          <span>Baseline:</span>
+                          <span className="font-bold text-slate-900 font-mono">
                             {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined
                               ? `${facility.baseline_frp_mean.toFixed(1)} MW`
                               : "Active"}
@@ -346,25 +336,21 @@ export default function FacilitiesPage() {
                       </div>
                     </div>
 
-                    {/* Bottom Translucent Glassmorphism Pill & Circular Action Button */}
-                    <div className="mt-4 flex items-center justify-between rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1.5 border border-white/30 shadow-xs">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                        {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                          <>
-                            <Flame className="h-3.5 w-3.5 text-amber-200 animate-pulse" />
-                            <span>+{facility.historical_event_count} Active Thermal</span>
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="h-3.5 w-3.5 text-amber-200" />
-                            <span>100% Baseline Active</span>
-                          </>
-                        )}
-                      </div>
+                    {/* Bottom Status Row (No Icons) */}
+                    <div className="mt-3.5 border-t border-slate-100 pt-2.5 flex items-center justify-between">
+                      {facility.historical_event_count && facility.historical_event_count > 0 ? (
+                        <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200">
+                          {facility.historical_event_count} Active Events
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 border border-slate-200">
+                          Monitored
+                        </span>
+                      )}
 
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-orange-600 shadow-sm transition-transform duration-200 group-hover:scale-110">
-                        <ChevronRight className="h-3.5 w-3.5 stroke-[3]" />
-                      </div>
+                      <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">
+                        Inspect →
+                      </span>
                     </div>
                   </div>
                 ))}
