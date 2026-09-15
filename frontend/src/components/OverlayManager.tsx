@@ -7,7 +7,7 @@ import {
   Trees,
   CheckCircle2, MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon,
   Send, LoaderCircle, CheckCheck, Clock, Radio, AlertTriangle, AlertOctagon,
-  BarChart2, Maximize2, Minimize2
+  BarChart2, Maximize2, Minimize2, ArrowLeft
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { 
@@ -295,11 +295,317 @@ export function OverlayManager() {
         className="fixed inset-0 left-0 md:left-20 lg:left-64 z-30 bg-slate-900/40 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
         aria-label="Close overlay backdrop"
       />
-      <div className={`fixed top-0 right-0 bottom-12 sm:bottom-0 h-[calc(100vh-3rem)] sm:h-full ${
+      {/* DEDICATED FULL-SCREEN MOBILE VIEW FOR THERMO NEWS & ALERTS (< md) */}
+      {(overlay === "news" || overlay === "alerts") && (
+        <div className="fixed inset-0 z-50 bg-white text-slate-900 flex flex-col md:hidden overflow-y-auto animate-in fade-in">
+          {/* Top Sticky Header with Clear Back Button (Phase 3 Pattern) */}
+          <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-xs">
+            <button
+              type="button"
+              onClick={closeOverlay}
+              className="flex items-center gap-2 text-xs font-bold text-orange-600 hover:text-orange-700 transition cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Monitor Map</span>
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900 font-mono">
+                {overlay === "news" ? "Thermo News Bulletins" : `Operational Alerts (${notifications.length})`}
+              </span>
+              <button
+                type="button"
+                onClick={closeOverlay}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                title="Close View"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Full Screen Scrollable Content Body */}
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30 pb-16">
+            {overlay === "news" && (
+              <>
+                {/* News Filter Toolbar */}
+                <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
+                  <div className="flex flex-col gap-1.5 px-2.5 py-2 bg-orange-50/90 border border-orange-200 rounded-lg text-[10px] text-orange-900 font-medium shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+                        <span className="font-semibold text-slate-900">NASA FIRMS Telemetry:</span>
+                        <span className="text-orange-700 font-mono">
+                          {firmsStatus?.last_successful_firms_fetch_utc
+                            ? `Polled ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)} (${firmsStatus.records_inserted ?? 0} new)`
+                            : "Polled Just now (Active)"}
+                        </span>
+                      </div>
+                      <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
+                        30M CADENCE
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search news by district, state, or plant..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                    {[["ALL", `All (${news.length})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Elevated"], ["INDUSTRIAL", "Industrial"], ["AGRI", "Crop Burns"]].map(([val, label]) => (
+                      <button
+                        key={`mob-fs-n-${val}`}
+                        onClick={() => setFilterType(val)}
+                        className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
+                          filterType === val
+                            ? val === "CRITICAL" ? "bg-red-600 text-white"
+                            : val === "ABNORMAL" ? "bg-amber-600 text-white"
+                            : val === "INDUSTRIAL" ? "bg-blue-600 text-white"
+                            : val === "AGRI" ? "bg-yellow-600 text-white"
+                            : "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* News Bulletins List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+                  {loading ? (
+                    <div className="space-y-3 animate-pulse">
+                      {[1, 2, 3].map((i) => <div key={i} className="h-28 bg-white border border-slate-200 rounded-xl" />)}
+                    </div>
+                  ) : filteredNews.length === 0 ? (
+                    <div className="text-center text-slate-500 py-16 text-xs">
+                      <div className="p-3 bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                        <Filter className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <p className="font-semibold text-slate-700 mb-1">No matching bulletins</p>
+                      <p className="text-slate-400">Try adjusting filters or search.</p>
+                    </div>
+                  ) : (
+                    filteredNews.map((item) => {
+                      const isInd = item.is_industrial || (item.classification && item.classification.startsWith("IND_"));
+                      return (
+                        <div
+                          key={`mob-fs-news-${item.id}`}
+                          onClick={() => handleSelectEvent(item)}
+                          className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-orange-400/60 rounded-xl cursor-pointer transition shadow-sm space-y-2 group relative"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs truncate">
+                              <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                              <span className="truncate">{cleanLocationName(item.location_name, item.latitude, item.longitude)}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              {formatRelativeTime(item.published_at)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                              {isInd ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-semibold text-[10px]">
+                                  <Factory className="w-3 h-3" /> Industrial
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-[10px]">
+                                  <Sprout className="w-3 h-3" /> Non-Industrial
+                                </span>
+                              )}
+                              <span className="text-[10px] text-slate-500 font-mono">{item.classification}</span>
+                            </div>
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${tierBadge(item.anomaly_tier)}`}>
+                              {item.anomaly_tier}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-slate-600 leading-snug line-clamp-2">
+                            {item.headline || item.summary}
+                          </p>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-mono">
+                            <div className="flex items-center gap-1.5 text-slate-700 flex-wrap">
+                              <span className="text-orange-600 font-bold">{item.peak_frp_mw ? `${Number(item.peak_frp_mw).toFixed(1)} MW` : "N/A"}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectEvent(item);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[10px] font-bold transition shadow-sm"
+                            >
+                              <MapPin className="w-3.5 h-3.5 text-orange-600" />
+                              Show on Map
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+
+            {overlay === "alerts" && (
+              <>
+                {/* Alerts Filter Toolbar */}
+                <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
+                  <div className="flex items-center justify-between px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[10px] text-slate-700">
+                    <span className="font-semibold flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-amber-600" />
+                      Critical, Abnormal & Industrial Alarms Only
+                    </span>
+                    <span className="font-mono text-slate-500">Max 250 Recent</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search alerts..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
+                      />
+                    </div>
+                    {unreadAlertCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold transition shrink-0"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        Mark All Read
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                    {[["ALL", `All (${notifications.length})`], ["UNREAD", `Unread (${unreadAlertCount})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Abnormal"]].map(([val, label]) => (
+                      <button
+                        key={`mob-fs-a-${val}`}
+                        onClick={() => setFilterType(val)}
+                        className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
+                          filterType === val
+                            ? val === "CRITICAL" ? "bg-red-600 text-white font-semibold"
+                            : val === "UNREAD" ? "bg-orange-600 text-white font-semibold"
+                            : val === "ABNORMAL" ? "bg-amber-600 text-white font-semibold"
+                            : "bg-slate-900 text-white font-semibold"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Alerts List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+                  {loading ? (
+                    <div className="space-y-3 animate-pulse">
+                      {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white border border-slate-200 rounded-xl" />)}
+                    </div>
+                  ) : filteredAlerts.length === 0 ? (
+                    <div className="text-center text-slate-500 py-16 text-xs">
+                      <div className="p-3 bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <p className="font-semibold text-slate-700 mb-1">All alerts acknowledged</p>
+                      <p className="text-slate-400">No active unacknowledged operational alarms matching filters.</p>
+                    </div>
+                  ) : (
+                    filteredAlerts.map((item) => (
+                      <div
+                        key={`mob-fs-alt-${item.id}`}
+                        onClick={() => handleSelectEvent(item)}
+                        className={`p-4 rounded-xl border transition shadow-sm cursor-pointer relative space-y-2 ${
+                          item.is_read 
+                            ? "bg-white hover:bg-slate-50 border-slate-200" 
+                            : "bg-orange-50/40 hover:bg-orange-50/80 border-orange-200 ring-1 ring-orange-500/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {!item.is_read && (
+                              <span className="w-2 h-2 rounded-full bg-orange-600 animate-pulse" title="Unread Alarm" />
+                            )}
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${tierBadge(item.severity)}`}>
+                              {item.severity}
+                            </span>
+                            <span className="text-[11px] font-mono font-bold text-slate-800">{item.event_id}</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {formatRelativeTime(item.created_at)}
+                          </span>
+                        </div>
+
+                        <div className="text-xs font-bold text-slate-900 leading-snug flex items-center justify-between gap-2">
+                          <span>{cleanLocationName(item.title, item.latitude, item.longitude)}</span>
+                        </div>
+
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {item.message?.replace(/\[OUTSIDE_SOVEREIGN_BOUNDS\]/g, "")}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                          <div className="flex items-center gap-2 font-mono text-slate-600 flex-wrap">
+                            <span className="text-orange-600 font-bold">{Number(item.peak_frp_mw || 0).toFixed(1)} MW</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectEvent(item);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[10px] font-bold transition shadow-sm"
+                            >
+                              <MapPin className="w-3 h-3 text-orange-600" />
+                              Show on Map
+                            </button>
+                            {!item.is_read ? (
+                              <button
+                                onClick={(e) => handleMarkRead(item.id, e)}
+                                className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-semibold text-slate-700 transition"
+                              >
+                                Acknowledge
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Read
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop & Standard Side Panel Container */}
+      <div className={cn(
+        "fixed top-0 right-0 bottom-12 sm:bottom-0 h-[calc(100vh-3rem)] sm:h-full bg-white border-l border-slate-200 shadow-2xl z-40 flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right",
         isEnlarged 
           ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
-          : "w-full sm:w-[450px]"
-      } bg-white border-l border-slate-200 shadow-2xl z-40 flex flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right`}>
+          : "w-full sm:w-[450px]",
+        (overlay === "news" || overlay === "alerts") ? "hidden md:flex" : "flex"
+      )}>
 
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-slate-50 shrink-0">
