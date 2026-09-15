@@ -681,19 +681,27 @@ export function EventDetailPanel({
         right: hasOverlay ? 'clamp(0px, 450px, calc(100vw - 480px))' : '0px',
         maxWidth: hasOverlay ? 'calc(100vw - 450px - 276px)' : 'calc(100vw - 276px)'
       }}
-      className={`fixed ${
+      className={`fixed inset-x-0 sm:left-auto ${
         mobileSnap === "peek"
-          ? "bottom-0 top-auto h-auto max-h-[148px] sm:top-0 sm:bottom-auto sm:h-full sm:max-h-none"
-          : "bottom-0 top-14 sm:top-0 sm:bottom-auto h-[calc(100vh-3.5rem)] sm:h-full"
+          ? "bottom-0 top-auto h-auto max-h-[160px] sm:top-0 sm:bottom-auto sm:h-full sm:max-h-none"
+          : "bottom-0 top-12 sm:top-0 sm:bottom-auto h-[calc(100vh-3rem)] sm:h-full"
       } ${
         isExpanded 
           ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
           : 'w-full sm:w-[480px] md:w-[500px] max-w-[100vw] sm:max-w-[95vw]'
-      } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-t sm:border-t-0 border-slate-200 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-800`}
+      } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-t sm:border-t-0 border-slate-200 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-800 rounded-t-2xl sm:rounded-t-none`}
     >
+      {/* Mobile Touch Drag Grab Handle Bar */}
+      <div 
+        onClick={() => setMobileSnap(mobileSnap === "peek" ? "expanded" : "peek")}
+        className="flex sm:hidden items-center justify-center pt-2 pb-1 bg-white cursor-pointer select-none rounded-t-2xl border-b border-slate-100"
+      >
+        <div className="w-12 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 active:bg-orange-500 transition-colors" />
+      </div>
+
       {/* Sleek Light Header matching Site UI */}
-      <div className="py-2.5 sm:py-3 px-3.5 sm:px-5 border-b border-slate-200 shrink-0 bg-white text-slate-900 flex flex-col gap-1.5 sm:gap-2">
-        {/* Mobile drag handle & snap status */}
+      <div className="py-2 sm:py-3 px-3.5 sm:px-5 border-b border-slate-200 shrink-0 bg-white text-slate-900 flex flex-col gap-1.5 sm:gap-2">
+        {/* Mobile Snap Status Indicator */}
         <div className="flex sm:hidden items-center justify-between pb-0.5">
           <button
             type="button"
@@ -703,12 +711,6 @@ export function EventDetailPanel({
             <Compass className="w-3 h-3 text-cyan-600" />
             <span>{mobileSnap === "peek" ? "Peek Mode (Tap to Expand)" : "Dossier Expanded (Tap to View Map)"}</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setMobileSnap(mobileSnap === "peek" ? "expanded" : "peek")}
-            className="w-10 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition"
-            aria-label="Toggle mobile drawer height"
-          />
         </div>
         <div className="flex items-start justify-between gap-3 min-w-0">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
