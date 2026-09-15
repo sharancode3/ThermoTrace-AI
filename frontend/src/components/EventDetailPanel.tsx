@@ -9,7 +9,8 @@ import {
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
   Layers, Compass, Info, Copy, Check, Eye, ExternalLink,
-  Wind, Gauge, Droplets, Thermometer, Navigation as NavigationIcon
+  Wind, Gauge, Droplets, Thermometer, Navigation as NavigationIcon,
+  ArrowLeft, ChevronDown, ChevronUp
 } from "lucide-react";
 import { fetchEventHistory, fetchEventIntelligence, WindData } from "@/lib/apiClient";
 import { DetectionFootprintCard } from "./DetectionFootprintCard";
@@ -476,6 +477,7 @@ export function EventDetailPanel({
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobileSnap, setMobileSnap] = useState<"peek" | "expanded">("expanded");
+  const [isMobileReadMoreOpen, setIsMobileReadMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -676,21 +678,198 @@ export function EventDetailPanel({
     `https://worldview.earthdata.nasa.gov/?v=${((data?.longitude || 85)-0.2).toFixed(3)},${((data?.latitude || 22)-0.2).toFixed(3)},${((data?.longitude || 85)+0.2).toFixed(3)},${((data?.latitude || 22)+0.2).toFixed(3)}`;
 
   return (
-    <div 
-      style={{
-        right: hasOverlay ? 'clamp(0px, 450px, calc(100vw - 480px))' : '0px',
-        maxWidth: hasOverlay ? 'calc(100vw - 450px - 276px)' : 'calc(100vw - 276px)'
-      }}
-      className={`fixed inset-x-0 sm:left-auto ${
-        mobileSnap === "peek"
-          ? "bottom-0 top-auto h-auto max-h-[160px] sm:top-0 sm:bottom-auto sm:h-full sm:max-h-none"
-          : "bottom-0 top-12 sm:top-0 sm:bottom-auto h-[calc(100vh-3rem)] sm:h-full"
-      } ${
-        isExpanded 
-          ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
-          : 'w-full sm:w-[480px] md:w-[500px] max-w-[100vw] sm:max-w-[95vw]'
-      } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-t sm:border-t-0 border-slate-200 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-800 rounded-t-2xl sm:rounded-t-none`}
-    >
+    <>
+      {/* DEDICATED FULL-SCREEN MOBILE EVENT VIEW (< sm) */}
+      <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col sm:hidden overflow-y-auto animate-in fade-in">
+        {/* Top Sticky Header with Clear Back Button */}
+        <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-md px-4 py-3 border-b border-slate-800 flex items-center justify-between shadow-lg">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-2 text-xs font-bold text-orange-400 hover:text-orange-300 transition cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Radar Map</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+              {data?.event_id || eventId}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Main Scrollable Content */}
+        <div className="p-4 space-y-4 pb-20">
+          {/* ESSENTIAL INFO FIRST (Top Priority) */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className={`p-2 rounded-xl border ${sourceBadgeStyle} shrink-0`}>
+                  <SourceIcon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-bold text-white leading-snug truncate">
+                    {data?.district ? `${data.district}, ` : ""}{data?.state || "Sovereign Territory"}
+                  </h2>
+                  <p className="text-xs text-slate-400 font-medium">{sourceCategory}</p>
+                </div>
+              </div>
+
+              {/* Threat Score */}
+              {(() => {
+                const threatScore = Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)));
+                return (
+                  <div className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-xl border shrink-0 min-w-[60px] ${
+                    isCritical ? "bg-red-950/80 border-red-700 text-red-300" : isAbnormal ? "bg-orange-950/80 border-orange-700 text-orange-300" : "bg-emerald-950/80 border-emerald-700 text-emerald-300"
+                  }`}>
+                    <span className="font-mono text-xl font-black">{threatScore}</span>
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Threat</span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Grid Essentials */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800">
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Radiative Power</p>
+                <p className="font-mono text-sm font-bold text-orange-400 mt-0.5">
+                  {data?.peak_frp_mw?.toFixed(1) || "18.0"} MW
+                </p>
+              </div>
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Satellite Sensor</p>
+                <p className="font-mono text-xs font-semibold text-slate-200 mt-0.5 truncate">
+                  {data?.satellite_sensor || "SNPP VIIRS"}
+                </p>
+              </div>
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Coordinates</p>
+                <p className="font-mono text-xs text-slate-200 font-bold mt-0.5">
+                  {data?.latitude?.toFixed(4)}°, {data?.longitude?.toFixed(4)}°
+                </p>
+              </div>
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Detection</p>
+                <p className="font-mono text-xs text-emerald-400 font-bold mt-0.5">
+                  {formatRelativeTime(data?.acquired_at)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ALWAYS VISIBLE ACTION BUTTONS (DOWNLOAD PDF & ASK CHAT) */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadReport}
+              disabled={isExportingPDF}
+              className="flex items-center justify-center gap-2 py-3 px-3 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-orange-900/40 transition active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <span>{isExportingPDF ? "Exporting..." : "Download Report"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleAskAboutEvent}
+              className="flex items-center justify-center gap-2 py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+            >
+              <Flame className="w-4 h-4 text-orange-400" />
+              <span>Ask AI Chat</span>
+            </button>
+          </div>
+
+          {/* LIVE SATELLITE INSPECTION LINKS */}
+          <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live 10m Optical Satellite Imagery</p>
+            <div className="flex gap-2 text-xs">
+              <a href={googleSatUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 px-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 font-semibold flex items-center justify-center gap-1 text-[11px] border border-slate-700">
+                Google Satellite <ExternalLink className="w-3 h-3 text-orange-400" />
+              </a>
+              <a href={copernicusUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 px-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 font-semibold flex items-center justify-center gap-1 text-[11px] border border-slate-700">
+                Copernicus <ExternalLink className="w-3 h-3 text-orange-400" />
+              </a>
+            </div>
+          </div>
+
+          {/* EXPANDABLE "READ MORE / DEEP INTELLIGENCE" ACCORDION */}
+          <div className="border border-slate-800 rounded-2xl bg-slate-900/80 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileReadMoreOpen((prev) => !prev)}
+              className="w-full py-3 px-4 flex items-center justify-between bg-slate-800/80 text-xs font-bold text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-orange-400" />
+                <span>Read More: 14-D Feature Vector & Baseline Curve</span>
+              </span>
+              {isMobileReadMoreOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-orange-400" />}
+            </button>
+
+            {isMobileReadMoreOpen && (
+              <div className="p-4 space-y-4 border-t border-slate-800 text-xs text-slate-300 animate-in fade-in">
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1 font-mono text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Gaussian Z-Score:</span>
+                    <span className="font-bold text-orange-400">+{data?.anomaly_z_score?.toFixed(1) || "0.0"}σ</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Robust MAD Z-Score:</span>
+                    <span className="font-bold text-amber-400">+{data?.contributing_factors?.robust_mad_z_score?.toFixed(1) || "0.0"}σ</span>
+                  </div>
+                </div>
+
+                {/* Thermal Trend Chart */}
+                <ThermalTrendCard history={history} fallbackTrend={data?.thermal_trend} />
+
+                {/* 14-D Multimodal Feature Vector */}
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">14-D Multimodal Features</h4>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Brightness Temp</span>
+                      <span className="font-bold text-slate-200">{data?.max_brightness_k?.toFixed(1) || "312.5"} K</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Cropland Cover</span>
+                      <span className="font-bold text-slate-200">{((data?.pct_cropland || 0) * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Forest Canopy</span>
+                      <span className="font-bold text-slate-200">{((data?.pct_forest || 0) * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Facility Distance</span>
+                      <span className="font-bold text-slate-200">{data?.dist_to_facility ? `${(data.dist_to_facility / 1000).toFixed(1)} km` : "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* DESKTOP EVENT SIDEBAR PANEL (>= sm) */}
+      <div 
+        style={{
+          right: hasOverlay ? 'clamp(0px, 450px, calc(100vw - 480px))' : '0px',
+          maxWidth: hasOverlay ? 'calc(100vw - 450px - 276px)' : 'calc(100vw - 276px)'
+        }}
+        className={`hidden sm:flex fixed top-0 right-0 bottom-0 h-full ${
+          isExpanded 
+            ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
+            : 'w-full sm:w-[480px] md:w-[500px] max-w-[100vw] sm:max-w-[95vw]'
+        } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-slate-200 shadow-2xl flex-col transition-all duration-300 ease-in-out text-slate-800`}
+      >
       {/* Mobile Touch Drag Grab Handle Bar */}
       <div 
         onClick={() => setMobileSnap(mobileSnap === "peek" ? "expanded" : "peek")}
@@ -1823,5 +2002,6 @@ export function EventDetailPanel({
         </button>
       </div>
     </div>
-  );
+  </>
+);
 }
