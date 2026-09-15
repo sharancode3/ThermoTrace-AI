@@ -680,25 +680,25 @@ export function EventDetailPanel({
   return (
     <>
       {/* DEDICATED FULL-SCREEN MOBILE EVENT VIEW (< sm) */}
-      <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col sm:hidden overflow-y-auto animate-in fade-in">
-        {/* Top Sticky Header with Clear Back Button */}
-        <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-md px-4 py-3 border-b border-slate-800 flex items-center justify-between shadow-lg">
+      <div className="fixed inset-x-0 bottom-0 top-14 z-50 bg-slate-950 text-white flex flex-col sm:hidden overflow-y-auto animate-in fade-in">
+        {/* Top Sticky Header with Prominent Back Button */}
+        <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md px-4 py-3 border-b border-slate-800 flex items-center justify-between shadow-lg">
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 px-3.5 py-2 rounded-xl border border-slate-700 transition cursor-pointer active:scale-95 shadow-sm group"
+            className="flex items-center gap-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 px-3.5 py-2 rounded-xl border border-orange-500 transition cursor-pointer active:scale-95 shadow-md group"
           >
-            <ArrowLeft className="w-4 h-4 text-orange-400 group-hover:-translate-x-0.5 transition-transform" />
+            <ArrowLeft className="w-4 h-4 text-white group-hover:-translate-x-0.5 transition-transform" />
             <span>Back to Monitor</span>
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+            <span className="font-mono text-[10px] text-slate-300 font-bold bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
               {data?.event_id || eventId}
             </span>
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -850,6 +850,17 @@ export function EventDetailPanel({
                       <span className="text-slate-500 block text-[9px]">Facility Distance</span>
                       <span className="font-bold text-slate-200">{data?.dist_to_facility ? `${(data.dist_to_facility / 1000).toFixed(1)} km` : "N/A"}</span>
                     </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm group"
+                    >
+                      <ArrowLeft className="w-4 h-4 text-orange-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span>Back to Interactive Monitor Map</span>
+                    </button>
                   </div>
                 </div>
               </div>
