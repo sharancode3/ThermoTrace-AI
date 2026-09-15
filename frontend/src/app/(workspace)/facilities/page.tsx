@@ -282,7 +282,7 @@ export default function FacilitiesPage() {
             </div>
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
-              /* GRID VIEW - Uneven Organic Mesh Flame Cards (Matching User Spec Image) */
+              /* GRID VIEW - Icon-Free Uneven Organic Mesh Cards */
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {data.items.map((facility) => (
                   <div
@@ -295,7 +295,7 @@ export default function FacilitiesPage() {
                     <div className="absolute top-1/4 -left-12 h-32 w-32 rounded-full bg-orange-700/60 blur-2xl pointer-events-none" />
                     <div className="absolute -bottom-10 right-4 h-28 w-28 rounded-full bg-amber-300/50 blur-xl pointer-events-none" />
 
-                    <div className="relative z-10">
+                    <div className="relative z-10 space-y-3">
                       {/* Top Header Row: Code & Category Tag */}
                       <div className="flex items-center justify-between">
                         <span className="rounded-full bg-black/25 backdrop-blur-md px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-white/95 border border-white/20 shadow-xs">
@@ -306,15 +306,8 @@ export default function FacilitiesPage() {
                         </span>
                       </div>
 
-                      {/* Center Star Sparkle Icon (as in image) */}
-                      <div className="my-2.5 flex justify-center">
-                        <div className="rounded-2xl bg-white/20 p-2.5 backdrop-blur-md border border-white/30 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                          <Sparkles className="h-7 w-7 text-amber-100 fill-amber-100/50" />
-                        </div>
-                      </div>
-
                       {/* Main Hero Title & Subtype */}
-                      <div className="text-center px-1">
+                      <div>
                         <h3 className="text-base font-extrabold text-white tracking-tight leading-snug line-clamp-1" title={facility.name}>
                           {facility.name}
                         </h3>
@@ -324,7 +317,7 @@ export default function FacilitiesPage() {
                       </div>
 
                       {/* Key-Value Stat Rows */}
-                      <div className="mt-3.5 space-y-1.5 text-xs border-t border-white/20 pt-3">
+                      <div className="space-y-1.5 text-xs border-t border-white/20 pt-2.5">
                         <div className="flex justify-between items-center text-white/85">
                           <span>Location:</span>
                           <span className="font-semibold text-white truncate max-w-[130px]">
@@ -348,25 +341,19 @@ export default function FacilitiesPage() {
                       </div>
                     </div>
 
-                    {/* Bottom Translucent Glassmorphism Pill & Circular Action Button */}
+                    {/* Bottom Translucent Glassmorphism Pill */}
                     <div className="relative z-10 mt-4 flex items-center justify-between rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1.5 border border-white/30 shadow-xs">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                      <div className="text-xs font-bold text-white">
                         {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                          <>
-                            <Flame className="h-3.5 w-3.5 text-amber-200 animate-pulse" />
-                            <span>+{facility.historical_event_count} Active Thermal</span>
-                          </>
+                          <span>+{facility.historical_event_count} Active Thermal Events</span>
                         ) : (
-                          <>
-                            <Zap className="h-3.5 w-3.5 text-amber-200" />
-                            <span>100% Baseline Active</span>
-                          </>
+                          <span>100% Baseline Monitored</span>
                         )}
                       </div>
 
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-orange-600 shadow-sm transition-transform duration-200 group-hover:scale-110">
-                        <ChevronRight className="h-3.5 w-3.5 stroke-[3]" />
-                      </div>
+                      <span className="text-xs font-extrabold text-white group-hover:translate-x-0.5 transition-transform">
+                        Inspect →
+                      </span>
                     </div>
                   </div>
                 ))}
