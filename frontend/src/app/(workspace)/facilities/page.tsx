@@ -92,6 +92,25 @@ export default function FacilitiesPage() {
         return <Building2 className="h-4 w-4 text-slate-600" />;
     }
   };
+  const getSectorGradient = (sector: string) => {
+    const s = sector.toLowerCase();
+    if (s.includes("refinery") || s.includes("petroleum")) {
+      return "from-amber-500 via-orange-600 to-rose-600";
+    }
+    if (s.includes("power") || s.includes("thermal")) {
+      return "from-blue-600 via-indigo-600 to-cyan-500";
+    }
+    if (s.includes("steel") || s.includes("iron")) {
+      return "from-slate-900 via-slate-800 to-indigo-950";
+    }
+    if (s.includes("mining") || s.includes("coal")) {
+      return "from-amber-800 via-orange-900 to-slate-900";
+    }
+    if (s.includes("petrochemical") || s.includes("chemical") || s.includes("lng")) {
+      return "from-indigo-600 via-purple-600 to-pink-600";
+    }
+    return "from-orange-600 via-rose-600 to-indigo-700";
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
@@ -279,88 +298,104 @@ export default function FacilitiesPage() {
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
               /* GRID VIEW */
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {data.items.map((facility) => (
                   <div
                     key={facility.id}
                     onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-pointer"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-orange-300 cursor-pointer"
                   >
-                    <div>
-                      {/* Top Badges */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700">
+                    {/* Modern Gradient Banner Header */}
+                    <div className={`relative h-28 w-full bg-gradient-to-br ${getSectorGradient(facility.sector_category)} p-4 flex flex-col justify-between text-white overflow-hidden shrink-0`}>
+                      {/* Decorative Ambient Radial Glow */}
+                      <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10 blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
+                      <div className="absolute -left-6 -bottom-6 h-20 w-20 rounded-full bg-black/15 blur-lg pointer-events-none" />
+
+                      {/* Top Badges (Facility Code & Active Status) */}
+                      <div className="relative z-10 flex items-center justify-between gap-2">
+                        <span className="rounded-full bg-black/30 backdrop-blur-md px-2.5 py-0.5 font-mono text-[11px] font-bold text-white border border-white/20 shadow-xs">
                           {facility.facility_code}
                         </span>
+
                         <div className="flex items-center gap-1.5">
                           {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                            <span className="flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                              <Flame className="h-3 w-3 text-rose-600 animate-pulse" />
+                            <span className="flex items-center gap-1 rounded-full bg-rose-950/70 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-rose-200 border border-rose-400/40 shadow-xs">
+                              <Flame className="h-3 w-3 text-rose-300 animate-pulse" />
                               {facility.historical_event_count} Active
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                              <Activity className="h-3 w-3 text-slate-400" />
+                            <span className="flex items-center gap-1 rounded-full bg-black/25 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-semibold text-white/90 border border-white/20 shadow-xs">
+                              <Activity className="h-3 w-3 text-emerald-300" />
                               Monitored
                             </span>
                           )}
-                          <span className="flex items-center gap-1 rounded border border-blue-100 bg-blue-50/80 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-                            {getSectorIcon(facility.sector_category)}
-                            {facility.sector_category}
-                          </span>
                         </div>
                       </div>
 
-                      {/* Name & Subtype */}
-                      <h3 className="mt-3 text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        {facility.name}
-                      </h3>
-                      {facility.sub_type && (
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {facility.sub_type}
-                        </p>
-                      )}
-
-                      {/* Location & Operator */}
-                      <div className="mt-3 space-y-1 text-xs text-slate-600 border-t border-slate-100 pt-3">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                          <span>
-                            {facility.district ? `${facility.district}, ` : ""}
-                            <strong>{facility.state}</strong>
-                          </span>
-                        </div>
-                        <div className="text-slate-500">
-                          Operator:{" "}
-                          <span className="text-slate-800 font-medium">
-                            {facility.operator_name || "Independent"}
-                          </span>
-                        </div>
+                      {/* Sector Category Pill */}
+                      <div className="relative z-10 flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-xs font-extrabold text-white border border-white/30 shadow-sm">
+                          {getSectorIcon(facility.sector_category)}
+                          <span>{facility.sector_category}</span>
+                        </span>
+                        <span className="text-[10px] font-mono font-bold tracking-wider text-white/80 uppercase">
+                          CPCB REGISTRY
+                        </span>
                       </div>
                     </div>
 
-                    {/* Precomputed Baseline Footer (Allowed Exception) */}
-                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                      {facility.baseline_frp_mean !== null &&
-                      facility.baseline_frp_mean !== undefined ? (
-                        <div className="text-[11px] text-slate-500">
-                          Baseline:{" "}
-                          <strong className="text-slate-800 font-mono">
-                            {facility.baseline_frp_mean.toFixed(1)} MW
-                          </strong>{" "}
-                          <span className="text-slate-400">
-                            (±{facility.baseline_frp_std?.toFixed(1) || "15.0"} MW)
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-slate-400">
-                          Baseline: Pending observations
-                        </span>
-                      )}
+                    {/* Card Body Content */}
+                    <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                      <div>
+                        {/* Name & Subtype */}
+                        <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-orange-600 transition-colors">
+                          {facility.name}
+                        </h3>
+                        {facility.sub_type && (
+                          <p className="mt-1 text-xs font-medium text-slate-500">
+                            {facility.sub_type}
+                          </p>
+                        )}
 
-                      <span className="flex items-center text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">
-                        Inspect Intelligence <ChevronRight className="h-4 w-4 ml-0.5" />
-                      </span>
+                        {/* Meta Info: Location & Operator */}
+                        <div className="mt-3.5 space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                            <span className="truncate">
+                              {facility.district ? `${facility.district}, ` : ""}
+                              <strong className="text-slate-800">{facility.state}</strong>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-500">
+                            <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <span className="truncate">
+                              Operator: <strong className="text-slate-700 font-medium">{facility.operator_name || "Independent"}</strong>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Precomputed Baseline & Action CTA */}
+                      <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">90-Day Baseline</div>
+                          {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined ? (
+                            <div className="text-xs font-bold text-slate-900 font-mono">
+                              {facility.baseline_frp_mean.toFixed(1)} MW{" "}
+                              <span className="text-[10px] text-slate-400 font-normal">
+                                (±{facility.baseline_frp_std?.toFixed(1) || "15.0"})
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-400 italic">Pending</div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 text-xs font-bold text-orange-600 group-hover:translate-x-1 transition-transform">
+                          <span>Inspect</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
