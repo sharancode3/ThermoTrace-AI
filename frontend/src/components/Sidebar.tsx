@@ -84,25 +84,26 @@ export function Sidebar() {
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Sidebar Header with In-Flow Flexbox Toggle Button (Option A Structural Fix) */}
-      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0 justify-between px-3")}>
+      {/* Sidebar Header with Anchored Edge Toggle Handle */}
+      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0 relative", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
         <Link 
           href="/" 
           title="Return to ThermoTrace AI Landing Page" 
           className="flex items-center hover:opacity-90 transition-opacity cursor-pointer group min-w-0"
         >
-          <Flame className={cn("text-orange-600 group-hover:scale-105 transition-transform shrink-0", isCollapsed ? "w-6 h-6" : "w-7 h-7")} />
+          <Flame className="w-8 h-8 text-orange-600 group-hover:scale-105 transition-transform shrink-0" />
           {!isCollapsed && (
-            <span className="ml-2 font-bold text-base text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors truncate">
+            <span className="ml-3 font-bold text-lg text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors truncate">
               ThermoTrace AI
             </span>
           )}
         </Link>
 
+        {/* Expand/Collapse Edge Badge Handle */}
         <button
           onClick={toggleCollapse}
           title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
-          className="p-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white shadow-xs flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+          className="absolute top-4 -right-3.5 z-20 w-7 h-7 rounded-full bg-orange-600 hover:bg-orange-500 shadow-md flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
           type="button"
         >
           {isCollapsed ? (
