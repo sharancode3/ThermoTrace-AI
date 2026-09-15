@@ -21,6 +21,7 @@ export default function AnalyticsPage() {
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<"events" | "frp" | "name">("events");
   const [viewMode, setViewMode] = useState<"split" | "matrix">("split");
+  const [mobileStateLimit, setMobileStateLimit] = useState<number>(6);
 
   const loadData = (targetDate?: string) => {
     setLoading(true);
@@ -574,7 +575,7 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* LEFT PANE (4.5 cols): Master State Selector List */}
-            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col h-[700px]">
+            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col h-auto max-h-[480px] lg:max-h-none lg:h-[700px]">
               {/* Master Header & Filters */}
               <div className="space-y-3 mb-4 shrink-0">
                 <div className="flex items-center justify-between">
@@ -614,7 +615,7 @@ export default function AnalyticsPage() {
 
               {/* Scrollable Territory List */}
               <div className="space-y-2 overflow-y-auto pr-1 flex-1">
-                {filteredStates.map((st: any) => {
+                {filteredStates.slice(0, mobileStateLimit).map((st: any) => {
                   const isSelected = activeState?.state === st.state;
                   const topCat = st.classifications?.[0]?.category || "AGRI_BURN";
                   const theme = getCategoryTheme(topCat);
@@ -656,6 +657,17 @@ export default function AnalyticsPage() {
                     </button>
                   );
                 })}
+
+                {filteredStates.length > mobileStateLimit && (
+                  <div className="pt-2 text-center">
+                    <button
+                      onClick={() => setMobileStateLimit((prev) => prev + 6)}
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition border border-slate-200"
+                    >
+                      Show All Territories (+{filteredStates.length - mobileStateLimit} remaining)
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
