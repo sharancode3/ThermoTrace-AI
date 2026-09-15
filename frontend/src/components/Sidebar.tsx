@@ -80,26 +80,26 @@ export function Sidebar() {
   return (
     <aside 
       className={cn(
-        "hidden md:flex flex-col border-r border-slate-200 bg-white text-slate-600 z-50 shadow-sm relative shrink-0 transition-all duration-300 ease-in-out",
+        "hidden md:flex flex-col border-r border-slate-200 bg-white text-slate-600 z-30 shadow-sm relative shrink-0 transition-all duration-300 ease-in-out",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Vertically Centered Sidebar Collapse Toggle Arrow */}
+      {/* Top Header Toggle Arrow anchored to Nav Rail Edge */}
       <button
         onClick={toggleCollapse}
         title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
-        className="absolute top-1/2 -translate-y-1/2 -right-4 z-[60] w-8 h-8 rounded-full bg-orange-600 hover:bg-orange-500 shadow-md shadow-orange-600/30 flex items-center justify-center text-white dark:text-black transition-all hover:scale-110 active:scale-95 cursor-pointer"
+        className="absolute top-4 -right-3.5 z-20 w-7 h-7 rounded-full bg-orange-600 hover:bg-orange-500 shadow-sm flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
         type="button"
       >
         {isCollapsed ? (
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-4 h-4 text-white" />
         ) : (
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4 text-white" />
         )}
       </button>
 
       {/* Sidebar Header */}
-      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0", isCollapsed ? "justify-center px-2" : "justify-start px-4")}>
+      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0 relative", isCollapsed ? "justify-center px-2" : "justify-start px-4")}>
         <Link 
           href="/" 
           title="Return to ThermoTrace AI Landing Page" 
