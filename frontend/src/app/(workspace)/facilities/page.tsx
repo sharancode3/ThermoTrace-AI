@@ -305,7 +305,7 @@ export default function FacilitiesPage() {
                         linear-gradient(135deg, #fd945b 0%, #fdb47d 25%, #fdd9b8 52%, #fed29d 75%, #fcbe8a 100%)
                       `
                     }}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-[28px] p-4 text-[#2b180d] shadow-[0_15px_40px_rgba(250,147,87,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(250,147,87,0.35)] cursor-pointer border-0"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl p-4 text-[#2b180d] shadow-[0_12px_32px_rgba(250,147,87,0.18)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(250,147,87,0.30)] cursor-pointer border-0"
                   >
                     <div className="relative z-10 space-y-3">
                       {/* Top Slanted White Trapezoid Header Tabs (Matching User Image Spec) */}
@@ -362,8 +362,8 @@ export default function FacilitiesPage() {
                       </div>
                     </div>
 
-                    {/* Bottom Translucent Glassmorphism Pill */}
-                    <div className="relative z-10 mt-4 flex items-center justify-between rounded-full bg-white/70 backdrop-blur-md px-3.5 py-1.5 border border-white/50 shadow-xs">
+                    {/* Bottom Button with #fff8ee Background and Reduced Roundness */}
+                    <div className="relative z-10 mt-4 flex items-center justify-between rounded-lg bg-[#fff8ee] px-3.5 py-2 border border-white/60 shadow-xs">
                       <div className="text-xs font-extrabold text-[#2b180d]">
                         {facility.historical_event_count && facility.historical_event_count > 0 ? (
                           <span className="text-[#8c2b00] font-extrabold">+{facility.historical_event_count} Active Thermal Events</span>

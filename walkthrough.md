@@ -161,3 +161,16 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
 - **Live Localhost Status:**
   - Frontend: `http://localhost:3000/` (Landing Page) & `http://localhost:3000/monitor` (Thermal Radar)
   - Backend: `http://127.0.0.1:8000/api/v1/health` (HTTP 200 OK)
+
+---
+
+## 8. Facilities Card UI Refinement
+
+- **Font System**: Locked system-wide fonts to `Inter` (`--font-sans`) and `ui-monospace` (`--font-mono`).
+- **Facilities Card Styling**:
+  - Soft multi-radial peach/orange mesh gradient (`#fd945b`, `#fa9357`, `#fdd9b8`, `#fed29d`, `#fcbe8a`).
+  - Top white slanted trapezoid header tabs (`clipPath: polygon(...)`).
+  - Card corners set to `rounded-2xl`.
+  - Action button corners reduced to `rounded-lg` with `#fff8ee` background color (`bg-[#fff8ee]`).
+
+  
