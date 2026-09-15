@@ -298,14 +298,14 @@ export default function FacilitiesPage() {
                     onClick={() => setSelectedFacility(facility)}
                     style={{
                       background: `
-                        radial-gradient(circle at 5% 15%, #FBA325 0%, #FBB548 20%, transparent 50%),
-                        radial-gradient(circle at 20% 85%, #FBA325 0%, #FCC76B 22%, transparent 50%),
-                        radial-gradient(circle at 52% 42%, #FEECB8 0%, #FDD98E 40%, transparent 75%),
-                        radial-gradient(circle at 100% 30%, #FDD98E 0%, #FCC76B 45%, transparent 80%),
-                        linear-gradient(135deg, #FBA325 0%, #FBB548 25%, #FDD98E 55%, #FEECB8 80%, #FCC76B 100%)
+                        radial-gradient(circle at 5% 15%, #ffab7b 0%, #ffbe95 18%, transparent 45%),
+                        radial-gradient(circle at 20% 85%, #ffa575 0%, #ffca9d 20%, transparent 48%),
+                        radial-gradient(circle at 52% 42%, #ffe5cc 0%, #ffeedb 35%, transparent 70%),
+                        radial-gradient(circle at 100% 30%, #fee3c3 0%, #feebd2 40%, transparent 75%),
+                        linear-gradient(135deg, #ffab7b 0%, #ffc9a1 25%, #ffe5cc 52%, #fee3c3 75%, #fed9b3 100%)
                       `
                     }}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl p-4 text-[#2b180d] shadow-[0_12px_32px_rgba(251,163,37,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(251,163,37,0.35)] cursor-pointer border-0"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl p-4 text-[#2b180d] shadow-[0_12px_32px_rgba(250,147,87,0.14)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(250,147,87,0.25)] cursor-pointer border-0"
                   >
                     <div className="relative z-10 space-y-3">
                       {/* Top Slanted White Trapezoid Header Tabs (Matching User Image Spec) */}
