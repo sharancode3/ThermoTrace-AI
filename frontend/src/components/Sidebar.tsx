@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Flame, Building2, FileText, LayoutDashboard, Bell, 
-  Newspaper, BookOpen, BarChart2, PieChart, Radio, Sparkles, User,
-  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen
+  Newspaper, BookOpen, BarChart2, User, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchNotifications } from "@/lib/apiClient";
@@ -82,19 +81,19 @@ export function Sidebar() {
     <aside 
       className={cn(
         "hidden md:flex flex-col border-r border-slate-200 bg-white text-slate-600 z-50 shadow-sm relative shrink-0 transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-20" : "w-20 lg:w-64"
+        isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Sidebar Header & Collapse Toggle Button */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 shrink-0">
+      {/* Sidebar Header & Chevron Collapse Toggle Arrow */}
+      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
         <Link 
           href="/" 
           title="Return to ThermoTrace AI Landing Page" 
-          className="flex items-center justify-center lg:justify-start hover:opacity-90 transition-opacity cursor-pointer group"
+          className="flex items-center hover:opacity-90 transition-opacity cursor-pointer group min-w-0"
         >
           <Flame className="w-8 h-8 text-orange-600 group-hover:scale-105 transition-transform shrink-0" />
           {!isCollapsed && (
-            <span className="hidden lg:block ml-3 font-bold text-lg text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors truncate">
+            <span className="ml-3 font-bold text-lg text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors truncate">
               ThermoTrace AI
             </span>
           )}
@@ -102,153 +101,195 @@ export function Sidebar() {
         
         <button
           onClick={toggleCollapse}
-          title={isCollapsed ? "Expand Navigation Sidebar" : "Collapse Navigation Sidebar"}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+          type="button"
         >
           {isCollapsed ? (
-            <PanelLeftOpen className="w-5 h-5 text-slate-600" />
+            <ChevronRight className="w-5 h-5 text-slate-600" />
           ) : (
-            <PanelLeftClose className="w-5 h-5 text-slate-500 hidden lg:block" />
+            <ChevronLeft className="w-5 h-5 text-slate-600" />
           )}
         </button>
       </div>
       
-      <nav className="flex-1 py-3 flex flex-col gap-1 px-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+      <nav className="flex-1 py-3 flex flex-col gap-1 px-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         {!isCollapsed && (
-          <div className="text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider hidden lg:block px-3">
+          <div className="text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider px-3">
             Main
           </div>
         )}
         {NAV_ITEMS.map((item) => {
           const isActive = pathname?.startsWith(item.href);
           return (
-            <Link
-              key={item.label}
-              href={item.href}
-              title={isCollapsed ? item.label : undefined}
-              className={cn(
-                "flex items-center py-2 px-3 rounded-lg transition-colors group",
-                isCollapsed ? "justify-center" : "justify-start",
-                isActive 
-                  ? "bg-slate-100 text-orange-600 font-medium" 
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            <div key={item.label} className="relative group flex items-center">
+              <Link
+                href={item.href}
+                className={cn(
+                  "flex items-center py-2 px-3 rounded-lg transition-colors w-full group",
+                  isCollapsed ? "justify-center" : "justify-start",
+                  isActive 
+                    ? "bg-slate-100 text-orange-600 font-medium" 
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                )}
+              >
+                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+                {!isCollapsed && <span className="ml-3 truncate">{item.label}</span>}
+              </Link>
+
+              {/* Floating Hover Tooltip Preview in Collapsed State */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+                  {item.label}
+                </div>
               )}
-            >
-              <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
-              {!isCollapsed && <span className="hidden lg:block ml-3 truncate">{item.label}</span>}
-            </Link>
+            </div>
           );
         })}
 
         {!isCollapsed && (
-          <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider hidden lg:block px-3">
+          <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider px-3">
             Intelligence
           </div>
         )}
         
-        {/* Thermo News with NRT Live Reminder Indicator */}
-        <button 
-          onClick={() => toggleOverlay("news")}
-          className={cn(
-            "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
-            isCollapsed ? "justify-center" : "",
-            currentOverlay === "news" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        {/* Thermo News */}
+        <div className="relative group flex items-center">
+          <button 
+            onClick={() => toggleOverlay("news")}
+            className={cn(
+              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
+              isCollapsed ? "justify-center" : "",
+              currentOverlay === "news" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            )}
+            type="button"
+          >
+            <div className={cn("flex items-center", isCollapsed ? "justify-center" : "")}>
+              <Newspaper className={cn("w-5 h-5 shrink-0", currentOverlay === "news" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+              {!isCollapsed && <span className="ml-3 truncate">Thermo News</span>}
+            </div>
+            {!isCollapsed && (
+              <span className="flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-600 animate-ping" />
+                LIVE NRT
+              </span>
+            )}
+          </button>
+          {isCollapsed && (
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+              Thermo News
+            </div>
           )}
-          title="Live 24h NASA FIRMS Thermal News Feed"
-        >
-          <div className={cn("flex items-center", isCollapsed ? "justify-center" : "")}>
-            <Newspaper className={cn("w-5 h-5 shrink-0", currentOverlay === "news" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
-            {!isCollapsed && <span className="hidden lg:block ml-3 truncate">Thermo News</span>}
-          </div>
-          {!isCollapsed && (
-            <span className="hidden lg:flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-600 animate-ping" />
-              LIVE NRT
-            </span>
-          )}
-        </button>
+        </div>
 
-        {/* Operational Alerts with Unread Badge */}
-        <button 
-          onClick={() => toggleOverlay("alerts")}
-          className={cn(
-            "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
-            isCollapsed ? "justify-center" : "",
-            currentOverlay === "alerts" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        {/* Operational Alerts */}
+        <div className="relative group flex items-center">
+          <button 
+            onClick={() => toggleOverlay("alerts")}
+            className={cn(
+              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
+              isCollapsed ? "justify-center" : "",
+              currentOverlay === "alerts" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            )}
+            type="button"
+          >
+            <div className={cn("flex items-center", isCollapsed ? "justify-center" : "")}>
+              <Bell className={cn("w-5 h-5 shrink-0", currentOverlay === "alerts" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+              {!isCollapsed && <span className="ml-3 truncate">Alerts</span>}
+            </div>
+            {unreadAlerts > 0 && (
+              <span className={cn(
+                "flex items-center justify-center bg-red-600 text-white rounded-full text-[10px] font-bold shrink-0",
+                isCollapsed ? "absolute -top-0.5 -right-0.5 w-4 h-4 text-[9px]" : "px-1.5 py-0.2"
+              )}>
+                {unreadAlerts}
+              </span>
+            )}
+          </button>
+          {isCollapsed && (
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+              Alerts
+            </div>
           )}
-          title="Critical, Abnormal & Industrial Operational Alerts"
-        >
-          <div className={cn("flex items-center", isCollapsed ? "justify-center" : "")}>
-            <Bell className={cn("w-5 h-5 shrink-0", currentOverlay === "alerts" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
-            {!isCollapsed && <span className="hidden lg:block ml-3 truncate">Alerts</span>}
-          </div>
-          {unreadAlerts > 0 && (
-            <span className={cn(
-              "flex items-center justify-center bg-red-600 text-white rounded-full text-[10px] font-bold shrink-0",
-              isCollapsed ? "absolute -top-0.5 -right-0.5 w-4 h-4 text-[9px]" : "hidden lg:flex px-1.5 py-0.2"
-            )}>
-              {unreadAlerts}
-            </span>
-          )}
-        </button>
+        </div>
 
         {/* Chat Interface */}
-        <button 
-          onClick={() => toggleOverlay("chat")}
-          className={cn(
-            "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left", 
-            isCollapsed ? "justify-center" : "",
-            currentOverlay === "chat" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        <div className="relative group flex items-center">
+          <button 
+            onClick={() => toggleOverlay("chat")}
+            className={cn(
+              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left", 
+              isCollapsed ? "justify-center" : "",
+              currentOverlay === "chat" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            )}
+            type="button"
+          >
+            <FlamePlusIcon active={currentOverlay === "chat"} />
+            {!isCollapsed && <span className="ml-3 truncate">Chat Interface</span>}
+          </button>
+          {isCollapsed && (
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+              Chat Interface
+            </div>
           )}
-          title="Thermo AI Chat Assistant"
-        >
-          <FlamePlusIcon active={currentOverlay === "chat"} />
-          {!isCollapsed && <span className="hidden lg:block ml-3 truncate">Chat Interface</span>}
-        </button>
+        </div>
 
         {!isCollapsed && (
-          <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider hidden lg:block px-3">
+          <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider px-3">
             System & Guide
           </div>
         )}
 
-        {/* System Guide & Architecture Manual (Dedicated Full Page) */}
-        <Link
-          href="/guide"
-          title="Authoritative Engineering Architecture, Algorithms & System Guide"
-          className={cn(
-            "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left",
-            isCollapsed ? "justify-center" : "",
-            pathname === "/guide"
-              ? "bg-slate-100 text-orange-600 font-semibold"
-              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-          )}
-        >
-          <BookOpen className={cn("w-5 h-5 shrink-0", pathname === "/guide" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
-          {!isCollapsed && <span className="hidden lg:block ml-3 truncate">System Guide & Info</span>}
-        </Link>
-      </nav>
-      
-      <div className="p-4 border-t border-slate-200 text-center lg:text-left shrink-0">
-        <button 
-          onClick={() => toggleOverlay("settings")}
-          className={cn(
-            "flex items-center w-full p-2 rounded transition-colors justify-center", 
-            !isCollapsed ? "lg:justify-start" : "",
-            currentOverlay === "settings" ? "bg-slate-100" : "hover:bg-slate-50"
-          )}
-          title="User Profile & Settings"
-        >
-          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 border border-slate-200 shrink-0">
-            <User className="w-4 h-4 text-slate-600" />
-          </div>
-          {!isCollapsed && (
-            <div className="hidden lg:block ml-3 text-left truncate">
-              <div className="text-sm font-medium text-slate-900 truncate">User Profile</div>
-              <div className="text-xs text-slate-500 truncate">Settings</div>
+        {/* System Guide */}
+        <div className="relative group flex items-center">
+          <Link
+            href="/guide"
+            className={cn(
+              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left",
+              isCollapsed ? "justify-center" : "",
+              pathname === "/guide"
+                ? "bg-slate-100 text-orange-600 font-semibold"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            )}
+          >
+            <BookOpen className={cn("w-5 h-5 shrink-0", pathname === "/guide" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+            {!isCollapsed && <span className="ml-3 truncate">System Guide & Info</span>}
+          </Link>
+          {isCollapsed && (
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+              System Guide & Info
             </div>
           )}
-        </button>
+        </div>
+      </nav>
+      
+      <div className="p-2 border-t border-slate-200 text-center shrink-0">
+        <div className="relative group flex items-center">
+          <button 
+            onClick={() => toggleOverlay("settings")}
+            className={cn(
+              "flex items-center w-full p-2 rounded-lg transition-colors justify-center", 
+              !isCollapsed ? "justify-start" : "",
+              currentOverlay === "settings" ? "bg-slate-100" : "hover:bg-slate-50"
+            )}
+            type="button"
+          >
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 border border-slate-200 shrink-0">
+              <User className="w-4 h-4 text-slate-600" />
+            </div>
+            {!isCollapsed && (
+              <div className="ml-3 text-left truncate">
+                <div className="text-sm font-medium text-slate-900 truncate">User Profile</div>
+                <div className="text-xs text-slate-500 truncate">Settings</div>
+              </div>
+            )}
+          </button>
+          {isCollapsed && (
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+              User Settings
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );
