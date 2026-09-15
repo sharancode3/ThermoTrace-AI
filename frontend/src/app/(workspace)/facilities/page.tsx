@@ -299,7 +299,7 @@ export default function FacilitiesPage() {
                     style={{
                       background: `
                         radial-gradient(circle at 5% 15%, #fd945b 0%, #fda66b 18%, transparent 45%),
-                        radial-gradient(circle at 20% 85%, #fa9357 0%, #fdb477 20%, transparent 48%),
+                        radial-gradient(circle at 20% 85%, #fba325 0%, #fdb477 20%, transparent 48%),
                         radial-gradient(circle at 52% 42%, #fdd9b8 0%, #fdd3aa 35%, transparent 70%),
                         radial-gradient(circle at 100% 30%, #fed29d 0%, #fdc894 40%, transparent 75%),
                         linear-gradient(135deg, #fd945b 0%, #fdb47d 25%, #fdd9b8 52%, #fed29d 75%, #fcbe8a 100%)
