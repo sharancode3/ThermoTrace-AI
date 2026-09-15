@@ -282,57 +282,57 @@ export default function FacilitiesPage() {
             </div>
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
-              /* GRID VIEW - Icon-Free Uneven Organic Mesh Cards */
+              /* GRID VIEW - Full Opacity Dark Text with Soft Translucent Gradient Cards */
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {data.items.map((facility) => (
                   <div
                     key={facility.id}
                     onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400/50 via-orange-500/50 to-orange-600/50 backdrop-blur-md p-4 text-white shadow-xs opacity-75 hover:opacity-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:shadow-orange-500/20 cursor-pointer"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-amber-200/60 bg-gradient-to-br from-amber-100/70 via-orange-100/50 to-amber-200/60 backdrop-blur-md p-4 text-slate-900 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-orange-300 hover:shadow-md cursor-pointer"
                   >
                     {/* Soft Translucent Radial Light Flares */}
-                    <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-amber-200/40 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
-                    <div className="absolute top-1/4 -left-12 h-32 w-32 rounded-full bg-orange-700/35 blur-2xl pointer-events-none" />
-                    <div className="absolute -bottom-10 right-4 h-28 w-28 rounded-full bg-amber-300/30 blur-xl pointer-events-none" />
+                    <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-amber-200/50 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
+                    <div className="absolute top-1/4 -left-12 h-32 w-32 rounded-full bg-orange-300/40 blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-10 right-4 h-28 w-28 rounded-full bg-amber-300/40 blur-xl pointer-events-none" />
 
                     <div className="relative z-10 space-y-3">
                       {/* Top Header Row: Code & Category Tag */}
                       <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-black/25 backdrop-blur-md px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-white/95 border border-white/20 shadow-xs">
+                        <span className="rounded-full bg-white/90 backdrop-blur-md px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-amber-950 border border-amber-200/80 shadow-2xs opacity-100">
                           {facility.facility_code}
                         </span>
-                        <span className="rounded-full bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white border border-white/25 shadow-xs">
+                        <span className="rounded-full bg-white/90 backdrop-blur-md px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-900 border border-amber-200/80 shadow-2xs opacity-100">
                           {facility.sector_category}
                         </span>
                       </div>
 
-                      {/* Main Hero Title & Subtype */}
+                      {/* Main Hero Title & Subtype - Dark Slate & 100% Opacity */}
                       <div>
-                        <h3 className="text-base font-extrabold text-white tracking-tight leading-snug line-clamp-1" title={facility.name}>
+                        <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-orange-600 transition-colors line-clamp-1 opacity-100" title={facility.name}>
                           {facility.name}
                         </h3>
-                        <p className="mt-0.5 text-[10.5px] font-medium text-white/85 line-clamp-1">
+                        <p className="mt-0.5 text-[10.5px] font-medium text-slate-700 line-clamp-1 opacity-100">
                           {facility.sub_type || facility.operator_name || "Independent Facility"}
                         </p>
                       </div>
 
-                      {/* Key-Value Stat Rows */}
-                      <div className="space-y-1.5 text-xs border-t border-white/20 pt-2.5">
-                        <div className="flex justify-between items-center text-white/85">
+                      {/* Key-Value Stat Rows - Dark Slate & 100% Opacity */}
+                      <div className="space-y-1.5 text-xs border-t border-amber-200/60 pt-2.5">
+                        <div className="flex justify-between items-center text-slate-700 font-medium opacity-100">
                           <span>Location:</span>
-                          <span className="font-semibold text-white truncate max-w-[130px]">
+                          <span className="font-bold text-slate-900 truncate max-w-[130px] opacity-100">
                             {facility.district ? `${facility.district}, ` : ""}{facility.state}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-white/85">
+                        <div className="flex justify-between items-center text-slate-700 font-medium opacity-100">
                           <span>Operator:</span>
-                          <span className="font-semibold text-white truncate max-w-[130px]">
+                          <span className="font-bold text-slate-900 truncate max-w-[130px] opacity-100">
                             {facility.operator_name || "Independent"}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-white/85">
+                        <div className="flex justify-between items-center text-slate-700 font-medium opacity-100">
                           <span>90-Day Baseline:</span>
-                          <span className="font-bold text-white font-mono">
+                          <span className="font-bold text-slate-900 font-mono opacity-100">
                             {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined
                               ? `${facility.baseline_frp_mean.toFixed(1)} MW`
                               : "Active"}
@@ -341,17 +341,17 @@ export default function FacilitiesPage() {
                       </div>
                     </div>
 
-                    {/* Bottom Translucent Glassmorphism Pill */}
-                    <div className="relative z-10 mt-4 flex items-center justify-between rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1.5 border border-white/30 shadow-xs">
-                      <div className="text-xs font-bold text-white">
+                    {/* Bottom Translucent Glassmorphism Pill - Full Opacity Text */}
+                    <div className="relative z-10 mt-4 flex items-center justify-between rounded-full bg-white/80 backdrop-blur-md px-3.5 py-1.5 border border-amber-200/80 shadow-2xs opacity-100">
+                      <div className="text-xs font-bold text-slate-900 opacity-100">
                         {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                          <span>+{facility.historical_event_count} Active Thermal Events</span>
+                          <span className="text-orange-950 font-bold">+{facility.historical_event_count} Active Thermal Events</span>
                         ) : (
-                          <span>100% Baseline Monitored</span>
+                          <span className="text-slate-900 font-bold">100% Baseline Monitored</span>
                         )}
                       </div>
 
-                      <span className="text-xs font-extrabold text-white group-hover:translate-x-0.5 transition-transform">
+                      <span className="text-xs font-extrabold text-orange-600 group-hover:translate-x-0.5 transition-transform opacity-100">
                         Inspect →
                       </span>
                     </div>
