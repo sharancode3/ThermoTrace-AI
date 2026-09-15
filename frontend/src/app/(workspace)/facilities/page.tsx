@@ -288,12 +288,12 @@ export default function FacilitiesPage() {
                   <div
                     key={facility.id}
                     onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400/85 via-orange-500/85 to-orange-600/85 backdrop-blur-md p-4 text-white shadow-md shadow-orange-500/15 opacity-90 hover:opacity-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/30 cursor-pointer"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400/50 via-orange-500/50 to-orange-600/50 backdrop-blur-md p-4 text-white shadow-xs opacity-75 hover:opacity-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:shadow-orange-500/20 cursor-pointer"
                   >
-                    {/* Uneven Organic Radial Light Flares */}
-                    <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-amber-200/70 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
-                    <div className="absolute top-1/4 -left-12 h-32 w-32 rounded-full bg-orange-700/60 blur-2xl pointer-events-none" />
-                    <div className="absolute -bottom-10 right-4 h-28 w-28 rounded-full bg-amber-300/50 blur-xl pointer-events-none" />
+                    {/* Soft Translucent Radial Light Flares */}
+                    <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-amber-200/40 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
+                    <div className="absolute top-1/4 -left-12 h-32 w-32 rounded-full bg-orange-700/35 blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-10 right-4 h-28 w-28 rounded-full bg-amber-300/30 blur-xl pointer-events-none" />
 
                     <div className="relative z-10 space-y-3">
                       {/* Top Header Row: Code & Category Tag */}
