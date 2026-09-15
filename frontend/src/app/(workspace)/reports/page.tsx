@@ -171,8 +171,32 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mt-6">
+      {/* Mobile Compact KPI Banner (< md) */}
+      <div className="block md:hidden mt-4 bg-white border border-slate-200 rounded-2xl p-3 shadow-xs">
+        <div className="grid grid-cols-3 divide-x divide-slate-100 text-center">
+          <div className="px-1.5">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Generated</div>
+            <div className="text-xl font-black text-slate-900 mt-0.5">{reports.length}</div>
+            <div className="text-[9px] text-slate-400 mt-0.5 truncate">Total Dossiers</div>
+          </div>
+          <div className="px-1.5">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Critical</div>
+            <div className="text-xl font-black text-red-600 mt-0.5">{criticalCount}</div>
+            <div className="text-[9px] text-slate-400 mt-0.5 truncate">Priority Events</div>
+          </div>
+          <div className="px-1.5">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Integrity</div>
+            <div className="text-xl font-black text-emerald-600 flex items-center justify-center gap-1 mt-0.5">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>100%</span>
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5 truncate">SHA-256 Valid</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop KPI Cards (>= md) */}
+      <div className="hidden md:grid grid-cols-3 gap-5 mt-6">
         <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Generated Dossiers</div>
           <div className="text-2xl font-bold text-slate-900">{reports.length}</div>
@@ -195,7 +219,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Reports Container & Controls */}
-      <div className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="mt-4 md:mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         {/* Table/Card Search Toolbar */}
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
           <div className="relative flex-1 w-full">
