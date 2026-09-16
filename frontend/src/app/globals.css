@@ -8,18 +8,18 @@
   --sidebar-width: 16rem;
 
   /* Semantic Theme Tokens - Light Mode */
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #888888;
   --bg-surface: #ffffff;
-  --bg-muted: #f8fafc;
+  --bg-muted: #f2f2f2;
   --bg-subtle: #f1f5f9;
   --bg-card: #ffffff;
   --bg-hover: #f1f5f9;
-
-  --text-primary: #0f172a;    /* Contrast 15.6:1 against #ffffff */
-  --text-secondary: #334155;  /* Contrast 9.8:1 against #ffffff */
-  --text-muted: #64748b;      /* Contrast 4.6:1 against #ffffff */
-
-  --border-subtle: #e2e8f0;
+  --bg-card-hover: #ececec;
+  --border-subtle: #e0e0e0;
   --border-default: #cbd5e1;
+  --accent-blue: #2563eb;
 
   /* Accent Blue Theme Palette */
   --accent-blue-bg: #eff6ff;
@@ -41,23 +41,24 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+[data-theme="dark"],
 .dark {
   --background: #020617;
   --foreground: #f8fafc;
 
-  /* Semantic Theme Tokens - Dark Mode (WCAG AA Compliant) */
+  /* Semantic Theme Tokens - Dark Mode (WCAG AA Compliant & Matched to Dark Theme Palette) */
+  --text-primary: #f8fafc;    /* Slate-50 - Contrast 17.1:1 against #0f172a */
+  --text-secondary: #cbd5e1;  /* Slate-300 - Contrast 10.9:1 against #0f172a */
+  --text-muted: #94a3b8;      /* Slate-400 - Contrast 6.8:1 against #0f172a */
   --bg-surface: #0f172a;      /* Slate-900 */
   --bg-muted: #1e293b;        /* Slate-800 */
   --bg-subtle: #090d16;       /* Slate-950/deep */
   --bg-card: #0f172a;         /* Slate-900 */
   --bg-hover: #1e293b;        /* Slate-800 hover */
-
-  --text-primary: #f8fafc;    /* Slate-50 - Contrast 17.1:1 against #0f172a */
-  --text-secondary: #e2e8f0;  /* Slate-200 - Contrast 13.5:1 against #0f172a */
-  --text-muted: #cbd5e1;      /* Slate-300 - Contrast 10.9:1 against #0f172a */
-
+  --bg-card-hover: #262a33;   /* Distinct hover step between #0f172a and #1e293b */
   --border-subtle: #1e293b;
   --border-default: #334155;
+  --accent-blue: #3b82f6;
 
   /* Accent Blue Theme Palette - Dark Mode */
   --accent-blue-bg: #1e3a8a;      /* Blue-900 */
