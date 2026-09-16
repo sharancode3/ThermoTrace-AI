@@ -149,11 +149,14 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     if (!isActive || !currentStep) return;
 
     let isSubscribed = true;
-    setIsWaitingForElement(true);
-    setTargetRect(null);
+
+    // Determine if next step is on the same page/route as current pathname
+    const isSameRoute = !currentStep.route || pathname === currentStep.route;
 
     // 1. Navigation if step defines a route different from current pathname
     if (currentStep.route && pathname !== currentStep.route) {
+      setIsWaitingForElement(true);
+      setTargetRect(null);
       router.push(currentStep.route);
     }
 
@@ -166,24 +169,18 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 3. Poll/observe for element to mount in DOM and for route to match
+    // 3. Poll/observe for target element to mount in DOM and position rect
     let pollCount = 0;
     const maxPolls = 60; // 3 seconds max (50ms interval)
-    const pollInterval = setInterval(() => {
-      if (!isSubscribed) return;
-      pollCount++;
+
+    const tryPositionElement = () => {
+      if (!isSubscribed) return false;
 
       const routeMatched = !currentStep.route || pathname === currentStep.route;
       const isCenterPlacement = currentStep.placement === "center" || !currentStep.targetSelector;
       const targetEl = currentStep.targetSelector ? document.querySelector(currentStep.targetSelector) : null;
 
-      if ((routeMatched && (targetEl || isCenterPlacement)) || pollCount >= maxPolls) {
-        clearInterval(pollInterval);
-        
-        if (pollCount >= maxPolls && !targetEl && !isCenterPlacement) {
-          console.warn(`[Tour Engine] Target selector not found after 3s: ${currentStep.targetSelector}`);
-        }
-
+      if (routeMatched && (targetEl || isCenterPlacement)) {
         // Auto-scroll target element into view before measuring bounding rect
         if (targetEl && !isCenterPlacement) {
           try {
@@ -197,12 +194,42 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Wait 450ms for smooth scroll animation & reflow to complete before measuring position
-        setTimeout(() => {
-          if (!isSubscribed) return;
+        if (isSameRoute) {
+          // SAME PAGE: Immediate snappy calculation with 0 artificial wait
           updateTargetRect();
           setIsWaitingForElement(false);
-        }, 450);
+        } else {
+          // CROSS PAGE: Brief 250ms wait for layout reflow on newly mounted page
+          setTimeout(() => {
+            if (!isSubscribed) return;
+            updateTargetRect();
+            setIsWaitingForElement(false);
+          }, 250);
+        }
+
+        return true;
+      }
+      return false;
+    };
+
+    // Attempt immediate positioning for same-page steps
+    const immediateSuccess = tryPositionElement();
+    if (immediateSuccess && isSameRoute) {
+      return () => {
+        isSubscribed = false;
+      };
+    }
+
+    // Otherwise poll until element is available
+    const pollInterval = setInterval(() => {
+      if (!isSubscribed) return;
+      pollCount++;
+      const done = tryPositionElement();
+      if (done || pollCount >= maxPolls) {
+        clearInterval(pollInterval);
+        if (!done) {
+          setIsWaitingForElement(false);
+        }
       }
     }, 50);
 
@@ -224,7 +251,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setShowIntroModal(false);
     setCurrentStepIndex(0);
     setIsActive(true);
-    setIsWaitingForElement(true);
+    setIsWaitingForElement(false);
   }, []);
 
   const startTourAtStep = useCallback((index: number) => {
@@ -232,7 +259,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setShowIntroModal(false);
     setCurrentStepIndex(index);
     setIsActive(true);
-    setIsWaitingForElement(true);
+    setIsWaitingForElement(false);
   }, []);
 
   const retriggerTour = useCallback(() => {
@@ -245,36 +272,54 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const nextStep = useCallback(() => {
     if (currentStepIndex < TOUR_STEPS.length - 1) {
       const nextIdx = currentStepIndex + 1;
-      // If moving past step-take-action or step-facilities-directory, close demo panels
+      const currentStepObj = TOUR_STEPS[currentStepIndex];
+      const nextStepObj = TOUR_STEPS[nextIdx];
+
       if (
-        TOUR_STEPS[currentStepIndex]?.id === "step-take-action" ||
-        TOUR_STEPS[currentStepIndex]?.id === "step-facilities-directory"
+        currentStepObj?.id === "step-take-action" ||
+        currentStepObj?.id === "step-facilities-directory"
       ) {
         closeDemoPanels();
       }
-      setIsWaitingForElement(true);
-      setTargetRect(null);
+
+      const isSameRoute = !nextStepObj?.route || nextStepObj.route === (currentStepObj?.route || pathname);
+
+      if (!isSameRoute) {
+        setIsWaitingForElement(true);
+        setTargetRect(null);
+      }
+
       setCurrentStepIndex(nextIdx);
     } else {
       closeDemoPanels();
       setIsActive(false);
       markTourSeen();
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, pathname]);
 
   const prevStep = useCallback(() => {
     if (currentStepIndex > 0) {
+      const prevIdx = currentStepIndex - 1;
+      const currentStepObj = TOUR_STEPS[currentStepIndex];
+      const prevStepObj = TOUR_STEPS[prevIdx];
+
       if (
-        TOUR_STEPS[currentStepIndex]?.id === "step-facilities-directory" ||
-        TOUR_STEPS[currentStepIndex]?.id === "step-take-action"
+        currentStepObj?.id === "step-facilities-directory" ||
+        currentStepObj?.id === "step-take-action"
       ) {
         closeDemoPanels();
       }
-      setIsWaitingForElement(true);
-      setTargetRect(null);
-      setCurrentStepIndex((prev) => prev - 1);
+
+      const isSameRoute = !prevStepObj?.route || prevStepObj.route === (currentStepObj?.route || pathname);
+
+      if (!isSameRoute) {
+        setIsWaitingForElement(true);
+        setTargetRect(null);
+      }
+
+      setCurrentStepIndex(prevIdx);
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, pathname]);
 
   const exitTour = useCallback(() => {
     closeDemoPanels();
