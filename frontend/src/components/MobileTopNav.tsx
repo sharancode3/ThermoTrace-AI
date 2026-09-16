@@ -106,8 +106,8 @@ export function MobileTopNav() {
           <Flame className="w-6 h-6 text-orange-600 shrink-0" />
           <div className="flex items-center gap-1.5 truncate">
             <span className="font-bold text-sm text-slate-900 dark:text-slate-100 tracking-tight">ThermoTrace</span>
-            <span className="text-slate-400 dark:text-slate-600 font-normal text-xs">/</span>
-            <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 font-mono truncate">{pageTitle}</span>
+            <span className="text-slate-400 dark:text-slate-600 font-normal text-xs hidden sm:inline">/</span>
+            <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 font-mono truncate hidden sm:inline">{pageTitle}</span>
           </div>
         </Link>
 
@@ -117,7 +117,7 @@ export function MobileTopNav() {
             type="button"
             onClick={toggleTheme}
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="w-8.5 h-8.5 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
             aria-label="Toggle Theme"
           >
             {theme === "dark" ? (
@@ -130,16 +130,16 @@ export function MobileTopNav() {
           <button
             type="button"
             onClick={retriggerTour}
-            className="p-1.5 px-2.5 rounded-xl text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/60 transition-colors border border-orange-200 dark:border-orange-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
+            className="p-1.5 px-2 rounded-xl text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/60 transition-colors border border-orange-200 dark:border-orange-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
             title="Restart Guided Tour"
           >
-            <Sparkles className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-            <span>Tour</span>
+            <Sparkles className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+            <span className="hidden min-[380px]:inline">Tour</span>
           </button>
 
           <button
             onClick={() => setIsOpen((prev) => !prev)}
-            className="p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 shrink-0"
+            className="p-1.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 shrink-0"
             aria-label="Toggle mobile menu"
           >
             {isOpen ? <X className="w-5 h-5 text-slate-900 dark:text-slate-100" /> : <Menu className="w-5 h-5 text-slate-900 dark:text-slate-100" />}
