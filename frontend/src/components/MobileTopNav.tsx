@@ -95,9 +95,9 @@ export function MobileTopNav() {
   }, [pathname, currentOverlay]);
 
   return (
-    <div ref={menuRef} className="flex md:hidden flex-col w-full sticky top-0 z-[55] bg-white border-b border-slate-200 shadow-sm shrink-0">
+    <div ref={menuRef} className="flex md:hidden flex-col w-full sticky top-0 z-[55] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
       {/* Top Header Bar */}
-      <div className="h-14 px-4 flex items-center justify-between bg-white">
+      <div className="h-14 px-4 flex items-center justify-between bg-white dark:bg-slate-900">
         <Link 
           href="/" 
           onClick={() => setIsOpen(false)}
@@ -105,9 +105,9 @@ export function MobileTopNav() {
         >
           <Flame className="w-6 h-6 text-orange-600 shrink-0" />
           <div className="flex items-center gap-1.5 truncate">
-            <span className="font-bold text-sm text-slate-900 tracking-tight">ThermoTrace</span>
-            <span className="text-slate-300 font-normal text-xs">/</span>
-            <span className="text-xs font-semibold text-orange-600 font-mono truncate">{pageTitle}</span>
+            <span className="font-bold text-sm text-slate-900 dark:text-slate-100 tracking-tight">ThermoTrace</span>
+            <span className="text-slate-400 dark:text-slate-600 font-normal text-xs">/</span>
+            <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 font-mono truncate">{pageTitle}</span>
           </div>
         </Link>
 
@@ -116,19 +116,19 @@ export function MobileTopNav() {
           <button
             type="button"
             onClick={retriggerTour}
-            className="p-1.5 px-2.5 rounded-xl text-orange-600 hover:bg-orange-50 transition-colors border border-orange-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+            className="p-1.5 px-2.5 rounded-xl text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/60 transition-colors border border-orange-200 dark:border-orange-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
             title="Restart Guided Tour"
           >
-            <Sparkles className="w-4 h-4 text-orange-600" />
+            <Sparkles className="w-4 h-4 text-orange-600 dark:text-orange-400" />
             <span>Tour</span>
           </button>
 
           <button
             onClick={() => setIsOpen((prev) => !prev)}
-            className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors border border-slate-200 shrink-0"
+            className="p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 shrink-0"
             aria-label="Toggle mobile menu"
           >
-            {isOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5 text-slate-900" />}
+            {isOpen ? <X className="w-5 h-5 text-slate-900 dark:text-slate-100" /> : <Menu className="w-5 h-5 text-slate-900 dark:text-slate-100" />}
           </button>
         </div>
       </div>
@@ -142,9 +142,9 @@ export function MobileTopNav() {
             className="fixed inset-0 top-14 bg-slate-900/40 backdrop-blur-xs z-[54] animate-in fade-in"
           />
 
-          <div className="relative z-[55] bg-white border-t border-slate-100 shadow-xl overflow-hidden animate-in slide-in-from-top duration-200">
+          <div className="relative z-[55] bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden animate-in slide-in-from-top duration-200">
             <div className="p-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-1 pb-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 pt-1 pb-1">
                 Main Views
               </div>
 
@@ -157,20 +157,20 @@ export function MobileTopNav() {
                     className={cn(
                       "w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left",
                       isActive
-                        ? "bg-orange-50 text-orange-700 border border-orange-200 shadow-xs"
-                        : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                        ? "bg-orange-50 dark:bg-orange-950/70 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 shadow-xs"
+                        : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/90 hover:text-slate-900 dark:hover:text-white"
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <item.icon className={cn("w-5 h-5", isActive ? "text-orange-600" : "text-slate-500")} />
+                      <item.icon className={cn("w-5 h-5", isActive ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400")} />
                       <span>{item.label}</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                   </button>
                 );
               })}
 
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 pt-3 pb-1">
                 Live Intelligence & Overlays
               </div>
 
@@ -180,15 +180,15 @@ export function MobileTopNav() {
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left",
                   currentOverlay === "news"
-                    ? "bg-orange-50 text-orange-700 border border-orange-200 shadow-xs"
-                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-orange-50 dark:bg-orange-950/70 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 shadow-xs"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/90 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <Newspaper className={cn("w-5 h-5", currentOverlay === "news" ? "text-orange-600" : "text-slate-500")} />
+                  <Newspaper className={cn("w-5 h-5", currentOverlay === "news" ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400")} />
                   <span>Thermo News</span>
                 </div>
-                <span className="text-[10px] font-bold bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full border border-orange-200">
+                <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
                   LIVE NRT
                 </span>
               </button>
@@ -199,12 +199,12 @@ export function MobileTopNav() {
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left",
                   currentOverlay === "alerts"
-                    ? "bg-orange-50 text-orange-700 border border-orange-200 shadow-xs"
-                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-orange-50 dark:bg-orange-950/70 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 shadow-xs"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/90 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <Bell className={cn("w-5 h-5", currentOverlay === "alerts" ? "text-orange-600" : "text-slate-500")} />
+                  <Bell className={cn("w-5 h-5", currentOverlay === "alerts" ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400")} />
                   <span>Operational Alerts</span>
                 </div>
                 {unreadAlerts > 0 ? (
@@ -212,7 +212,7 @@ export function MobileTopNav() {
                     {unreadAlerts} Unread
                   </span>
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 )}
               </button>
 
@@ -222,21 +222,21 @@ export function MobileTopNav() {
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left",
                   currentOverlay === "chat"
-                    ? "bg-orange-50 text-orange-700 border border-orange-200 shadow-xs"
-                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-orange-50 dark:bg-orange-950/70 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 shadow-xs"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/90 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <Flame className={cn("w-5 h-5", currentOverlay === "chat" ? "text-orange-600" : "text-slate-500")} />
+                    <Flame className={cn("w-5 h-5", currentOverlay === "chat" ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400")} />
                     <span className="absolute -top-1 -right-1 flex items-center justify-center w-3 h-3 rounded-full bg-orange-600 text-white font-black text-[8px] leading-none ring-1 ring-white">+</span>
                   </div>
                   <span>Ask AI Chat Interface</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               </button>
 
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 pt-3 pb-1">
                 Appearance & Theme
               </div>
 
@@ -244,7 +244,7 @@ export function MobileTopNav() {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                className="w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   {theme === "dark" ? (
@@ -265,7 +265,7 @@ export function MobileTopNav() {
                 </div>
               </button>
 
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 pt-3 pb-1">
                 Guided Tour
               </div>
 
@@ -275,10 +275,10 @@ export function MobileTopNav() {
                   setIsOpen(false);
                   retriggerTour();
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl text-sm font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200/80 transition-all text-left cursor-pointer"
+                className="w-full flex items-center justify-between p-3 rounded-xl text-sm font-bold text-orange-700 dark:text-orange-300 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/60 dark:hover:bg-orange-900/80 border border-orange-200/80 dark:border-orange-800/80 transition-all text-left cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5 text-orange-600" />
+                  <Sparkles className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   <span>Restart Platform Tour</span>
                 </div>
                 <span className="text-[10px] font-bold bg-orange-600 text-white px-2 py-0.5 rounded-full">
