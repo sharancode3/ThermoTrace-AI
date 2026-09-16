@@ -987,7 +987,6 @@ export function EventDetailPanel({
             </div>
           </div>
         </div>
-      </div>
 
         {/* Fallback notice banner */}
         {isInsufficient && (

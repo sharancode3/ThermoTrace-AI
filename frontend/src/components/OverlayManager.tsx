@@ -1488,7 +1488,6 @@ export function OverlayManager() {
 
           </div>
         </div>
-      </>
       )}
 
       {/* THERMO NEWS OVERLAY (Strictly Time-Ordered, Past 24h) */}
