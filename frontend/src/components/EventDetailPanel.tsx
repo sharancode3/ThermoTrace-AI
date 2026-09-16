@@ -1020,18 +1020,18 @@ export function EventDetailPanel({
         )}
       </div>
 
-      {/* Navigation Tabs (Clean Light Styling with Hidden Scrollbar & Auto-Hiding Arrow Indicators) */}
+      {/* Navigation Tabs (Clean Light & Dark Styling with Hidden Scrollbar & Auto-Hiding Arrow Indicators) */}
       {!isExpanded && (
-        <div className="relative border-b border-slate-200 bg-slate-50 shrink-0">
+        <div className="relative border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
           {canScrollLeft && (
             <button
               type="button"
               onClick={() => tabsRef.current?.scrollBy({ left: -140, behavior: "smooth" })}
-              className="absolute left-0 top-0 bottom-0 z-10 px-1 bg-gradient-to-r from-slate-100 via-slate-100/90 to-transparent flex items-center justify-center text-slate-600 hover:text-orange-600 transition"
+              className="absolute left-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-r from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300 transition"
               title="Scroll left"
               aria-label="Scroll left"
             >
-              <ChevronLeft className="w-4 h-4 drop-shadow-xs" />
+              <ChevronLeft className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300" />
             </button>
           )}
 
@@ -1042,35 +1042,35 @@ export function EventDetailPanel({
           >
             <button 
               onClick={() => setActiveTab("overview")}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               Overview
             </button>
             <button 
               onClick={() => setActiveTab("telemetry")}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
             >
               <Activity className="w-3.5 h-3.5" />
               ML & 14-D Vector
             </button>
             <button 
               onClick={() => setActiveTab("baseline")}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
               Baseline Anomaly
             </button>
             <button 
               onClick={() => setActiveTab("geography")}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
             >
               <MapPin className="w-3.5 h-3.5" />
               Facility & Terrain
             </button>
             <button 
               onClick={() => setActiveTab("ai_brief")}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
             >
               <Cpu className="w-3.5 h-3.5" />
               Grounded Brief
@@ -1081,11 +1081,11 @@ export function EventDetailPanel({
             <button
               type="button"
               onClick={() => tabsRef.current?.scrollBy({ left: 140, behavior: "smooth" })}
-              className="absolute right-0 top-0 bottom-0 z-10 px-1 bg-gradient-to-l from-slate-100 via-slate-100/90 to-transparent flex items-center justify-center text-slate-600 hover:text-orange-600 transition"
+              className="absolute right-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-l from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300 transition"
               title="Scroll right"
               aria-label="Scroll right"
             >
-              <ChevronRight className="w-4 h-4 drop-shadow-xs" />
+              <ChevronRight className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300" />
             </button>
           )}
         </div>
