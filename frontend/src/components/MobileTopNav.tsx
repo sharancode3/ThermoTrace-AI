@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Flame, Building2, FileText, LayoutDashboard, Bell, 
-  Newspaper, BarChart2, Menu, X, ChevronRight, Sparkles, HelpCircle 
+  Newspaper, BarChart2, Menu, X, ChevronRight, Sparkles, HelpCircle, Sun, Moon 
 } from "lucide-react";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { fetchNotifications } from "@/lib/apiClient";
 import { useTour } from "@/components/tour/TourContext";
+import { useTheme } from "@/components/ThemeContext";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -24,6 +25,7 @@ export function MobileTopNav() {
   const searchParams = useSearchParams();
   const currentOverlay = searchParams.get("overlay");
   const { retriggerTour } = useTour();
+  const { theme, toggleTheme } = useTheme();
   
   const [isOpen, setIsOpen] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState<number>(0);
@@ -232,6 +234,35 @@ export function MobileTopNav() {
                   <span>Ask AI Chat Interface</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1">
+                Appearance & Theme
+              </div>
+
+              {/* Mobile Theme Toggle Item */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  {theme === "dark" ? (
+                    <Moon className="w-5 h-5 text-amber-400 shrink-0" />
+                  ) : (
+                    <Sun className="w-5 h-5 text-orange-500 shrink-0" />
+                  )}
+                  <span>Theme: {theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
+                </div>
+                <div className={cn(
+                  "w-9 h-5 rounded-full p-0.5 transition-colors relative flex items-center",
+                  theme === "dark" ? "bg-orange-600" : "bg-slate-300"
+                )}>
+                  <div className={cn(
+                    "w-4 h-4 rounded-full bg-white transition-transform duration-200 shadow-sm",
+                    theme === "dark" ? "translate-x-4" : "translate-x-0"
+                  )} />
+                </div>
               </button>
 
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1">

@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Flame, Building2, FileText, LayoutDashboard, Bell, 
-  Newspaper, BookOpen, BarChart2, User, ChevronLeft, ChevronRight, HelpCircle, Sparkles
+  Newspaper, BookOpen, BarChart2, User, ChevronLeft, ChevronRight, HelpCircle, Sparkles, Sun, Moon
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchNotifications } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
 import { useTour } from "@/components/tour/TourContext";
+import { useTheme } from "@/components/ThemeContext";
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Monitor", href: "/monitor" },
@@ -87,10 +88,12 @@ export function Sidebar() {
     router.push(`${pathname}${newQuery ? "?" + newQuery : ""}`);
   };
 
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <aside 
       className={cn(
-        "hidden md:flex flex-col border-r border-slate-200 bg-white text-slate-600 z-50 shadow-sm relative shrink-0 transition-all duration-300 ease-in-out",
+        "hidden md:flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 z-50 shadow-sm relative shrink-0 transition-all duration-300 ease-in-out",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -109,7 +112,7 @@ export function Sidebar() {
       </button>
 
       {/* Sidebar Header */}
-      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0", isCollapsed ? "justify-center px-2" : "justify-start px-4")}>
+      <div className={cn("h-16 flex items-center border-b border-slate-200 dark:border-slate-800 shrink-0", isCollapsed ? "justify-center px-2" : "justify-start px-4")}>
         <Link 
           href="/" 
           title="Return to ThermoTrace AI Landing Page" 
@@ -117,7 +120,7 @@ export function Sidebar() {
         >
           <Flame className="w-8 h-8 text-orange-600 group-hover:scale-105 transition-transform shrink-0" />
           {!isCollapsed && (
-            <span className="ml-3 font-bold text-lg text-slate-900 tracking-tight group-hover:text-orange-600 transition-colors truncate">
+            <span className="ml-3 font-bold text-lg text-slate-900 dark:text-white tracking-tight group-hover:text-orange-600 transition-colors truncate">
               ThermoTrace AI
             </span>
           )}
@@ -126,7 +129,7 @@ export function Sidebar() {
       
       <nav className="flex-1 py-3 flex flex-col gap-1 px-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         {!isCollapsed && (
-          <div className="text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider px-3">
+          <div className="text-xs font-semibold text-slate-400 dark:text-slate-400 mb-1.5 uppercase tracking-wider px-3">
             Main
           </div>
         )}
@@ -286,11 +289,11 @@ export function Sidebar() {
             onClick={retriggerTour}
             data-tour="take-tour-btn"
             className={cn(
-              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left bg-orange-50 hover:bg-orange-100 border border-orange-200/80 text-orange-700 font-bold cursor-pointer",
+              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/60 dark:hover:bg-orange-900/80 border border-orange-200/80 dark:border-orange-800/80 text-orange-700 dark:text-orange-300 font-bold cursor-pointer",
               isCollapsed ? "justify-center" : ""
             )}
           >
-            <Sparkles className="w-5 h-5 shrink-0 text-orange-600" />
+            <Sparkles className="w-5 h-5 shrink-0 text-orange-600 dark:text-orange-400" />
             {!isCollapsed && <span className="ml-3 truncate">Take a Tour</span>}
           </button>
           {isCollapsed && (
@@ -301,24 +304,69 @@ export function Sidebar() {
         </div>
       </nav>
       
-      <div className="p-2 border-t border-slate-200 text-center shrink-0">
+      {/* Sidebar Footer: Theme Toggle + User Profile */}
+      <div className="p-2 border-t border-slate-200 dark:border-slate-800 shrink-0 space-y-1">
+        {/* Theme Toggle Button */}
+        <div className="relative group flex items-center">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className={cn(
+              "flex items-center w-full p-2 rounded-lg transition-colors text-xs font-semibold cursor-pointer",
+              isCollapsed ? "justify-center" : "justify-between",
+              theme === "dark"
+                ? "bg-slate-800 text-amber-300 hover:bg-slate-750"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              {theme === "dark" ? (
+                <Moon className="w-4 h-4 text-amber-400 shrink-0" />
+              ) : (
+                <Sun className="w-4 h-4 text-orange-500 shrink-0" />
+              )}
+              {!isCollapsed && (
+                <span className="font-bold">{theme === "dark" ? "Dark Theme" : "Light Theme"}</span>
+              )}
+            </div>
+            {!isCollapsed && (
+              <div className={cn(
+                "w-8 h-4 rounded-full p-0.5 transition-colors relative flex items-center",
+                theme === "dark" ? "bg-orange-600" : "bg-slate-300"
+              )}>
+                <div className={cn(
+                  "w-3 h-3 rounded-full bg-white transition-transform duration-200 shadow-sm",
+                  theme === "dark" ? "translate-x-4" : "translate-x-0"
+                )} />
+              </div>
+            )}
+          </button>
+          {isCollapsed && (
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+              {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            </div>
+          )}
+        </div>
+
+        {/* User Profile Row */}
         <div className="relative group flex items-center">
           <button 
             onClick={() => toggleOverlay("settings")}
             className={cn(
               "flex items-center w-full p-2 rounded-lg transition-colors justify-center", 
               !isCollapsed ? "justify-start" : "",
-              currentOverlay === "settings" ? "bg-slate-100" : "hover:bg-slate-50"
+              currentOverlay === "settings" ? "bg-slate-100 dark:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
             )}
             type="button"
           >
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 border border-slate-200 shrink-0">
-              <User className="w-4 h-4 text-slate-600" />
+            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shrink-0">
+              <User className="w-4 h-4 text-slate-600 dark:text-slate-300" />
             </div>
             {!isCollapsed && (
               <div className="ml-3 text-left truncate">
-                <div className="text-sm font-medium text-slate-900 truncate">User Profile</div>
-                <div className="text-xs text-slate-500 truncate">Settings</div>
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">User Profile</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">Settings</div>
               </div>
             )}
           </button>
