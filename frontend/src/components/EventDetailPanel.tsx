@@ -883,77 +883,24 @@ export function EventDetailPanel({
             : 'w-full sm:w-[480px] md:w-[500px] max-w-[100vw] sm:max-w-[95vw]'
         } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-slate-200 shadow-2xl flex-col transition-all duration-300 ease-in-out text-slate-800`}
       >
-      {/* Sleek Light Header matching Site UI */}
-      <div className="py-2 sm:py-3 px-3.5 sm:px-5 border-b border-slate-200 shrink-0 bg-white text-slate-900 flex flex-col gap-1.5 sm:gap-2">
-        <div className="flex items-start justify-between gap-3 min-w-0">
-          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            {/* Thermal Severity Threat Score Badge with Clear '/100 Threat Score' Label */}
-            {(() => {
-              const threatScore = Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)));
-              return (
-                <div 
-                  className={`flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl border shrink-0 min-w-[62px] shadow-sm ${
-                    isCritical 
-                      ? "bg-red-50 border-red-200 text-red-700" 
-                      : isAbnormal 
-                      ? "bg-amber-50 border-amber-200 text-amber-700" 
-                      : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  }`}
-                  title={`Thermal Severity Score: ${threatScore} / 100 (Calculated from satellite Fire Radiative Power of ${data?.peak_frp_mw?.toFixed(1) || "18.0"} MW)`}
-                >
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="font-mono text-2xl font-black leading-none">{threatScore}</span>
-                    <span className="text-[10px] font-bold opacity-60">/100</span>
-                  </div>
-                  <span className="text-[8px] font-extrabold uppercase tracking-wider mt-0.5 leading-none opacity-80 whitespace-nowrap">
-                    Threat Score
-                  </span>
-                </div>
-              );
-            })()}
+      {/* Sleek Light/Dark Header matching Site UI */}
+      <div className="py-2.5 sm:py-3 px-3.5 sm:px-5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col gap-2">
+        {/* Top Navigation Control Bar */}
+        <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-orange-950/60 text-slate-700 dark:text-slate-200 hover:text-orange-600 dark:hover:text-orange-400 rounded-lg font-bold text-xs border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+            title="Close hotspot dossier and return to Monitor map"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+            <span>Back to Monitor</span>
+          </button>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-1.5">
-                  <Flame className={`w-4 h-4 ${isWildfire ? "text-teal-600" : isAgricultural ? "text-amber-600" : "text-orange-600"}`} />
-                  <span>{isIndustrial ? "Industrial Facility" : isAgricultural ? "Agricultural Burn" : isWildfire ? "Wildfire" : "Thermal Anomaly"}</span>
-                </span>
-                <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${
-                  isCritical ? "bg-red-50 text-red-700 border-red-200" :
-                  isAbnormal ? "bg-amber-50 text-amber-700 border-amber-200" :
-                  "bg-emerald-50 text-emerald-700 border-emerald-200"
-                }`}>
-                  {isCritical ? "CRITICAL" : isAbnormal ? "ELEVATED" : isWildfire ? "MEDIUM" : "ROUTINE"}
-                </span>
-              </div>
-
-              {/* Coordinate + Time Subtitle */}
-              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5 mt-0.5 truncate">
-                <span className="text-slate-700 font-semibold truncate">{data?.event_id || eventId}</span>
-                <span>·</span>
-                <span>{data?.latitude ? `${data.latitude.toFixed(4)}°N` : ""}{data?.longitude ? ` ${data.longitude.toFixed(4)}°E` : ""}</span>
-                <span>·</span>
-                <span>{data?.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Active"}</span>
-                <span>·</span>
-                <span className="text-emerald-600 font-semibold">active</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-600 rounded-xl font-bold text-xs border border-slate-200 hover:border-orange-200 transition shadow-2xs group cursor-pointer"
-              title="Close hotspot dossier and return to Monitor map"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform text-orange-600" />
-              <span>Back to Monitor</span>
-            </button>
-
+          <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={handleCopyId}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition"
               title="Copy Event ID"
               type="button"
             >
@@ -961,13 +908,13 @@ export function EventDetailPanel({
             </button>
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition shadow-2xs"
               title={isExpanded ? "Collapse to side panel" : "Expand to multi-column tactical command dossier"}
               type="button"
             >
               {isExpanded ? (
                 <>
-                  <Minimize2 className="w-3.5 h-3.5 text-slate-500" />
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                   <span className="hidden sm:inline">Collapse</span>
                 </>
               ) : (
@@ -979,14 +926,68 @@ export function EventDetailPanel({
             </button>
             <button 
               onClick={onClose}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition"
               title="Close Dossier"
               type="button"
             >
-              <X className="w-5 h-5 text-slate-600" />
+              <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             </button>
           </div>
         </div>
+
+        {/* Second Row: Threat Score & Incident Title */}
+        <div className="flex items-center gap-3 pt-0.5">
+          {/* Thermal Severity Threat Score Badge */}
+          {(() => {
+            const threatScore = Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)));
+            return (
+              <div 
+                className={`flex flex-col items-center justify-center px-2.5 py-1 rounded-xl border shrink-0 min-w-[60px] shadow-2xs ${
+                  isCritical 
+                    ? "bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300" 
+                    : isAbnormal 
+                    ? "bg-amber-50 dark:bg-amber-950/80 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300" 
+                    : "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
+                }`}
+                title={`Thermal Severity Score: ${threatScore} / 100`}
+              >
+                <div className="flex items-baseline gap-0.5">
+                  <span className="font-mono text-xl font-black leading-none">{threatScore}</span>
+                  <span className="text-[9px] font-bold opacity-60">/100</span>
+                </div>
+                <span className="text-[7.5px] font-extrabold uppercase tracking-wider mt-0.5 leading-none opacity-80 whitespace-nowrap">
+                  Threat Score
+                </span>
+              </div>
+            );
+          })()}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg flex items-center gap-1.5 truncate">
+                <Flame className={`w-4 h-4 ${isWildfire ? "text-teal-600" : isAgricultural ? "text-amber-600" : "text-orange-600"}`} />
+                <span className="truncate">{isIndustrial ? "Industrial Facility" : isAgricultural ? "Agricultural Burn" : isWildfire ? "Wildfire" : "Thermal Anomaly"}</span>
+              </span>
+              <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border shrink-0 ${
+                isCritical ? "bg-red-50 dark:bg-red-950/80 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800" :
+                isAbnormal ? "bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800" :
+                "bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+              }`}>
+                {isCritical ? "CRITICAL" : isAbnormal ? "ELEVATED" : isWildfire ? "MEDIUM" : "ROUTINE"}
+              </span>
+            </div>
+
+            {/* Coordinate + Time Subtitle */}
+            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
+              <span className="text-slate-700 dark:text-slate-300 font-semibold truncate">{data?.event_id || eventId}</span>
+              <span>·</span>
+              <span>{data?.latitude ? `${data.latitude.toFixed(4)}°N` : ""}{data?.longitude ? ` ${data.longitude.toFixed(4)}°E` : ""}</span>
+              <span>·</span>
+              <span>{data?.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Active"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
         {/* Fallback notice banner */}
         {isInsufficient && (
