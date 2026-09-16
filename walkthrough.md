@@ -282,6 +282,13 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
     - **Consolidated 3 Steps into 1**: Single step (`step-facilities-directory`) with Title *"Facility Directory"* and Description *"Browse and search registered facilities. Click any facility to view its detailed profile."*.
     - **Clean Teardown**: Moving past or exiting this step cleanly invokes `closeDemoPanels()`, resetting drawer open state.
 
+23. **Guided Tour System — Tour v2 Phase 6 (`ui: tour v2 - consolidated reports steps`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/reports/page.tsx):
+    - **Removed Duplicate Intro**: Single clean intro step retained for the Reports section.
+    - **Removed Standalone Search Step**: Eliminated search bar highlight step (`step-reports-search`).
+    - **Preserved Custom Dossier Generation**: Kept `step-reports-generate` targeting `[data-tour="reports-generate-btn"]`.
+    - **Merged Record & Download Steps**: Replaced separate record and download steps with merged step `step-reports-downloads` targeting `[data-tour="reports-table-row-first"]`.
+    - **Updated Crisp Copy**: Title *"Reports & Downloads"*, Description *"Browse generated reports and download any of them as a PDF."*.
+
 ---
 
 ## 9. Final System Verification Status
