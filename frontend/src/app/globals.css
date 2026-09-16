@@ -5,6 +5,13 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --background: #ffffff;
   --foreground: #0f172a;
+  --sidebar-width: 16rem;
+}
+
+@media (min-width: 768px) {
+  .sidebar-blur-backdrop {
+    left: var(--sidebar-width, 16rem) !important;
+  }
 }
 
 @theme {

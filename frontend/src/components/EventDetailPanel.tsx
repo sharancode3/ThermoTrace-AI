@@ -872,6 +872,7 @@ export function EventDetailPanel({
 
       {/* DESKTOP EVENT SIDEBAR PANEL (>= sm) */}
       <div 
+        data-tour="event-detail-drawer"
         style={{
           right: hasOverlay ? 'clamp(0px, 450px, calc(100vw - 480px))' : '0px',
           maxWidth: hasOverlay ? 'calc(100vw - 450px - 276px)' : 'calc(100vw - 276px)'
@@ -1974,6 +1975,7 @@ export function EventDetailPanel({
           <button 
             onClick={handleAskAboutEvent}
             disabled={!data}
+            data-tour="ask-ai-button"
             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
             title="Ask AI Tactical Intelligence about this event"
           >
@@ -1983,6 +1985,7 @@ export function EventDetailPanel({
           <button 
             onClick={handleDownloadReport}
             disabled={!data || isExportingPDF}
+            data-tour="download-report-button"
             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
             title="Download authoritative immutable PDF Dossier"
           >

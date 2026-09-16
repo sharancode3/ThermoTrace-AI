@@ -224,15 +224,45 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
     - **Keyboard & Viewport Safe Area Handling**: Pinned input container (`sticky bottom-0 shrink-0`) with safe-area padding (`pb-[env(safe-area-inset-bottom)]`) and dynamic height restriction (`max-h-[90dvh]`). Input field remains 100% visible and accessible above mobile virtual keyboard.
     - **Real-Time Telemetry Query & Auto-Scroll**: Verified message delivery against live PostGIS backend (`/api/v1/chat/query`) with real-time response rendering and smooth `chatMessagesEndRef` auto-scrolling.
 
-13. **Phase 6 (`ui: fix mobile reports page` / Fix Mobile Reports/Dossiers Page)** — [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/reports/page.tsx):
+12. **Phase 6 (`ui: fix mobile reports page` / Fix Mobile Reports/Dossiers Page)** — [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/reports/page.tsx):
     - **Responsive Mobile Card List**: Below desktop width (`< md`), replaced the un-usable wide data table with a vertically stacked card list (`block md:hidden divide-y divide-slate-100`).
     - **Essential Default Display**: Cards show essential fields at a glance: Dossier Title, Anomaly Tier Badge, Generated Date, and direct Download PDF action button.
     - **Expandable Secondary Details**: Secondary metadata (Report ID, Event Ref, SHA-256 Checksum) are tucked behind a clean "Show Details" / "Hide Details" accordion toggle (`ChevronDown` / `ChevronUp`), preventing long SHA-256 string clutter and horizontal overflow on mobile screens.
     - **Full-Width Search & Stacked Summary Stats**: Top KPI summary cards stack cleanly on mobile (`grid-cols-1 md:grid-cols-3 gap-4 md:gap-5`), and search bar expands full width (`w-full`) for easy mobile filtering.
 
+13. **Guided Tour System — Phase 5 (`ui: guided tour reports walkthrough`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/reports/page.tsx):
+    - **Reports Intro Step**: Highlights `[data-tour="sidebar-reports"]` with route transition to `/reports`.
+    - **Generate Custom Dossier Step**: Highlights `[data-tour="reports-generate-btn"]` button.
+    - **Search Bar Step**: Highlights `[data-tour="reports-search-bar"]` input container.
+    - **Report Record Step**: Highlights `[data-tour="reports-table-row-first"]` (table row on desktop, card container on mobile).
+    - **Download PDF Action Step**: Highlights `[data-tour="reports-download-btn-first"]` action button for exporting PDF briefs with SHA-256 integrity seals.
+
+14. **Guided Tour System — Phase 6 (`ui: guided tour analytics walkthrough`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`analytics/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/analytics/page.tsx):
+    - **Analytics Intro Step**: Highlights `[data-tour="sidebar-analytics"]` with route transition to `/analytics`.
+    - **Historical Progression Row Step**: Highlights `[data-tour="analytics-historical-row"]` for tracking 9-day hotspot velocity and MW intensity.
+    - **Source Classification Breakdown Step**: Highlights `[data-tour="analytics-source-breakdown"]` for ground-truth interpretation categories.
+    - **Territory Intelligence Console Step**: Highlights `[data-tour="analytics-territories-panel"]` for master state/UT selector and radiative profile detail view.
+
+15. **Guided Tour System — Phase 7 (`ui: guided tour end screen`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`TourMessageBox.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourMessageBox.tsx):
+    - **Centered Outro Modal Card**: Displays centered prompt *"You're all set! 🎉"* with body text *"You now know your way around the platform."*.
+    - **Single "Good to go" Action**: Single primary orange button that dismisses the tour, sets `hasSeenTour = true` in `localStorage`, and cleanly navigates back to `/monitor` as a clean home state.
+
+16. **Guided Tour System — Phase 8 (`ui: guided tour exit and skip handlers`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx):
+    - **Universal Exit Guarantee**: Clicking the exit (`X`) icon on any step immediately removes the overlay, calls `closeDemoPanels()` to clean up programmatically opened sidebars (e.g. event drawers or overlay panels), sets `hasSeenTour = true` in `localStorage`, and restores normal app focus without leaving dangling drawers or sticky overlays.
+
+17. **Guided Tour System — Phase 9 (`ui: guided tour manual retrigger`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx), [`Sidebar.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/Sidebar.tsx) & [`MobileTopNav.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileTopNav.tsx):
+    - **`retriggerTour()` Engine Method**: Resets tour state (`currentStepIndex = 0`), closes active sidebars, and re-opens Phase 2's Intro Modal.
+    - **Desktop Top Nav & Sidebar Access**: Persistent *"Take a Tour"* button in the sidebar navigation rail and system guide section.
+    - **Mobile Header & Hamburger Menu Access**: Persistent *"Tour"* button in the mobile sticky top header bar (next to hamburger icon) and a dedicated *"Restart Platform Tour"* item inside the slide-down hamburger menu.
+
 ---
 
 ## 9. Final System Verification Status
-- **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all 9 static/dynamic routes).
+- **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all static/dynamic routes).
 - **Phase 0 Rules Upheld**: Zero backend, API, DB, env, or ML model changes.
-- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`, `ui: fix mobile ai chat`, `ui: fix mobile national analytics`, `ui: fix mobile reports page`).
+- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`, `ui: fix mobile ai chat`, `ui: fix mobile national analytics`, `ui: fix mobile reports page`, `ui: guided tour reports walkthrough`, `ui: guided tour analytics walkthrough`, `ui: guided tour end screen`, `ui: guided tour exit handlers`, `ui: guided tour manual retrigger`).
+- **Live Localhost Status**:
+  - Frontend: `http://localhost:3000/` & `http://localhost:3000/monitor`
+  - Backend: `http://127.0.0.1:8000/api/v1/health` (HTTP 200 OK)
+
+

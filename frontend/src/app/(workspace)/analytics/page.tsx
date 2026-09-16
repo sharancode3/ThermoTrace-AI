@@ -281,7 +281,7 @@ export default function AnalyticsPage() {
         
         {/* 2. CHRONOLOGICAL 9-DAY TIMELINE PROGRESSION BAR (Swipable Row on Mobile) */}
         {data?.daily_history && data.daily_history.length > 0 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs" data-tour="analytics-historical-row">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-orange-600 shrink-0" />
@@ -398,7 +398,7 @@ export default function AnalyticsPage() {
               </div>
 
               {/* Category Breakdown Progress Bars */}
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour="analytics-source-breakdown">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Source Classification Distribution
                 </div>
@@ -525,7 +525,7 @@ export default function AnalyticsPage() {
 
         {/* 4. SPLIT-SCREEN STATE INTELLIGENCE CONSOLE OR COMPARISON MATRIX */}
         {viewMode === "split" ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" data-tour="analytics-territories-panel">
             
             {/* LEFT PANE (4.5 cols): Master State Selector List */}
             <div className={`lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col h-auto max-h-[520px] lg:max-h-none lg:h-[700px] ${mobileTerritoryView === "detail" ? "hidden lg:flex" : "flex"}`}>

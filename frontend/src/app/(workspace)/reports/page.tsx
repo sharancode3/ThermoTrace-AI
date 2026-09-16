@@ -151,7 +151,8 @@ export default function ReportsPage() {
           </button>
           <button
             onClick={openGenerateModal}
-            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold text-xs transition shadow-sm"
+            data-tour="reports-generate-btn"
+            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-semibold text-xs transition shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             Generate Custom Dossier
@@ -222,7 +223,7 @@ export default function ReportsPage() {
       <div className="mt-4 md:mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         {/* Table/Card Search Toolbar */}
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
-          <div className="relative flex-1 w-full">
+          <div className="relative flex-1 w-full" data-tour="reports-search-bar">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -268,8 +269,12 @@ export default function ReportsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredReports.map((r) => (
-                  <tr key={r.id || r.report_id} className="hover:bg-slate-50 transition">
+                filteredReports.map((r, idx) => (
+                  <tr 
+                    key={r.id || r.report_id} 
+                    data-tour={idx === 0 ? "reports-table-row-first" : undefined}
+                    className="hover:bg-slate-50 transition"
+                  >
                     <td className="py-3.5 px-5 font-bold font-mono text-slate-900">
                       {r.report_id}
                     </td>
@@ -300,6 +305,7 @@ export default function ReportsPage() {
                         href={r.download_url}
                         target="_blank"
                         rel="noreferrer"
+                        data-tour={idx === 0 ? "reports-download-btn-first" : undefined}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-orange-600 text-white rounded-lg font-medium text-xs transition shadow-2xs"
                       >
                         <ArrowDownToLine className="w-3.5 h-3.5" />
@@ -327,11 +333,15 @@ export default function ReportsPage() {
               <p className="text-xs text-slate-400 mt-1">Click "Generate Custom Dossier" to produce a tailored PDF forensic brief.</p>
             </div>
           ) : (
-            filteredReports.map((r) => {
+            filteredReports.map((r, idx) => {
               const reportKey = r.id || r.report_id;
               const isExpanded = !!expandedIds[reportKey];
               return (
-                <div key={reportKey} className="p-4 bg-white space-y-3">
+                <div 
+                  key={reportKey} 
+                  data-tour={idx === 0 ? "reports-table-row-first" : undefined}
+                  className="p-4 bg-white space-y-3"
+                >
                   {/* Card Header: Title, Date, Tier */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -366,6 +376,7 @@ export default function ReportsPage() {
                       href={r.download_url}
                       target="_blank"
                       rel="noreferrer"
+                      data-tour={idx === 0 ? "reports-download-btn-first" : undefined}
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-orange-600 text-white rounded-xl font-medium text-xs transition shadow-2xs"
                     >
                       <ArrowDownToLine className="w-3.5 h-3.5" />

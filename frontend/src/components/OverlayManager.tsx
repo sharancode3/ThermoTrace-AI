@@ -299,10 +299,10 @@ export function OverlayManager() {
 
   return (
     <>
-      {/* Backdrop blur overlay over main content area only (left-0 md:left-20 lg:left-64 to preserve left nav bar clarity) */}
+      {/* Backdrop blur overlay over main content area only (left-0 on mobile, sidebar-blur-backdrop on desktop dynamically following --sidebar-width) */}
       <div 
         onClick={closeOverlay}
-        className="fixed inset-0 left-0 md:left-20 lg:left-64 z-30 bg-slate-900/40 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
+        className="fixed inset-0 left-0 sidebar-blur-backdrop z-30 bg-slate-900/40 backdrop-blur-md transition-all duration-300 ease-in-out animate-in fade-in cursor-pointer"
         aria-label="Close overlay backdrop"
       />
       {/* DEDICATED FULL-SCREEN MOBILE VIEW FOR THERMO NEWS & ALERTS (< md) */}

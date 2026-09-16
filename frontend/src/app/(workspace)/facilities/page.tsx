@@ -167,7 +167,7 @@ export default function FacilitiesPage() {
       {/* Main Container */}
       <div className="mx-auto max-w-7xl px-2.5 py-2.5 sm:px-6 lg:px-8">
         {/* Search & Dynamic Sector Filter Bar */}
-        <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
+        <div data-tour="facilities-filter-bar" className="space-y-2.5 rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -293,10 +293,11 @@ export default function FacilitiesPage() {
             viewMode === "grid" ? (
               /* GRID VIEW - Soft Multi-Radial Peach & Muted Orange Gradient Cards */
               <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                  {data.items.slice(0, mobileLimit).map((facility) => (
+                <div data-tour="facilities-directory-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                  {data.items.slice(0, mobileLimit).map((facility, idx) => (
                     <div
                       key={facility.id}
+                      {...(idx === 0 ? { "data-tour": "facility-card-first" } : {})}
                       onClick={() => setSelectedFacility(facility)}
                       style={{
                         background: `

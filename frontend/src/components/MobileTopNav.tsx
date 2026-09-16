@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Flame, Building2, FileText, LayoutDashboard, Bell, 
-  Newspaper, BarChart2, Menu, X, ChevronRight 
+  Newspaper, BarChart2, Menu, X, ChevronRight, Sparkles, HelpCircle 
 } from "lucide-react";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { fetchNotifications } from "@/lib/apiClient";
+import { useTour } from "@/components/tour/TourContext";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -22,6 +23,7 @@ export function MobileTopNav() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentOverlay = searchParams.get("overlay");
+  const { retriggerTour } = useTour();
   
   const [isOpen, setIsOpen] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState<number>(0);
@@ -107,14 +109,26 @@ export function MobileTopNav() {
           </div>
         </Link>
 
-        {/* Single Right Hamburger Button Only */}
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors border border-slate-200 shrink-0"
-          aria-label="Toggle mobile menu"
-        >
-          {isOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5 text-slate-900" />}
-        </button>
+        {/* Action Controls: Tour Button & Hamburger Toggle */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={retriggerTour}
+            className="p-1.5 px-2.5 rounded-xl text-orange-600 hover:bg-orange-50 transition-colors border border-orange-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+            title="Restart Guided Tour"
+          >
+            <Sparkles className="w-4 h-4 text-orange-600" />
+            <span>Tour</span>
+          </button>
+
+          <button
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors border border-slate-200 shrink-0"
+            aria-label="Toggle mobile menu"
+          >
+            {isOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5 text-slate-900" />}
+          </button>
+        </div>
       </div>
 
       {/* Slide-Down Dropdown Menu */}
@@ -218,6 +232,27 @@ export function MobileTopNav() {
                   <span>Ask AI Chat Interface</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1">
+                Guided Tour
+              </div>
+
+              {/* Restart Platform Tour */}
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  retriggerTour();
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl text-sm font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200/80 transition-all text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-orange-600" />
+                  <span>Restart Platform Tour</span>
+                </div>
+                <span className="text-[10px] font-bold bg-orange-600 text-white px-2 py-0.5 rounded-full">
+                  Phase 2 Intro
+                </span>
               </button>
             </div>
           </div>

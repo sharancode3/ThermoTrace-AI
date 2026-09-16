@@ -677,7 +677,7 @@ export default function MapComponent({
   }, [windGeometry?.lon, windGeometry?.lat, windGeometry?.toward]);
 
   return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
+    <div data-tour="map-container" className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
       <Map
         ref={mapRef}
         initialViewState={{
@@ -816,6 +816,7 @@ export default function MapComponent({
               }}
             >
               <div 
+                data-tour="map-marker"
                 className="relative group cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();

@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Flame, Building2, FileText, LayoutDashboard, Bell, 
-  Newspaper, BookOpen, BarChart2, User, ChevronLeft, ChevronRight
+  Newspaper, BookOpen, BarChart2, User, ChevronLeft, ChevronRight, HelpCircle, Sparkles
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchNotifications } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
+import { useTour } from "@/components/tour/TourContext";
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Monitor", href: "/monitor" },
@@ -35,6 +36,7 @@ export function Sidebar() {
   const currentOverlay = searchParams.get("overlay");
   const [unreadAlerts, setUnreadAlerts] = useState<number>(0);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const { startTour, retriggerTour } = useTour();
 
   // Read saved collapse state from localStorage on mount
   useEffect(() => {
@@ -45,6 +47,14 @@ export function Sidebar() {
       }
     } catch (e) {}
   }, []);
+
+  // Dynamically update --sidebar-width CSS variable whenever collapse state changes
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      isCollapsed ? "4rem" : "16rem"
+    );
+  }, [isCollapsed]);
 
   const toggleCollapse = () => {
     setIsCollapsed((prev) => {
@@ -80,12 +90,26 @@ export function Sidebar() {
   return (
     <aside 
       className={cn(
-        "hidden md:flex flex-col border-r border-slate-200 bg-white text-slate-600 z-30 shadow-sm relative shrink-0 transition-all duration-300 ease-in-out",
+        "hidden md:flex flex-col border-r border-slate-200 bg-white text-slate-600 z-50 shadow-sm relative shrink-0 transition-all duration-300 ease-in-out",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Sidebar Header with Anchored Edge Toggle Handle */}
-      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0 relative", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
+      {/* Vertically Centered Sidebar Collapse Toggle Arrow */}
+      <button
+        onClick={toggleCollapse}
+        title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
+        className="absolute top-1/2 -translate-y-1/2 -right-4 z-[60] w-8 h-8 rounded-full bg-orange-600 hover:bg-orange-500 shadow-md shadow-orange-600/30 flex items-center justify-center text-white dark:text-black transition-all hover:scale-110 active:scale-95 cursor-pointer"
+        type="button"
+      >
+        {isCollapsed ? (
+          <ChevronRight className="w-5 h-5" />
+        ) : (
+          <ChevronLeft className="w-5 h-5" />
+        )}
+      </button>
+
+      {/* Sidebar Header */}
+      <div className={cn("h-16 flex items-center border-b border-slate-200 shrink-0", isCollapsed ? "justify-center px-2" : "justify-start px-4")}>
         <Link 
           href="/" 
           title="Return to ThermoTrace AI Landing Page" 
@@ -98,20 +122,6 @@ export function Sidebar() {
             </span>
           )}
         </Link>
-
-        {/* Expand/Collapse Edge Badge Handle */}
-        <button
-          onClick={toggleCollapse}
-          title={isCollapsed ? "Expand Navigation Sidebar (Click →)" : "Collapse Navigation Sidebar (Click ←)"}
-          className="absolute top-4 -right-3.5 z-20 w-7 h-7 rounded-full bg-orange-600 hover:bg-orange-500 shadow-md flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          type="button"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="w-4 h-4 text-white stroke-[2.5]" />
-          ) : (
-            <ChevronLeft className="w-4 h-4 text-white stroke-[2.5]" />
-          )}
-        </button>
       </div>
       
       <nav className="flex-1 py-3 flex flex-col gap-1 px-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
@@ -122,10 +132,12 @@ export function Sidebar() {
         )}
         {NAV_ITEMS.map((item) => {
           const isActive = pathname?.startsWith(item.href);
+          const dataTourKey = `sidebar-${item.href.replace("/", "")}`;
           return (
             <div key={item.label} className="relative group flex items-center">
               <Link
                 href={item.href}
+                data-tour={dataTourKey}
                 className={cn(
                   "flex items-center py-2 px-3 rounded-lg transition-colors w-full group",
                   isCollapsed ? "justify-center" : "justify-start",
@@ -158,8 +170,9 @@ export function Sidebar() {
         <div className="relative group flex items-center">
           <button 
             onClick={() => toggleOverlay("news")}
+            data-tour="sidebar-news"
             className={cn(
-              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
+              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative cursor-pointer", 
               isCollapsed ? "justify-center" : "",
               currentOverlay === "news" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             )}
@@ -187,8 +200,9 @@ export function Sidebar() {
         <div className="relative group flex items-center">
           <button 
             onClick={() => toggleOverlay("alerts")}
+            data-tour="sidebar-alerts"
             className={cn(
-              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative", 
+              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative cursor-pointer", 
               isCollapsed ? "justify-center" : "",
               currentOverlay === "alerts" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             )}
@@ -218,8 +232,9 @@ export function Sidebar() {
         <div className="relative group flex items-center">
           <button 
             onClick={() => toggleOverlay("chat")}
+            data-tour="sidebar-chat"
             className={cn(
-              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left", 
+              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left cursor-pointer", 
               isCollapsed ? "justify-center" : "",
               currentOverlay === "chat" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             )}
@@ -245,6 +260,7 @@ export function Sidebar() {
         <div className="relative group flex items-center">
           <Link
             href="/guide"
+            data-tour="sidebar-guide"
             className={cn(
               "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left",
               isCollapsed ? "justify-center" : "",
@@ -259,6 +275,27 @@ export function Sidebar() {
           {isCollapsed && (
             <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
               System Guide & Info
+            </div>
+          )}
+        </div>
+
+        {/* Persistent Take a Tour Button */}
+        <div className="relative group flex items-center mt-1">
+          <button
+            type="button"
+            onClick={retriggerTour}
+            data-tour="take-tour-btn"
+            className={cn(
+              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left bg-orange-50 hover:bg-orange-100 border border-orange-200/80 text-orange-700 font-bold cursor-pointer",
+              isCollapsed ? "justify-center" : ""
+            )}
+          >
+            <Sparkles className="w-5 h-5 shrink-0 text-orange-600" />
+            {!isCollapsed && <span className="ml-3 truncate">Take a Tour</span>}
+          </button>
+          {isCollapsed && (
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+              Take a Tour
             </div>
           )}
         </div>
