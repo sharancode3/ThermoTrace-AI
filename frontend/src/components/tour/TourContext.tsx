@@ -85,6 +85,8 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const [isWaitingForElement, setIsWaitingForElement] = useState(false);
 
+  const currentStep = isActive && TOUR_STEPS[currentStepIndex] ? TOUR_STEPS[currentStepIndex] : null;
+
   const prewarmTourPages = useCallback(() => {
     try {
       // Prefetch Next.js route JS bundles
