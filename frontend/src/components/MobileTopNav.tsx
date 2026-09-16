@@ -111,8 +111,22 @@ export function MobileTopNav() {
           </div>
         </Link>
 
-        {/* Action Controls: Tour Button & Hamburger Toggle */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Action Controls: Round Theme Toggle, Tour Button & Hamburger Toggle */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="w-8.5 h-8.5 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+            aria-label="Toggle Theme"
+          >
+            {theme === "dark" ? (
+              <Moon className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Sun className="w-4 h-4 text-orange-500" />
+            )}
+          </button>
+
           <button
             type="button"
             onClick={retriggerTour}
@@ -244,25 +258,19 @@ export function MobileTopNav() {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition-all text-left bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-sm font-semibold transition-all text-left bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  {theme === "dark" ? (
-                    <Moon className="w-5 h-5 text-amber-400 shrink-0" />
-                  ) : (
-                    <Sun className="w-5 h-5 text-orange-500 shrink-0" />
-                  )}
-                  <span>Theme: {theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
+                  <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    {theme === "dark" ? (
+                      <Moon className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Sun className="w-4 h-4 text-orange-500" />
+                    )}
+                  </div>
+                  <span>{theme === "dark" ? "Dark Mode Active" : "Light Mode Active"}</span>
                 </div>
-                <div className={cn(
-                  "w-9 h-5 rounded-full p-0.5 transition-colors relative flex items-center",
-                  theme === "dark" ? "bg-orange-600" : "bg-slate-300"
-                )}>
-                  <div className={cn(
-                    "w-4 h-4 rounded-full bg-white transition-transform duration-200 shadow-sm",
-                    theme === "dark" ? "translate-x-4" : "translate-x-0"
-                  )} />
-                </div>
+                <span className="text-xs text-orange-600 dark:text-orange-400 font-semibold px-2 py-1 bg-orange-50 dark:bg-orange-950/60 rounded-lg border border-orange-200 dark:border-orange-800">Switch Theme</span>
               </button>
 
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 pt-3 pb-1">

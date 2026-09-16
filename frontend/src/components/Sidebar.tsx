@@ -304,78 +304,103 @@ export function Sidebar() {
         </div>
       </nav>
       
-      {/* Sidebar Footer: Theme Toggle + User Profile */}
-      <div className="p-2 border-t border-slate-200 dark:border-slate-800 shrink-0 space-y-1">
-        {/* Theme Toggle Button */}
-        <div className="relative group flex items-center">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className={cn(
-              "flex items-center w-full p-2 rounded-lg transition-colors text-xs font-semibold cursor-pointer",
-              isCollapsed ? "justify-center" : "justify-between",
-              theme === "dark"
-                ? "bg-slate-800 text-amber-300 hover:bg-slate-750"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              {theme === "dark" ? (
-                <Moon className="w-4 h-4 text-amber-400 shrink-0" />
-              ) : (
-                <Sun className="w-4 h-4 text-orange-500 shrink-0" />
-              )}
-              {!isCollapsed && (
-                <span className="font-bold">{theme === "dark" ? "Dark Theme" : "Light Theme"}</span>
-              )}
+      {/* Sidebar Footer: User Profile & Compact Round Theme Toggle Icon Button */}
+      <div className="p-2 border-t border-slate-200 dark:border-slate-800 shrink-0">
+        {!isCollapsed ? (
+          <div className="flex items-center justify-between gap-1.5">
+            {/* User Profile Button */}
+            <div className="relative group flex-1 min-w-0">
+              <button 
+                onClick={() => toggleOverlay("settings")}
+                className={cn(
+                  "flex items-center w-full p-1.5 rounded-xl transition-colors justify-start min-w-0", 
+                  currentOverlay === "settings" ? "bg-slate-100 dark:bg-slate-800" : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
+                )}
+                type="button"
+              >
+                <div className="w-8 h-8 rounded-full bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200 border border-slate-300/80 dark:border-slate-700 shrink-0 shadow-2xs">
+                  <User className="w-4 h-4 text-slate-700 dark:text-slate-200" />
+                </div>
+                <div className="ml-2.5 text-left truncate min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">User Profile</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Settings</div>
+                </div>
+              </button>
             </div>
-            {!isCollapsed && (
-              <div className={cn(
-                "w-8 h-4 rounded-full p-0.5 transition-colors relative flex items-center",
-                theme === "dark" ? "bg-orange-600" : "bg-slate-300"
-              )}>
-                <div className={cn(
-                  "w-3 h-3 rounded-full bg-white transition-transform duration-200 shadow-sm",
-                  theme === "dark" ? "translate-x-4" : "translate-x-0"
-                )} />
-              </div>
-            )}
-          </button>
-          {isCollapsed && (
-            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
-              {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            </div>
-          )}
-        </div>
 
-        {/* User Profile Row */}
-        <div className="relative group flex items-center">
-          <button 
-            onClick={() => toggleOverlay("settings")}
-            className={cn(
-              "flex items-center w-full p-2 rounded-lg transition-colors justify-center", 
-              !isCollapsed ? "justify-start" : "",
-              currentOverlay === "settings" ? "bg-slate-100 dark:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
-            )}
-            type="button"
-          >
-            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shrink-0">
-              <User className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-            </div>
-            {!isCollapsed && (
-              <div className="ml-3 text-left truncate">
-                <div className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">User Profile</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">Settings</div>
+            {/* Small Round Theme Toggle Icon Button */}
+            <div className="relative group shrink-0">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 border cursor-pointer shadow-2xs active:scale-95",
+                  theme === "dark"
+                    ? "bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-400"
+                    : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-orange-500"
+                )}
+                aria-label="Toggle Theme"
+              >
+                {theme === "dark" ? (
+                  <Moon className="w-4.5 h-4.5 text-amber-400" />
+                ) : (
+                  <Sun className="w-4.5 h-4.5 text-orange-500" />
+                )}
+              </button>
+              <div className="absolute bottom-full mb-2 right-0 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+                {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
               </div>
-            )}
-          </button>
-          {isCollapsed && (
-            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
-              User Settings
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            {/* Collapsed Small Round Theme Toggle Icon Button */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 border cursor-pointer shadow-2xs active:scale-95",
+                  theme === "dark"
+                    ? "bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-400"
+                    : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-orange-500"
+                )}
+                aria-label="Toggle Theme"
+              >
+                {theme === "dark" ? (
+                  <Moon className="w-4.5 h-4.5 text-amber-400" />
+                ) : (
+                  <Sun className="w-4.5 h-4.5 text-orange-500" />
+                )}
+              </button>
+              <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+                {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              </div>
+            </div>
+
+            {/* Collapsed User Profile Button */}
+            <div className="relative group">
+              <button 
+                onClick={() => toggleOverlay("settings")}
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-colors border shadow-2xs", 
+                  currentOverlay === "settings" 
+                    ? "bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600" 
+                    : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700"
+                )}
+                type="button"
+                title="User Profile Settings"
+              >
+                <User className="w-4 h-4 text-slate-700 dark:text-slate-200" />
+              </button>
+              <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
+                User Settings
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
