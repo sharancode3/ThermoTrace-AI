@@ -179,7 +179,7 @@ export default function FacilityDetailDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300">
-      <div className="relative flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl transition-all duration-300">
+      <div data-tour="facility-detail-drawer" className="relative flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl transition-all duration-300">
         {/* Header Bar */}
         <div className="flex items-start justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
           <div className="flex items-start gap-3">
@@ -464,35 +464,35 @@ export default function FacilityDetailDrawer({
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">Mean Flaring (μ)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">Mean Flaring (μ)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900 dark:text-white">
                             {intel.baseline_profile.mean_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">Std Deviation (σ)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">Std Deviation (σ)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900 dark:text-white">
                             ±{intel.baseline_profile.std_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">Median (Q50)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">Median (Q50)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900 dark:text-white">
                             {intel.baseline_profile.median_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">95th Percentile (Q95)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-amber-700">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">95th Percentile (Q95)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-amber-700 dark:text-yellow-400">
                             {intel.baseline_profile.q95_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-900">
-                        <strong>Analytical Grounding:</strong> Thermal detections exceeding{" "}
-                        <span className="font-mono font-bold">
+                      <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800/80 bg-blue-50 dark:bg-blue-950/70 p-3.5 text-xs text-blue-950 dark:text-blue-100 shadow-xs">
+                        <strong className="font-extrabold text-blue-900 dark:text-blue-200">Analytical Grounding:</strong> Thermal detections exceeding{" "}
+                        <span className="font-mono font-bold text-blue-950 dark:text-white">
                           {(
                             intel.baseline_profile.mean_frp_mw +
                             2.5 * intel.baseline_profile.std_frp_mw
@@ -503,8 +503,8 @@ export default function FacilityDetailDrawer({
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
-                      <strong>Insufficient Historical Baseline:</strong> Fewer than 10 sovereign
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/70 p-5 text-sm text-amber-900 dark:text-amber-200">
+                      <strong className="font-bold text-amber-950 dark:text-amber-100">Insufficient Historical Baseline:</strong> Fewer than 10 sovereign
                       satellite passes recorded for this specific facility coordinate. Anomaly
                       classification operates in exploratory mode.
                     </div>
@@ -530,61 +530,61 @@ export default function FacilityDetailDrawer({
                       </div>
                     ) : facilityWind && facilityWind.available ? (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 rounded-xl border border-cyan-200/70">
+                        <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 dark:bg-cyan-950/40 rounded-xl border border-cyan-200/70 dark:border-cyan-800/80">
                           <div
-                            className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-cyan-700 shadow-sm"
+                            className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white dark:bg-slate-900 border-2 border-cyan-500 text-cyan-700 dark:text-cyan-400 shadow-sm"
                             style={{
                               transform: `rotate(${Number(facilityWind.direction_toward_degrees) || 0}deg)`,
                             }}
                           >
-                            <NavigationIcon className="w-5 h-5 text-cyan-600 fill-cyan-500" />
+                            <NavigationIcon className="w-5 h-5 text-cyan-600 dark:text-cyan-400 fill-cyan-500" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                            <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-cyan-300 tracking-wider">
                               Surface Transport Vector
                             </div>
-                            <div className="font-mono font-bold text-slate-900 text-sm">
+                            <div className="font-mono font-bold text-slate-900 dark:text-cyan-100 text-sm">
                               Blowing from {facilityWind.direction_from_cardinal || "N/A"} ({facilityWind.direction_from_degrees ?? "—"}°) toward {facilityWind.direction_toward_cardinal || "N/A"} ({facilityWind.direction_toward_degrees ?? "—"}°)
                             </div>
-                            <div className="text-xs font-mono text-slate-600 mt-0.5">
-                              Speed: <span className="font-bold text-cyan-700">{facilityWind.speed_kmh} km/h</span>
+                            <div className="text-xs font-mono text-slate-600 dark:text-cyan-200 mt-0.5">
+                              Speed: <span className="font-bold text-cyan-700 dark:text-cyan-300">{facilityWind.speed_kmh} km/h</span>
                               {facilityWind.gusts_kmh !== undefined && (
-                                <span> · Gusts: <span className="font-bold text-slate-800">{facilityWind.gusts_kmh} km/h</span></span>
+                                <span> · Gusts: <span className="font-bold text-slate-800 dark:text-cyan-100">{facilityWind.gusts_kmh} km/h</span></span>
                               )}
                             </div>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Surface Temp</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Surface Temp</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.temperature_c !== undefined ? `${facilityWind.temperature_c.toFixed(1)} °C` : "N/A"}
                             </p>
                           </div>
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Humidity</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Humidity</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.relative_humidity_pct !== undefined ? `${facilityWind.relative_humidity_pct}%` : "N/A"}
                             </p>
                           </div>
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Pressure</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Pressure</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.surface_pressure_hpa !== undefined ? `${facilityWind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
                             </p>
-                            <p className="text-[9px] text-slate-400 mt-0.5">Surface pressure</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Surface pressure</p>
                           </div>
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Precipitation</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Precipitation</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.precipitation_mm !== undefined ? `${facilityWind.precipitation_mm} mm` : "0.0 mm"}
                             </p>
                           </div>
                         </div>
 
-                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-[11px] text-slate-600 leading-relaxed">
-                          <strong className="text-slate-800">Scientific Context:</strong> Ambient surface wind context at facility location. Does not assert or model facility emissions or particulate dispersion.
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-2.5 text-[11px] text-slate-600 dark:text-slate-200 leading-relaxed">
+                          <strong className="text-slate-800 dark:text-slate-100">Scientific Context:</strong> Ambient surface wind context at facility location. Does not assert or model facility emissions or particulate dispersion.
                         </div>
                       </div>
                     ) : (

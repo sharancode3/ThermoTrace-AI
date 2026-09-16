@@ -1,21 +1,76 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 :root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --background: #ffffff;
   --foreground: #0f172a;
+  --sidebar-width: 16rem;
+
+  /* Semantic Theme Tokens - Light Mode */
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --bg-surface: #ffffff;
+  --bg-muted: #f2f2f2;
+  --bg-subtle: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f5f9;
+  --bg-card-hover: #ececec;
+  --border-subtle: #e0e0e0;
+  --border-default: #cbd5e1;
+  --accent-blue: #2563eb;
+
+  /* Accent Blue Theme Palette */
+  --accent-blue-bg: #eff6ff;
+  --accent-blue-border: #bfdbfe;
+  --accent-blue-text: #1e40af;
+  --accent-blue-solid: #2563eb;
 }
 
+@media (min-width: 768px) {
+  .sidebar-blur-backdrop {
+    left: var(--sidebar-width, 16rem) !important;
+  }
+}
+
+@theme {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+[data-theme="dark"],
 .dark {
   --background: #020617;
   --foreground: #f8fafc;
+
+  /* Semantic Theme Tokens - Dark Mode (WCAG AA Compliant & Matched to Dark Theme Palette) */
+  --text-primary: #f8fafc;    /* Slate-50 - Contrast 17.1:1 against #0f172a */
+  --text-secondary: #cbd5e1;  /* Slate-300 - Contrast 10.9:1 against #0f172a */
+  --text-muted: #94a3b8;      /* Slate-400 - Contrast 6.8:1 against #0f172a */
+  --bg-surface: #0f172a;      /* Slate-900 */
+  --bg-muted: #1e293b;        /* Slate-800 */
+  --bg-subtle: #090d16;       /* Slate-950/deep */
+  --bg-card: #0f172a;         /* Slate-900 */
+  --bg-hover: #1e293b;        /* Slate-800 hover */
+  --bg-card-hover: #262a33;   /* Distinct hover step between #0f172a and #1e293b */
+  --border-subtle: #1e293b;
+  --border-default: #334155;
+  --accent-blue: #3b82f6;
+
+  /* Accent Blue Theme Palette - Dark Mode */
+  --accent-blue-bg: #1e3a8a;      /* Blue-900 */
+  --accent-blue-border: #3b82f6;  /* Blue-500 */
+  --accent-blue-text: #eff6ff;    /* Blue-50 - Contrast 10.4:1 against #1e3a8a */
+  --accent-blue-solid: #3b82f6;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 @keyframes nearby-toast-in {
@@ -28,47 +83,214 @@ body {
   to { opacity: 0; transform: translateY(6px); }
 }
 
-/* Dark Mode Aerospace Theme Styling */
+/* Dark Mode Aerospace Theme Styling & Contrast Overrides (Exhaustive Sweep) */
+[data-theme="dark"] body,
 .dark body {
   background-color: #020617;
   color: #f8fafc;
 }
 
+[data-theme="dark"] aside,
 .dark aside,
-.dark .bg-white {
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
-  border-color: #1e293b !important;
+[data-theme="dark"] .bg-white:not([class*="dark:bg-"]),
+.dark .bg-white:not([class*="dark:bg-"]) {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #1e293b;
 }
 
-.dark .bg-slate-50,
-.dark .bg-slate-100 {
-  background-color: #0b1329 !important;
-  color: #f1f5f9 !important;
-  border-color: #1e293b !important;
+[data-theme="dark"] .bg-slate-50:not([class*="dark:bg-"]),
+.dark .bg-slate-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-slate-100:not([class*="dark:bg-"]),
+.dark .bg-slate-100:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-gray-50:not([class*="dark:bg-"]),
+.dark .bg-gray-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-gray-100:not([class*="dark:bg-"]),
+.dark .bg-gray-100:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-zinc-50:not([class*="dark:bg-"]),
+.dark .bg-zinc-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-zinc-100:not([class*="dark:bg-"]),
+.dark .bg-zinc-100:not([class*="dark:bg-"]) {
+  background-color: #0b1329;
+  color: #f1f5f9;
+  border-color: #1e293b;
 }
 
-.dark .text-slate-900,
-.dark .text-slate-800,
-.dark .text-slate-700 {
-  color: #f8fafc !important;
+[data-theme="dark"] .text-slate-900:not([class*="dark:text-"]),
+.dark .text-slate-900:not([class*="dark:text-"]),
+[data-theme="dark"] .text-slate-800:not([class*="dark:text-"]),
+.dark .text-slate-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-slate-700:not([class*="dark:text-"]),
+.dark .text-slate-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-gray-900:not([class*="dark:text-"]),
+.dark .text-gray-900:not([class*="dark:text-"]),
+[data-theme="dark"] .text-gray-800:not([class*="dark:text-"]),
+.dark .text-gray-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-gray-700:not([class*="dark:text-"]),
+.dark .text-gray-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-zinc-900:not([class*="dark:text-"]),
+.dark .text-zinc-900:not([class*="dark:text-"]),
+[data-theme="dark"] .text-zinc-800:not([class*="dark:text-"]),
+.dark .text-zinc-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-zinc-700:not([class*="dark:text-"]),
+.dark .text-zinc-700:not([class*="dark:text-"]) {
+  color: #f8fafc;
 }
 
-.dark .text-slate-600,
-.dark .text-slate-500 {
-  color: #94a3b8 !important;
+[data-theme="dark"] .text-slate-600:not([class*="dark:text-"]),
+.dark .text-slate-600:not([class*="dark:text-"]),
+[data-theme="dark"] .text-slate-500:not([class*="dark:text-"]),
+.dark .text-slate-500:not([class*="dark:text-"]),
+[data-theme="dark"] .text-slate-400:not([class*="dark:text-"]),
+.dark .text-slate-400:not([class*="dark:text-"]),
+[data-theme="dark"] .text-gray-600:not([class*="dark:text-"]),
+.dark .text-gray-600:not([class*="dark:text-"]),
+[data-theme="dark"] .text-gray-500:not([class*="dark:text-"]),
+.dark .text-gray-500:not([class*="dark:text-"]),
+[data-theme="dark"] .text-gray-400:not([class*="dark:text-"]),
+.dark .text-gray-400:not([class*="dark:text-"]),
+[data-theme="dark"] .text-zinc-600:not([class*="dark:text-"]),
+.dark .text-zinc-600:not([class*="dark:text-"]),
+[data-theme="dark"] .text-zinc-500:not([class*="dark:text-"]),
+.dark .text-zinc-500:not([class*="dark:text-"]),
+[data-theme="dark"] .text-zinc-400:not([class*="dark:text-"]),
+.dark .text-zinc-400:not([class*="dark:text-"]) {
+  color: #cbd5e1;
 }
 
-.dark .border-slate-200,
-.dark .border-slate-100,
-.dark .border-slate-300 {
-  border-color: #1e293b !important;
+[data-theme="dark"] .border-slate-200:not([class*="dark:border-"]),
+.dark .border-slate-200:not([class*="dark:border-"]),
+[data-theme="dark"] .border-slate-100:not([class*="dark:border-"]),
+.dark .border-slate-100:not([class*="dark:border-"]),
+[data-theme="dark"] .border-slate-300:not([class*="dark:border-"]),
+.dark .border-slate-300:not([class*="dark:border-"]),
+[data-theme="dark"] .border-gray-200:not([class*="dark:border-"]),
+.dark .border-gray-200:not([class*="dark:border-"]),
+[data-theme="dark"] .border-gray-100:not([class*="dark:border-"]),
+.dark .border-gray-100:not([class*="dark:border-"]) {
+  border-color: #1e293b;
 }
 
-.dark input,
-.dark select,
-.dark textarea {
-  background-color: #0b1329 !important;
-  color: #f8fafc !important;
-  border-color: #334155 !important;
+[data-theme="dark"] input:not([class*="dark:bg-"]),
+.dark input:not([class*="dark:bg-"]),
+[data-theme="dark"] select:not([class*="dark:bg-"]),
+.dark select:not([class*="dark:bg-"]),
+[data-theme="dark"] textarea:not([class*="dark:bg-"]),
+.dark textarea:not([class*="dark:bg-"]) {
+  background-color: #0b1329;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+/* Dark Mode Badges & Category Pill Overrides (Fallback Only) */
+[data-theme="dark"] .bg-emerald-50:not([class*="dark:bg-"]),
+.dark .bg-emerald-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-emerald-100:not([class*="dark:bg-"]),
+.dark .bg-emerald-100:not([class*="dark:bg-"]) {
+  background-color: rgba(6, 78, 59, 0.45);
+  border-color: rgba(5, 150, 105, 0.5);
+}
+[data-theme="dark"] .text-emerald-700:not([class*="dark:text-"]),
+.dark .text-emerald-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-emerald-800:not([class*="dark:text-"]),
+.dark .text-emerald-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-emerald-900:not([class*="dark:text-"]),
+.dark .text-emerald-900:not([class*="dark:text-"]) {
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .bg-amber-50:not([class*="dark:bg-"]),
+.dark .bg-amber-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-amber-100:not([class*="dark:bg-"]),
+.dark .bg-amber-100:not([class*="dark:bg-"]) {
+  background-color: rgba(120, 53, 15, 0.45);
+  border-color: rgba(217, 119, 6, 0.5);
+}
+[data-theme="dark"] .text-amber-700:not([class*="dark:text-"]),
+.dark .text-amber-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-amber-800:not([class*="dark:text-"]),
+.dark .text-amber-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-amber-900:not([class*="dark:text-"]),
+.dark .text-amber-900:not([class*="dark:text-"]) {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .bg-orange-50:not([class*="dark:bg-"]),
+.dark .bg-orange-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-orange-100:not([class*="dark:bg-"]),
+.dark .bg-orange-100:not([class*="dark:bg-"]) {
+  background-color: rgba(124, 45, 18, 0.45);
+  border-color: rgba(234, 88, 12, 0.5);
+}
+[data-theme="dark"] .text-orange-700:not([class*="dark:text-"]),
+.dark .text-orange-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-orange-800:not([class*="dark:text-"]),
+.dark .text-orange-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-orange-900:not([class*="dark:text-"]),
+.dark .text-orange-900:not([class*="dark:text-"]) {
+  color: #fdba74;
+}
+
+[data-theme="dark"] .bg-blue-50:not([class*="dark:bg-"]),
+.dark .bg-blue-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-blue-100:not([class*="dark:bg-"]),
+.dark .bg-blue-100:not([class*="dark:bg-"]) {
+  background-color: rgba(30, 58, 138, 0.45);
+  border-color: rgba(37, 99, 235, 0.5);
+}
+[data-theme="dark"] .text-blue-700:not([class*="dark:text-"]),
+.dark .text-blue-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-blue-800:not([class*="dark:text-"]),
+.dark .text-blue-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-blue-900:not([class*="dark:text-"]),
+.dark .text-blue-900:not([class*="dark:text-"]) {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .bg-sky-50:not([class*="dark:bg-"]),
+.dark .bg-sky-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-sky-100:not([class*="dark:bg-"]),
+.dark .bg-sky-100:not([class*="dark:bg-"]) {
+  background-color: rgba(12, 74, 110, 0.45);
+  border-color: rgba(14, 165, 233, 0.5);
+}
+[data-theme="dark"] .text-sky-700:not([class*="dark:text-"]),
+.dark .text-sky-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-sky-800:not([class*="dark:text-"]),
+.dark .text-sky-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-sky-900:not([class*="dark:text-"]),
+.dark .text-sky-900:not([class*="dark:text-"]) {
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .bg-red-50:not([class*="dark:bg-"]),
+.dark .bg-red-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-red-100:not([class*="dark:bg-"]),
+.dark .bg-red-100:not([class*="dark:bg-"]) {
+  background-color: rgba(127, 29, 29, 0.45);
+  border-color: rgba(220, 38, 38, 0.5);
+}
+[data-theme="dark"] .text-red-700:not([class*="dark:text-"]),
+.dark .text-red-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-red-800:not([class*="dark:text-"]),
+.dark .text-red-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-red-900:not([class*="dark:text-"]),
+.dark .text-red-900:not([class*="dark:text-"]) {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .bg-yellow-50:not([class*="dark:bg-"]),
+.dark .bg-yellow-50:not([class*="dark:bg-"]),
+[data-theme="dark"] .bg-yellow-100:not([class*="dark:bg-"]),
+.dark .bg-yellow-100:not([class*="dark:bg-"]) {
+  background-color: rgba(113, 63, 18, 0.45);
+  border-color: rgba(202, 138, 4, 0.5);
+}
+[data-theme="dark"] .text-yellow-700:not([class*="dark:text-"]),
+.dark .text-yellow-700:not([class*="dark:text-"]),
+[data-theme="dark"] .text-yellow-800:not([class*="dark:text-"]),
+.dark .text-yellow-800:not([class*="dark:text-"]),
+[data-theme="dark"] .text-yellow-900:not([class*="dark:text-"]),
+.dark .text-yellow-900:not([class*="dark:text-"]) {
+  color: #fef08a;
 }

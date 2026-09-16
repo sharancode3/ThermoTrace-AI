@@ -18,6 +18,7 @@ import {
   RefreshCw,
   LayoutGrid,
   List,
+  Sparkles,
 } from "lucide-react";
 import {
   fetchFacilities,
@@ -36,6 +37,7 @@ export default function FacilitiesPage() {
   const [page, setPage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedFacility, setSelectedFacility] = useState<FacilitySummary | null>(null);
+  const [mobileLimit, setMobileLimit] = useState<number>(8);
 
   // Debounce search input ~300ms
   useEffect(() => {
@@ -70,6 +72,39 @@ export default function FacilitiesPage() {
     loadFacilities();
   }, [loadFacilities]);
 
+  useEffect(() => {
+    const handleOpenDrawer = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      const targetId = customEvt.detail?.facilityId;
+      if (data && data.items.length > 0) {
+        const found = targetId && targetId !== "demo" ? data.items.find((f) => f.id === targetId || f.facility_code === targetId) : null;
+        setSelectedFacility(found || data.items[0]);
+      }
+    };
+
+    const handleCloseDrawer = () => {
+      setSelectedFacility(null);
+    };
+
+    window.addEventListener("thermo-open-facility-drawer", handleOpenDrawer);
+    window.addEventListener("thermo-close-facility-drawer", handleCloseDrawer);
+
+    return () => {
+      window.removeEventListener("thermo-open-facility-drawer", handleOpenDrawer);
+      window.removeEventListener("thermo-close-facility-drawer", handleCloseDrawer);
+    };
+  }, [data]);
+
+  useEffect(() => {
+    if (!data || data.items.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("facilityId") && !selectedFacility) {
+      const facId = params.get("facilityId");
+      const found = facId && facId !== "demo" ? data.items.find((f) => f.id === facId || f.facility_code === facId) : null;
+      setSelectedFacility(found || data.items[0]);
+    }
+  }, [data, selectedFacility]);
+
   const getSectorIcon = (sector: string) => {
     switch (sector.toLowerCase()) {
       case "refinery":
@@ -92,57 +127,68 @@ export default function FacilitiesPage() {
         return <Building2 className="h-4 w-4 text-slate-600" />;
     }
   };
+  const getSectorGradient = (_sector: string) => {
+    return "from-slate-900 via-slate-800 to-amber-950/70";
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       {/* Top Header & Sovereign Ribbon */}
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto max-w-7xl px-4 py-3.5 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
-                  <Shield className="h-3.5 w-3.5" />
-                  Sovereign Industrial Registry
-                </span>
-                <span className="text-xs text-slate-500 font-mono">
+              {/* iPhone Notch / Dynamic Island Shape Header */}
+              <div className="-mt-3.5 mb-2.5 inline-flex items-center gap-3.5 rounded-b-2xl bg-slate-950 px-4 py-1.5 text-white shadow-lg border-x border-b border-slate-800">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                  <Shield className="h-3.5 w-3.5 text-orange-400" />
+                  <span>Sovereign Industrial Registry</span>
+                </div>
+
+                {/* Notch Camera Sensor Dot */}
+                <div className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-slate-700" />
+                </div>
+
+                <span className="text-[11px] font-mono font-semibold text-slate-300">
                   CPCB · NTRO Monitored
                 </span>
               </div>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                 Strategic Industrial Facilities
               </h1>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-0.5 text-xs text-slate-600">
                 Authoritative registry of India&apos;s strategic refineries, steel plants, power stations, and empirical flaring baselines.
               </p>
             </div>
 
             {/* Quick KPI Ribbon */}
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 shadow-sm">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+            <div className="flex items-center gap-2.5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 shadow-xs">
+                <div className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
                   Total Monitored
                 </div>
-                <div className="mt-0.5 text-xl font-bold text-slate-900">
+                <div className="mt-0.5 text-lg font-bold text-slate-900">
                   {data ? data.total_count : "..."}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 shadow-sm">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 shadow-xs">
+                <div className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
                   Sectors Covered
                 </div>
-                <div className="mt-0.5 text-xl font-bold text-blue-700">
+                <div className="mt-0.5 text-lg font-bold text-blue-700">
                   {data ? data.sectors.length : "..."}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 shadow-sm">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 shadow-xs">
+                <div className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
                   Baselines Active
                 </div>
-                <div className="mt-0.5 flex items-center gap-1 text-xl font-bold text-emerald-700">
-                  <CheckCircle2 className="h-5 w-5" />
+                <div className="mt-0.5 flex items-center gap-1 text-lg font-bold text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" />
                   100%
                 </div>
               </div>
@@ -152,9 +198,9 @@ export default function FacilitiesPage() {
       </div>
 
       {/* Main Container */}
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-2.5 py-2.5 sm:px-6 lg:px-8">
         {/* Search & Dynamic Sector Filter Bar */}
-        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div data-tour="facilities-filter-bar" className="space-y-2.5 rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -253,121 +299,137 @@ export default function FacilitiesPage() {
         </div>
 
         {/* Facility Cards / Directory Listing */}
-        <div className="mt-6">
+        <div className="mt-4">
           {loading ? (
             /* Skeleton Loading Grid */
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className="animate-pulse rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-slate-200" />
+                    <div className="h-8 w-8 rounded-lg bg-slate-200" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-4 w-3/4 rounded bg-slate-200" />
-                      <div className="h-3 w-1/2 rounded bg-slate-100" />
+                      <div className="h-3.5 w-3/4 rounded bg-slate-200" />
+                      <div className="h-2.5 w-1/2 rounded bg-slate-100" />
                     </div>
                   </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="h-3 w-full rounded bg-slate-100" />
-                    <div className="h-3 w-2/3 rounded bg-slate-100" />
+                  <div className="mt-3 space-y-1.5">
+                    <div className="h-2.5 w-full rounded bg-slate-100" />
+                    <div className="h-2.5 w-2/3 rounded bg-slate-100" />
                   </div>
                 </div>
               ))}
             </div>
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
-              /* GRID VIEW */
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {data.items.map((facility) => (
-                  <div
-                    key={facility.id}
-                    onClick={() => setSelectedFacility(facility)}
-                    className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-pointer"
-                  >
-                    <div>
-                      {/* Top Badges */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700">
-                          {facility.facility_code}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                            <span className="flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                              <Flame className="h-3 w-3 text-rose-600 animate-pulse" />
-                              {facility.historical_event_count} Active
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                              <Activity className="h-3 w-3 text-slate-400" />
-                              Monitored
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1 rounded border border-blue-100 bg-blue-50/80 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-                            {getSectorIcon(facility.sector_category)}
+              /* GRID VIEW - Soft Multi-Radial Peach & Muted Orange Gradient Cards */
+              <>
+                <div data-tour="facilities-directory-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                  {data.items.slice(0, mobileLimit).map((facility, idx) => (
+                    <div
+                      key={facility.id}
+                      {...(idx === 0 ? { "data-tour": "facility-card-first" } : {})}
+                      onClick={() => setSelectedFacility(facility)}
+                      style={{
+                        background: `
+                          radial-gradient(circle at 5% 15%, #ffab7b 0%, #ffbe95 18%, transparent 45%),
+                          radial-gradient(circle at 20% 85%, #ffa575 0%, #ffca9d 20%, transparent 48%),
+                          radial-gradient(circle at 52% 42%, #ffe5cc 0%, #ffeedb 35%, transparent 70%),
+                          radial-gradient(circle at 100% 30%, #fee3c3 0%, #feebd2 40%, transparent 75%),
+                          linear-gradient(135deg, #ffab7b 0%, #ffc9a1 25%, #ffe5cc 52%, #fee3c3 75%, #fed9b3 100%)
+                        `
+                      }}
+                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl p-4 text-[#2b180d] shadow-[0_12px_32px_rgba(250,147,87,0.14)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(250,147,87,0.25)] cursor-pointer border border-white/40"
+                    >
+                      <div className="relative z-10 space-y-3">
+                        {/* Top Slanted White Trapezoid Header Tabs (Matching User Image Spec) */}
+                        <div className="-mx-4 -mt-4 flex items-start justify-between">
+                          {/* Left Slanted White Tab: Facility Code */}
+                          <div
+                            style={{ clipPath: 'polygon(0 0, 100% 0, 84% 100%, 0 100%)' }}
+                            className="bg-white/95 backdrop-blur-md pl-4 pr-6 py-1.5 font-mono text-[10px] font-bold text-[#3b2313] shadow-xs shrink-0"
+                          >
+                            {facility.facility_code}
+                          </div>
+
+                          {/* Right Slanted White Tab: Sector Category */}
+                          <div
+                            style={{ clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 0 100%)' }}
+                            className="bg-white/95 backdrop-blur-md pl-6 pr-4 py-1.5 text-[9.5px] font-black uppercase tracking-wider text-[#3b2313] shadow-xs text-right truncate max-w-[170px]"
+                          >
                             {facility.sector_category}
-                          </span>
+                          </div>
+                        </div>
+
+                        {/* Main Hero Title & Subtype */}
+                        <div>
+                          <h3 className="text-base font-extrabold text-[#231207] tracking-tight leading-snug group-hover:text-[#b43e00] transition-colors line-clamp-1" title={facility.name}>
+                            {facility.name}
+                          </h3>
+                          <p className="mt-0.5 text-[10.5px] font-semibold text-[#4e2b17] line-clamp-1">
+                            {facility.sub_type || facility.operator_name || "Independent Facility"}
+                          </p>
+                        </div>
+
+                        {/* Key-Value Stat Rows */}
+                        <div className="space-y-1.5 text-xs border-t border-black/10 pt-2.5">
+                          <div className="flex justify-between items-center text-[#4e2b17] font-semibold">
+                            <span>Location:</span>
+                            <span className="font-extrabold text-[#231207] truncate max-w-[130px]">
+                              {facility.district ? `${facility.district}, ` : ""}{facility.state}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-[#4e2b17] font-semibold">
+                            <span>Operator:</span>
+                            <span className="font-extrabold text-[#231207] truncate max-w-[130px]">
+                              {facility.operator_name || "Independent"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-[#4e2b17] font-semibold">
+                            <span>90-Day Baseline:</span>
+                            <span className="font-extrabold text-[#231207] font-mono">
+                              {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined
+                                ? `${facility.baseline_frp_mean.toFixed(1)} MW`
+                                : "Active"}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Name & Subtype */}
-                      <h3 className="mt-3 text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        {facility.name}
-                      </h3>
-                      {facility.sub_type && (
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {facility.sub_type}
-                        </p>
-                      )}
+                      {/* Bottom Button with #fff8ee Background and Reduced Roundness */}
+                      <div className="relative z-10 mt-4 flex items-center justify-between rounded-lg bg-[#fff8ee] px-3.5 py-2 border border-white/60 shadow-xs">
+                        <div className="text-xs font-extrabold text-[#2b180d]">
+                          {facility.historical_event_count && facility.historical_event_count > 0 ? (
+                            <span className="text-[#8c2b00] font-extrabold">+{facility.historical_event_count} Active Thermal Events</span>
+                          ) : (
+                            <span className="text-[#2b180d] font-extrabold">100% Baseline Monitored</span>
+                          )}
+                        </div>
 
-                      {/* Location & Operator */}
-                      <div className="mt-3 space-y-1 text-xs text-slate-600 border-t border-slate-100 pt-3">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                          <span>
-                            {facility.district ? `${facility.district}, ` : ""}
-                            <strong>{facility.state}</strong>
-                          </span>
-                        </div>
-                        <div className="text-slate-500">
-                          Operator:{" "}
-                          <span className="text-slate-800 font-medium">
-                            {facility.operator_name || "Independent"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Precomputed Baseline Footer (Allowed Exception) */}
-                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                      {facility.baseline_frp_mean !== null &&
-                      facility.baseline_frp_mean !== undefined ? (
-                        <div className="text-[11px] text-slate-500">
-                          Baseline:{" "}
-                          <strong className="text-slate-800 font-mono">
-                            {facility.baseline_frp_mean.toFixed(1)} MW
-                          </strong>{" "}
-                          <span className="text-slate-400">
-                            (±{facility.baseline_frp_std?.toFixed(1) || "15.0"} MW)
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-slate-400">
-                          Baseline: Pending observations
+                        <span className="text-xs font-black text-[#d94800] group-hover:translate-x-0.5 transition-transform">
+                          Inspect →
                         </span>
-                      )}
-
-                      <span className="flex items-center text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">
-                        Inspect Intelligence <ChevronRight className="h-4 w-4 ml-0.5" />
-                      </span>
+                      </div>
                     </div>
+                  ))}
+                </div>
+
+                {data.items.length > mobileLimit && (
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => setMobileLimit((prev) => prev + 8)}
+                      className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition"
+                    >
+                      Load More Facilities (+{data.items.length - mobileLimit} remaining)
+                    </button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             ) : (
               /* TABLE VIEW */
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                 <table className="w-full text-left text-xs">
                   <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                     <tr>
@@ -381,7 +443,7 @@ export default function FacilitiesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {data.items.map((facility) => (
+                    {data.items.slice(0, mobileLimit).map((facility) => (
                       <tr
                         key={facility.id}
                         onClick={() => setSelectedFacility(facility)}

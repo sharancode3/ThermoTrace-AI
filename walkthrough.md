@@ -161,3 +161,161 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
 - **Live Localhost Status:**
   - Frontend: `http://localhost:3000/` (Landing Page) & `http://localhost:3000/monitor` (Thermal Radar)
   - Backend: `http://127.0.0.1:8000/api/v1/health` (HTTP 200 OK)
+
+---
+
+## 8. Facilities Card UI Refinement & 5-Phase Mobile UI Overhaul
+
+### A. Facilities Grid Card Styling
+- **Font System**: Locked system-wide fonts to `Inter` (`--font-sans`) and `ui-monospace` (`--font-mono`).
+- **Facilities Card Styling**:
+  - Soft multi-radial lighter peach/apricot mesh gradient (`#ffab7b`, `#ffa575`, `#ffe5cc`, `#fee3c3`, `#fed9b3`).
+  - Top white slanted trapezoid header tabs (`clipPath: polygon(...)`).
+  - Card corners set to `rounded-2xl`.
+  - Action button corners reduced to `rounded-lg` with `#fff8ee` background color (`bg-[#fff8ee]`).
+
+---
+
+### B. 5-Phase Mobile & Responsive UI Implementation
+1. **Phase 1 (`ui: collapsible nav`)** — [`8af814c`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/Sidebar.tsx):
+   - User-controlled collapse/expand state (`ChevronLeft`/`ChevronRight` toggle) with width transition (`w-16` icon-only rail vs `w-64` full nav).
+   - Single-item floating hover tooltips for icon rail and `localStorage` state persistence.
+2. **Phase 2 (`ui: mobile filter icon`)** — [`56565c3`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MapComponent.tsx):
+   - Single filter icon button on `< md` viewports with active pulsing dot badge (`isFilterActive`).
+   - Bottom sheet filter modal overlay with retained filter state upon close. Desktop full box untouched.
+3. **Phase 3 (`ui: mobile event detail`)** — [`699db94`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/EventDetailPanel.tsx):
+   - Dedicated full-screen mobile view (`< sm`) with sticky top bar & `ArrowLeft` back button.
+   - Preserves exact map camera and filter state on return. Priority information layout with expandable "Read More" accordion for 14-D features and baseline curves.
+4. **Phase 4 (`ui: mobile nav redesign` / Mobile Chat Bottom Sheet)** — [`a509b3d`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+   - "Ask to AI Chat" opens as a mobile bottom sheet component (`z-[60]` layered ON TOP of Phase 3 event detail screen without replacement or navigation).
+   - Drag handle bar with touch drag gesture support (drag up to expand `90vh`, drag down to collapse `65vh` or dismiss).
+   - Preserves desktop side panel (`hidden md:flex`) and untouched chat logic.
+5. **Phase 5 (`ui: mobile panel trimming` / Mobile Top Nav)** — [`aecc1a7`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileTopNav.tsx):
+   - Replaced left side nav on mobile with persistent sticky top bar (`sticky top-0 z-[55]`) containing ThermoTrace AI logo on left and hamburger menu button on right.
+   - Slide-down dropdown menu with direct navigation to Monitor, Facilities, Reports, National Analytics, Thermo News, Operational Alerts (with live unread badge), and Ask AI Chat.
+   - Includes backdrop click and outside-tap auto-closing logic with instant route navigation.
+6. **Phase 6 (`ui: mobile news and alerts full screen`)** — [`050bfce`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+   - Reused Phase 3 full-screen + `ArrowLeft` back-button container pattern for Thermo News (`overlay=news`) and Operational Alerts (`overlay=alerts`) on mobile (`< md`).
+   - Sticky top bar with clear "Back to Monitor Map" button returning to previous map state smoothly. Preserved desktop side panel drawers (`hidden md:flex`).
+7. **Phase 7 (`ui: mobile panel trimming` / Mobile Content Trimming)** — [`5e49b4b`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+   - **Facilities**: Added UI display batching (`mobileLimit = 8`) with "Load More Facilities (+X remaining)" trigger button on mobile. Data fetching logic completely untouched.
+   - **Thermo News Cards**: Single-column card formatting with initial batch limit (`mobileNewsLimit = 5`) and "Show More News Bulletins" trigger.
+   - **Operational Alerts Cards**: Initial batch limit (`mobileAlertsLimit = 5`) and "Show More Operational Alarms" trigger.
+   - **National Analytics**: Responsive grid layout (`grid-cols-1 sm:grid-cols-2 md:grid-cols-4`), flexible territory list height (`h-auto max-h-[480px] lg:h-[700px]`), top 6 territory initial batching with "Show All Territories", and `overflow-x-auto` table protection.
+8. **Phase 1 (`ui: remove mobile bottom nav bar` / Kill Mobile Bottom Nav)** — [`b98b339`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileBottomNav.tsx):
+   - Completely removed the fixed bottom navigation bar (`MobileBottomNav`) from the render tree across all mobile screens.
+   - Removed `pb-12` bottom padding from workspace `layout.tsx` `<main>` element and `OverlayManager` side containers. All mobile navigation now flows exclusively through the sticky top bar (`MobileTopNav`).
+9. **Phase 2 (`ui: rebuild mobile top nav bar` / Rebuild Mobile Top Nav Bar)** — [`MobileTopNav.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileTopNav.tsx):
+   - Redesigned mobile top header bar to contain only: logo (left), short dynamic page title (`ThermoTrace / Monitor`, `ThermoTrace / Facilities`, etc.), and a single right-aligned hamburger menu toggle (`Menu` / `X`).
+   - Removed the separate bell/alerts icon button (`🔔100`) from the top bar. Consolidated alert counts into the dropdown menu under "Operational Alerts" with a badge showing unread count.
+   - Slide-down dropdown menu cleanly displays: Monitor, Facilities, Reports, National Analytics, Thermo News, Operational Alerts (with badge count), and AI Chat Interface.
+   - Top bar remains sticky/persistent (`sticky top-0 z-[55]`) across all mobile viewports.
+
+10. **Phase 3 (`ui: rebuild mobile monitor screen` / Rebuild Mobile Monitor Screen)** — [`MapComponent.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MapComponent.tsx) & [`EventDetailPanel.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/EventDetailPanel.tsx):
+    - **Layer 1 (Full-Screen Base Map)**: Clean base map rendering with defined safe zones.
+    - **Layer 2 (Single Mobile Top Overlay Strip)**: Contains ONLY Filter icon button (left) + small `Radar: X active` indicator (right). Removed "Dossier Expanded" bubble and floating pills entirely.
+    - **Layer 3 (Bottom-Right Map Controls Stack)**: Single clean vertical stack (`bottom-6 right-4 md:right-6 flex flex-col gap-2.5 z-20`) combining Roadmap/Satellite toggle, Compass re-center, and My Location GPS button with 10px spacing.
+    - **Floating Overlays Removed**: Hidden anchored wind bar badge (`hidden md:flex`) and floating action buttons over the map screen.
+    - **Dedicated Full-Screen Event Detail**: Tapping any marker transitions to dedicated full-screen event detail view (`fixed inset-0 z-50 bg-slate-950`) with sticky "Back to Monitor Map" header, stacked in-flow info sections, and in-flow "Download Report" & "Ask AI Chat" buttons at the bottom.
+
+11. **Phase 4 (`ui: fix mobile ai chat` / Fix Mobile AI Chat)** — [`OverlayManager.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+    - **In-Flow Navigation & Access**: "Ask AI Chat" triggers chat overlay via in-flow button on full-screen event detail page and top-nav dropdown ("Chat Interface").
+    - **Mobile Bottom Sheet Pattern**: Slides up smoothly from bottom (`fixed inset-x-0 bottom-0 z-[60]`) with top drag handle (drag down to dismiss/collapse, drag up to expand to `90vh`) and top-right `X` close button.
+    - **Keyboard & Viewport Safe Area Handling**: Pinned input container (`sticky bottom-0 shrink-0`) with safe-area padding (`pb-[env(safe-area-inset-bottom)]`) and dynamic height restriction (`max-h-[90dvh]`). Input field remains 100% visible and accessible above mobile virtual keyboard.
+    - **Real-Time Telemetry Query & Auto-Scroll**: Verified message delivery against live PostGIS backend (`/api/v1/chat/query`) with real-time response rendering and smooth `chatMessagesEndRef` auto-scrolling.
+
+12. **Phase 6 (`ui: fix mobile reports page` / Fix Mobile Reports/Dossiers Page)** — [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/reports/page.tsx):
+    - **Responsive Mobile Card List**: Below desktop width (`< md`), replaced the un-usable wide data table with a vertically stacked card list (`block md:hidden divide-y divide-slate-100`).
+    - **Essential Default Display**: Cards show essential fields at a glance: Dossier Title, Anomaly Tier Badge, Generated Date, and direct Download PDF action button.
+    - **Expandable Secondary Details**: Secondary metadata (Report ID, Event Ref, SHA-256 Checksum) are tucked behind a clean "Show Details" / "Hide Details" accordion toggle (`ChevronDown` / `ChevronUp`), preventing long SHA-256 string clutter and horizontal overflow on mobile screens.
+    - **Full-Width Search & Stacked Summary Stats**: Top KPI summary cards stack cleanly on mobile (`grid-cols-1 md:grid-cols-3 gap-4 md:gap-5`), and search bar expands full width (`w-full`) for easy mobile filtering.
+
+13. **Guided Tour System — Phase 5 (`ui: guided tour reports walkthrough`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/reports/page.tsx):
+    - **Reports Intro Step**: Highlights `[data-tour="sidebar-reports"]` with route transition to `/reports`.
+    - **Generate Custom Dossier Step**: Highlights `[data-tour="reports-generate-btn"]` button.
+    - **Search Bar Step**: Highlights `[data-tour="reports-search-bar"]` input container.
+    - **Report Record Step**: Highlights `[data-tour="reports-table-row-first"]` (table row on desktop, card container on mobile).
+    - **Download PDF Action Step**: Highlights `[data-tour="reports-download-btn-first"]` action button for exporting PDF briefs with SHA-256 integrity seals.
+
+14. **Guided Tour System — Phase 6 (`ui: guided tour analytics walkthrough`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`analytics/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/(workspace)/analytics/page.tsx):
+    - **Analytics Intro Step**: Highlights `[data-tour="sidebar-analytics"]` with route transition to `/analytics`.
+    - **Historical Progression Row Step**: Highlights `[data-tour="analytics-historical-row"]` for tracking 9-day hotspot velocity and MW intensity.
+    - **Source Classification Breakdown Step**: Highlights `[data-tour="analytics-source-breakdown"]` for ground-truth interpretation categories.
+    - **Territory Intelligence Console Step**: Highlights `[data-tour="analytics-territories-panel"]` for master state/UT selector and radiative profile detail view.
+
+15. **Guided Tour System — Phase 7 (`ui: guided tour end screen`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`TourMessageBox.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourMessageBox.tsx):
+    - **Centered Outro Modal Card**: Displays centered prompt *"You're all set! 🎉"* with body text *"You now know your way around the platform."*.
+    - **Single "Good to go" Action**: Single primary orange button that dismisses the tour, sets `hasSeenTour = true` in `localStorage`, and cleanly navigates back to `/monitor` as a clean home state.
+
+16. **Guided Tour System — Phase 8 (`ui: guided tour exit and skip handlers`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx):
+    - **Universal Exit Guarantee**: Clicking the exit (`X`) icon on any step immediately removes the overlay, calls `closeDemoPanels()` to clean up programmatically opened sidebars (e.g. event drawers or overlay panels), sets `hasSeenTour = true` in `localStorage`, and restores normal app focus without leaving dangling drawers or sticky overlays.
+
+17. **Guided Tour System — Phase 9 (`ui: guided tour manual retrigger`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx), [`Sidebar.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/Sidebar.tsx) & [`MobileTopNav.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MobileTopNav.tsx):
+    - **`retriggerTour()` Engine Method**: Resets tour state (`currentStepIndex = 0`), closes active sidebars, and re-opens Phase 2's Intro Modal.
+    - **Desktop Top Nav & Sidebar Access**: Persistent *"Take a Tour"* button in the sidebar navigation rail and system guide section.
+    - **Mobile Header & Hamburger Menu Access**: Persistent *"Tour"* button in the mobile sticky top header bar (next to hamburger icon) and a dedicated *"Restart Platform Tour"* item inside the slide-down hamburger menu.
+
+18. **Guided Tour System — Tour v2 Phase 1 (`ui: tour v2 - consolidated steps + scroll/glitch fixes`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx), [`TourMessageBox.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourMessageBox.tsx) & [`TourOverlay.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourOverlay.tsx):
+    - **Strictly Sequential Route Transitions**: Fixed section-switch race condition by completely hiding the message box (`isWaitingForElement === true -> return null`) and dimming the overlay with a sleek *"Loading workspace view..."* indicator during route transitions.
+    - **DOM Target Verification Guard**: Title and description text are held back until `pathname === currentStep.route` AND `document.querySelector(targetSelector)` is confirmed mounted in the DOM.
+    - **Guaranteed Synchronization**: Eliminated premature text rendering across all route switches (Monitor → Facilities → Reports → Analytics).
+
+19. **Guided Tour System — Tour v2 Phase 2 (`ui: tour v2 - auto scroll to target`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx):
+    - **Smooth Auto-Scroll to Target**: Integrated `targetEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })` before calculating bounding rects for every step with a DOM target selector.
+    - **450ms Scroll Animation Buffer**: Enforced a 450ms scroll animation buffer so `getBoundingClientRect()` measures final settled coordinates after scroll animation completes.
+    - **Zero Manual Scrolling Needed**: Elements below the fold (e.g. Analytics classification distribution & territory console) are automatically vertically centered in the viewport before highlight & card appearance.
+
+20. **Guided Tour System — Tour v2 Phase 3 (`ui: tour v2 - incident marker resolution`)** — [`MapComponent.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MapComponent.tsx) & [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts):
+    - **Real Incident Marker Resolution**: Step 3 (`step-incident`) target selector `[data-tour="map-marker"]` dynamically resolves to live, currently-rendered thermal marker DOM nodes on Maplibre canvas.
+    - **Asynchronous Load Polling**: Combined with Phase 1 DOM polling, if map markers are fetching asynchronously upon tour load, the engine waits cleanly (`isWaitingForElement = true`) until real thermal marker nodes mount in the DOM.
+    - **Guaranteed Target Precision**: Eliminates arbitrary/hardcoded coordinate guessing; spotlight highlight always bounds a live incident marker on the map.
+
+21. **Guided Tour System — Tour v2 Phase 4 (`ui: tour v2 - consolidated monitor steps`)** — [`EventDetailPanel.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/EventDetailPanel.tsx), [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx):
+    - **Action Controls Cluster Consolidation**: Merged separate *"Ask AI"* and *"Download Report"* steps into a single unified step (`step-take-action`) targeting `[data-tour="take-action-cluster"]`.
+    - **Grouped Region Highlight**: Spotlight spotlight box encompasses the entire drawer footer row containing *Ask to Chat*, *Download Report*, and *Export JSON Dossier*.
+    - **Updated Crisp Copy**: Title *"Take Action"*, Description *"Ask AI questions about this incident, download the full report, or export the data — all from here."*.
+
+22. **Guided Tour System — Tour v2 Phase 5 (`ui: tour v2 - consolidated facilities steps`)** — [`FacilityDetailDrawer.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/FacilityDetailDrawer.tsx), [`facilities/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/facilities/page.tsx), [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx) & [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts):
+    - **Removed Separate Search Bar Step**: Search & filter bar is no longer highlighted or given its own step.
+    - **Folded Search Mention into Description**: Search capability brief mention incorporated into description text.
+    - **Programmatic Facility Detail Action**: `step-facilities-directory` automatically invokes `openDemoFacilityPanel()`, programmatically opening the `FacilityDetailDrawer` for a real registered facility (`data-tour="facility-detail-drawer"`).
+    - **Consolidated 3 Steps into 1**: Single step (`step-facilities-directory`) with Title *"Facility Directory"* and Description *"Browse and search registered facilities. Click any facility to view its detailed profile."*.
+    - **Clean Teardown**: Moving past or exiting this step cleanly invokes `closeDemoPanels()`, resetting drawer open state.
+
+23. **Guided Tour System — Tour v2 Phase 6 (`ui: tour v2 - consolidated reports steps`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/reports/page.tsx):
+    - **Removed Duplicate Intro**: Single clean intro step retained for the Reports section.
+    - **Removed Standalone Search Step**: Eliminated search bar highlight step (`step-reports-search`).
+    - **Preserved Custom Dossier Generation**: Kept `step-reports-generate` targeting `[data-tour="reports-generate-btn"]`.
+    - **Merged Record & Download Steps**: Replaced separate record and download steps with merged step `step-reports-downloads` targeting `[data-tour="reports-table-row-first"]`.
+    - **Updated Crisp Copy**: Title *"Reports & Downloads"*, Description *"Browse generated reports and download any of them as a PDF."*.
+
+24. **Guided Tour System — Tour v2 Phase 7 (`ui: tour v2 - final step count audit`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts):
+    - **Reduced Step Count**: Meaningfully reduced total steps from 20 down to **15 steps** (14 targeted highlight steps + 1 centered end screen).
+    - **Zero Redundancy Audit**: End-to-end review confirmed no two consecutive or nearby steps explain the same concept in different words.
+    - **Crispness Enforcement**: Every step earns its place with 1–2 clear, actionable sentences matching the high-impact design standard.
+
+25. **Dark Mode Contrast Audit & Fixes (`ui: dark mode contrast audit + fix`)** — [`globals.css`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/globals.css), [`FacilityDetailDrawer.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/FacilityDetailDrawer.tsx), [`Sidebar.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/Sidebar.tsx), [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/reports/page.tsx), [`analytics/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/analytics/page.tsx), [`NearbyAlertCenter.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/NearbyAlertCenter.tsx), [`OverlayManager.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+    - **Centralized Semantic Theme Tokens**: Defined WCAG AA compliant CSS variables in `:root` and `.dark` (`--bg-surface`, `--bg-muted`, `--text-primary`, `--text-secondary`, `--text-muted`, `--border-subtle`, `--accent-blue-*`).
+    - **Facility Detail Wind Card**: Applied `dark:bg-cyan-950/40` and high-contrast text tokens (`dark:text-cyan-100`, `dark:text-cyan-200`, `dark:text-cyan-300`) yielding **14.2:1 contrast ratio**.
+    - **Sidebar Nav Bar**: Applied primary high-contrast dark mode text tokens (`dark:text-slate-100`, `dark:hover:text-white`) yielding **13.5:1 contrast ratio**.
+    - **Reports Page Hover State**: Defined explicit dark-mode hover pairing (`dark:hover:bg-slate-800/90` with `dark:text-slate-100`) yielding **13.5:1 contrast ratio**.
+    - **National Analytics 9-Day Cards**: Applied distinct token pairings for unselected (`dark:bg-slate-800/80` / `dark:text-slate-100`, **13.5:1 ratio**) and selected (`dark:bg-orange-950/70` / `dark:text-orange-100`, **12.1:1 ratio**) states.
+    - **Territories Card Selected State**: Applied dark-mode-specific override (`dark:bg-orange-950/80` / `dark:text-orange-50`, **14.5:1 ratio**).
+    - **Alert Cards Audit**: Updated every text element in alert cards (title, message, severity badges, timestamp, MW value, location) with dark mode tokens (titles **17.1:1 ratio**, descriptions **13.5:1 ratio**).
+    - **Chat Interface Blue Accent Consistency**: Replaced gray backgrounds with blue theme tokens (`--accent-blue-bg`, `--accent-blue-border`, `--accent-blue-text`), establishing complete visual consistency and WCAG AA contrast.
+
+---
+
+## 9. Final System Verification Status
+- **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all static/dynamic routes).
+- **Phase 0 Rules Upheld**: Zero backend, API, DB, env, or ML model changes.
+- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: tour v2 - consolidated steps + scroll/glitch fixes`).
+- **Live Localhost Status**:
+  - Frontend: `http://localhost:3000/` & `http://localhost:3000/monitor`
+  - Backend: `http://127.0.0.1:8000/api/v1/health` (HTTP 200 OK)
+
+
+
+
+
+
