@@ -667,20 +667,24 @@ export function OverlayManager() {
                   </span>
                 </div>
 
-                {/* Center Grab Bar Indicator */}
-                <div className="flex flex-col items-center gap-0.5">
-                  <div className="w-10 h-1.5 rounded-full bg-slate-400 dark:bg-slate-600 hover:bg-slate-500 active:bg-orange-600 transition-colors shadow-xs" />
-                  <span className="text-[9px] text-slate-400 dark:text-slate-400 font-medium">{isChatMobileExpanded ? "Drag down to collapse" : "Drag up to expand"}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setIsChatMobileExpanded((prev) => !prev); }}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition cursor-pointer"
+                    title={isChatMobileExpanded ? "Collapse height" : "Expand full height"}
+                  >
+                    {isChatMobileExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); closeOverlay(); }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition cursor-pointer"
+                    title="Close Chat"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); closeOverlay(); }}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
-                  title="Close Chat"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
 
               {/* Chat Body for Mobile Contextual Chat */}
