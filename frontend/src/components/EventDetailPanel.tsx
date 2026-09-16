@@ -337,20 +337,20 @@ function WindConditionsCard({
   const isLightVariable = Boolean(wind.is_light_variable) || (typeof wind.speed_kmh === "number" && wind.speed_kmh < 3.0);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-3.5 text-slate-800 shadow-sm">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3.5 text-slate-800 dark:text-slate-100 shadow-sm">
       {/* Header with Title, Status Badges & Toggle */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5 font-mono">
-            <Compass className="w-4 h-4 text-cyan-600" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5 font-mono">
+            <Compass className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
             <span>DOWNWIND AWARENESS CORRIDOR</span>
           </h2>
           {isStale && (
-            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
               STALE
             </span>
           )}
-          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 font-semibold">
+          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 font-semibold">
             {wind.data_kind === "FORECAST_MODEL" ? "OPEN-METEO FORECAST" : "ERA5 REANALYSIS"}
           </span>
         </div>
@@ -360,8 +360,8 @@ function WindConditionsCard({
           onClick={() => onVisibleChange(!visible)}
           className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded-lg border transition flex items-center gap-1 cursor-pointer ${
             visible
-              ? "bg-cyan-600 text-white border-cyan-600 hover:bg-cyan-700 shadow-sm"
-              : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
+              ? "bg-cyan-600 dark:bg-cyan-600 text-white border-cyan-600 hover:bg-cyan-700 shadow-sm"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
           title={visible ? "Hide downwind awareness corridor on map" : "Show downwind awareness corridor on map"}
         >
@@ -371,77 +371,77 @@ function WindConditionsCard({
       </div>
 
       {/* Main Direction & Speed Visual Row with Full Expanded Names */}
-      <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 rounded-xl border border-cyan-200/80">
+      <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50 dark:bg-cyan-950/70 rounded-xl border border-cyan-200/80 dark:border-cyan-800/80">
         <div
-          className="grid h-13 w-13 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-base font-black text-cyan-700 shadow-sm"
+          className="grid h-13 w-13 shrink-0 place-items-center rounded-full bg-white dark:bg-slate-900 border-2 border-cyan-500 text-base font-black text-cyan-700 dark:text-cyan-300 shadow-sm"
           style={{ transform: `rotate(${Number.isFinite(towardDeg) ? towardDeg : 0}deg)` }}
           title={isLightVariable ? "Light and variable surface wind (< 3 km/h)" : `Wind directed toward ${toFullName} (${toCard} · ${towardDeg}°)`}
         >
-          <NavigationIcon className="w-6 h-6 text-cyan-600 fill-cyan-500" />
+          <NavigationIcon className="w-6 h-6 text-cyan-600 dark:text-cyan-400 fill-cyan-500 dark:fill-cyan-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+          <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-cyan-300 tracking-wider">
             Downwind Awareness Corridor
           </div>
-          <div className="font-mono font-black text-slate-900 text-base leading-snug">
+          <div className="font-mono font-black text-slate-900 dark:text-white text-base leading-snug">
             {isLightVariable ? "Light / Variable Wind" : `Directed toward ${toFullName}`}
           </div>
-          <div className="text-xs font-mono font-semibold text-slate-600 mt-0.5 flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-cyan-700">{speed}</span>
-            <span className="text-slate-300">•</span>
+          <div className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-cyan-700 dark:text-cyan-300">{speed}</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
             <span>Bearing: {Number.isFinite(towardDeg) ? `${towardDeg}° (${toCard})` : "N/A"}</span>
-            <span className="text-slate-300">•</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
             <span>Origin: {fromFullName} ({fromCard})</span>
           </div>
         </div>
       </div>
 
       {/* Honest Scientific Operational Corridor Description */}
-      <div className="p-3 bg-cyan-50/50 rounded-xl border border-cyan-200/60 space-y-1 text-xs">
-        <div className="font-bold text-cyan-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
-          <Wind className="w-3.5 h-3.5 text-cyan-600" />
+      <div className="p-3 bg-cyan-50/70 dark:bg-cyan-950/60 rounded-xl border border-cyan-200/80 dark:border-cyan-800/60 space-y-1 text-xs">
+        <div className="font-bold text-cyan-950 dark:text-cyan-200 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+          <Wind className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
           <span>Downwind Awareness Corridor</span>
         </div>
         {isLightVariable ? (
-          <p className="text-[11.5px] text-slate-700 leading-relaxed">
+          <p className="text-[11.5px] text-slate-700 dark:text-slate-200 leading-relaxed">
             Surface wind is light and variable (&lt; 3 km/h). Directional transport is uncertain; the map displays a radial awareness buffer around the event for localized ground verification.
           </p>
         ) : (
-          <p className="text-[11.5px] text-slate-700 leading-relaxed">
-            Surface wind at the selected time is directed from the <strong className="font-semibold text-slate-900">{fromFullName} ({fromCard})</strong> toward the <strong className="font-semibold text-cyan-950">{toFullName} ({toCard} at {towardDeg}°)</strong> at <strong className="font-semibold text-slate-900">{speed}</strong>. The map shows a wind-directed awareness corridor for prioritizing ground verification. Actual smoke or pollutant transport may differ because this operational view does not model plume rise, complex terrain, atmospheric stability, precipitation, or specific source characteristics.
+          <p className="text-[11.5px] text-slate-700 dark:text-slate-200 leading-relaxed">
+            Surface wind at the selected time is directed from the <strong className="font-semibold text-slate-900 dark:text-white">{fromFullName} ({fromCard})</strong> toward the <strong className="font-semibold text-cyan-950 dark:text-cyan-100">{toFullName} ({toCard} at {towardDeg}°)</strong> at <strong className="font-semibold text-slate-900 dark:text-white">{speed}</strong>. The map shows a wind-directed awareness corridor for prioritizing ground verification. Actual smoke or pollutant transport may differ because this operational view does not model plume rise, complex terrain, atmospheric stability, precipitation, or specific source characteristics.
           </p>
         )}
       </div>
 
       {/* Full Meteorological 4-Metric Grid with Clarifying Subtitles */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Wind Gusts</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Wind Gusts</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.gusts_kmh !== undefined ? `${wind.gusts_kmh.toFixed(1)} km/h` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Peak surface gusts</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Peak surface gusts</p>
         </div>
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Surface Temp</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Surface Temp</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.temperature_c !== undefined ? `${wind.temperature_c.toFixed(1)} °C` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Ground air temp</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Ground air temp</p>
         </div>
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Humidity</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Humidity</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.relative_humidity_pct !== undefined ? `${wind.relative_humidity_pct}%` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Relative moisture</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Relative moisture</p>
         </div>
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Pressure</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Pressure</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.surface_pressure_hpa !== undefined ? `${wind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Surface pressure</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Surface pressure</p>
         </div>
       </div>
 
@@ -618,7 +618,7 @@ export function EventDetailPanel({
 
   let anomalyHeadline = "NORMAL BEHAVIOR";
   let anomalyDesc = "Thermal radiance matches expected baseline operations.";
-  let anomalyStyle = "bg-yellow-50/70 border-yellow-300 text-yellow-900";
+  let anomalyStyle = "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100";
   let AnomalyIcon = CheckCircle2;
 
   if (isInsufficient) {
@@ -626,39 +626,39 @@ export function EventDetailPanel({
     const sampleSize = data?.baseline_sample_size || 0;
     const threshold = data?.baseline_sufficiency_threshold || 10;
     anomalyDesc = `Not enough historical data at this facility yet (${sampleSize} of ${threshold} minimum observations) — anomaly status unavailable.`;
-    anomalyStyle = "bg-slate-100 border-slate-300 text-slate-700";
+    anomalyStyle = "bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200";
     AnomalyIcon = Info;
   } else if (isCritical) {
     anomalyHeadline = "CRITICAL ANOMALY DETECTED";
     anomalyDesc = `Current intensity (${data?.peak_frp_mw?.toFixed(1)} MW) is significantly above verified historical baseline (+${data?.anomaly_z_score?.toFixed(1)}σ). Potential emergency flare or blaze.`;
-    anomalyStyle = "bg-red-50 border-red-200 text-red-800";
+    anomalyStyle = "bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100";
     AnomalyIcon = AlertOctagon;
   } else if (isAbnormal) {
     anomalyHeadline = "ABNORMAL THERMAL ACTIVITY";
     anomalyDesc = `Elevated heat signature (+${data?.anomaly_z_score?.toFixed(1)}σ above verified baseline). Activity exceeds typical operational variance.`;
-    anomalyStyle = "bg-orange-50 border-orange-200 text-orange-800";
+    anomalyStyle = "bg-orange-50 dark:bg-orange-950/80 border-orange-200 dark:border-orange-800 text-orange-900 dark:text-orange-100";
     AnomalyIcon = AlertTriangle;
   } else if (isElevated) {
     anomalyHeadline = "ELEVATED EMISSION";
     anomalyDesc = `Moderate thermal deviation (+${data?.anomaly_z_score?.toFixed(1)}σ). Continues under monitoring.`;
-    anomalyStyle = "bg-amber-50 border-amber-200 text-amber-800";
+    anomalyStyle = "bg-amber-50 dark:bg-amber-950/80 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
     AnomalyIcon = AlertTriangle;
   }
 
   if (isCritical) {
     anomalyHeadline = "CRITICAL ANOMALY DETECTED";
     anomalyDesc = `Current intensity (${data?.peak_frp_mw?.toFixed(1)} MW) is significantly above historical 90-day baseline (+${data?.anomaly_z_score?.toFixed(1)}σ). Potential emergency flare or incident.`;
-    anomalyStyle = "bg-red-50 border-red-200 text-red-800";
+    anomalyStyle = "bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100";
     AnomalyIcon = AlertOctagon;
   } else if (isAbnormal) {
     anomalyHeadline = "ABNORMAL THERMAL ACTIVITY";
     anomalyDesc = `Elevated heat signature (+${data?.anomaly_z_score?.toFixed(1)}σ above baseline). Activity exceeds typical operational variance.`;
-    anomalyStyle = "bg-orange-50 border-orange-200 text-orange-800";
+    anomalyStyle = "bg-orange-50 dark:bg-orange-950/80 border-orange-200 dark:border-orange-800 text-orange-900 dark:text-orange-100";
     AnomalyIcon = AlertTriangle;
   } else if (isElevated) {
     anomalyHeadline = "ELEVATED EMISSION";
     anomalyDesc = `Moderate thermal deviation (+${data?.anomaly_z_score?.toFixed(1)}σ). Continues under monitoring.`;
-    anomalyStyle = "bg-amber-50 border-amber-200 text-amber-800";
+    anomalyStyle = "bg-amber-50 dark:bg-amber-950/80 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
     AnomalyIcon = Activity;
   }
 
