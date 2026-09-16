@@ -1027,11 +1027,11 @@ export function EventDetailPanel({
             <button
               type="button"
               onClick={() => tabsRef.current?.scrollBy({ left: -140, behavior: "smooth" })}
-              className="absolute left-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-r from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300 transition"
+              className="absolute left-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-r from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200 transition"
               title="Scroll left"
               aria-label="Scroll left"
             >
-              <ChevronLeft className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300" />
+              <ChevronLeft className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200" />
             </button>
           )}
 
@@ -1081,11 +1081,11 @@ export function EventDetailPanel({
             <button
               type="button"
               onClick={() => tabsRef.current?.scrollBy({ left: 140, behavior: "smooth" })}
-              className="absolute right-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-l from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300 transition"
+              className="absolute right-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-l from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200 transition"
               title="Scroll right"
               aria-label="Scroll right"
             >
-              <ChevronRight className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-blue-400 hover:text-orange-600 dark:hover:text-blue-300" />
+              <ChevronRight className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200" />
             </button>
           )}
         </div>
