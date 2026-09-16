@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { 
   X, Loader2, Activity, AlertTriangle, ShieldCheck, Flame, 
   MapPin, Clock, BarChart3, TrendingUp, TrendingDown, Cpu, 
-  ChevronRight, Download, FileText, Satellite,
+  ChevronRight, ChevronLeft, Download, FileText, Satellite,
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
   Layers, Compass, Info, Copy, Check, Eye, ExternalLink,
@@ -481,6 +481,30 @@ export function EventDetailPanel({
   const [mobileSnap, setMobileSnap] = useState<"peek" | "expanded">("expanded");
   const [isMobileReadMoreOpen, setIsMobileReadMoreOpen] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkTabScroll = () => {
+    const el = tabsRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 6);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6);
+  };
+
+  useEffect(() => {
+    checkTabScroll();
+    const el = tabsRef.current;
+    if (el) {
+      el.addEventListener("scroll", checkTabScroll);
+    }
+    window.addEventListener("resize", checkTabScroll);
+    return () => {
+      if (el) el.removeEventListener("scroll", checkTabScroll);
+      window.removeEventListener("resize", checkTabScroll);
+    };
+  }, [loading, isExpanded]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -996,44 +1020,74 @@ export function EventDetailPanel({
         )}
       </div>
 
-      {/* Navigation Tabs (Clean Light Styling) */}
+      {/* Navigation Tabs (Clean Light Styling with Hidden Scrollbar & Auto-Hiding Arrow Indicators) */}
       {!isExpanded && (
-        <div className={`border-b border-slate-200 px-3 py-1.5 bg-slate-50 text-xs font-semibold shrink-0 gap-1 overflow-x-auto [scrollbar-width:thin] ${mobileSnap === "peek" ? "hidden sm:flex" : "flex"}`}>
-          <button 
-            onClick={() => setActiveTab("overview")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+        <div className="relative border-b border-slate-200 bg-slate-50 shrink-0">
+          {canScrollLeft && (
+            <button
+              type="button"
+              onClick={() => tabsRef.current?.scrollBy({ left: -140, behavior: "smooth" })}
+              className="absolute left-0 top-0 bottom-0 z-10 px-1 bg-gradient-to-r from-slate-100 via-slate-100/90 to-transparent flex items-center justify-center text-slate-600 hover:text-orange-600 transition"
+              title="Scroll left"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="w-4 h-4 drop-shadow-xs" />
+            </button>
+          )}
+
+          <div
+            ref={tabsRef}
+            onScroll={checkTabScroll}
+            className={`px-3 py-1.5 text-xs font-semibold gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth ${mobileSnap === "peek" ? "hidden sm:flex" : "flex"}`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab("telemetry")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            ML & 14-D Vector
-          </button>
-          <button 
-            onClick={() => setActiveTab("baseline")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Baseline Anomaly
-          </button>
-          <button 
-            onClick={() => setActiveTab("geography")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            Facility & Terrain
-          </button>
-          <button 
-            onClick={() => setActiveTab("ai_brief")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            Grounded Brief
-          </button>
+            <button 
+              onClick={() => setActiveTab("overview")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Overview
+            </button>
+            <button 
+              onClick={() => setActiveTab("telemetry")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              ML & 14-D Vector
+            </button>
+            <button 
+              onClick={() => setActiveTab("baseline")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Baseline Anomaly
+            </button>
+            <button 
+              onClick={() => setActiveTab("geography")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              Facility & Terrain
+            </button>
+            <button 
+              onClick={() => setActiveTab("ai_brief")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              Grounded Brief
+            </button>
+          </div>
+
+          {canScrollRight && (
+            <button
+              type="button"
+              onClick={() => tabsRef.current?.scrollBy({ left: 140, behavior: "smooth" })}
+              className="absolute right-0 top-0 bottom-0 z-10 px-1 bg-gradient-to-l from-slate-100 via-slate-100/90 to-transparent flex items-center justify-center text-slate-600 hover:text-orange-600 transition"
+              title="Scroll right"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="w-4 h-4 drop-shadow-xs" />
+            </button>
+          )}
         </div>
       )}
 

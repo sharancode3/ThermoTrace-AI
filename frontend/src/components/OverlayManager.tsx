@@ -363,7 +363,7 @@ export function OverlayManager() {
                       className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
                     />
                   </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                  <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
                     {[["ALL", `All (${news.length})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Elevated"], ["INDUSTRIAL", "Industrial"], ["AGRI", "Crop Burns"]].map(([val, label]) => (
                       <button
                         key={`mob-fs-n-${val}`}
@@ -511,7 +511,7 @@ export function OverlayManager() {
                       </button>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                  <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
                     {[["ALL", `All (${notifications.length})`], ["UNREAD", `Unread (${unreadAlertCount})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Abnormal"]].map(([val, label]) => (
                       <button
                         key={`mob-fs-a-${val}`}
@@ -1285,7 +1285,7 @@ export function OverlayManager() {
               className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
             />
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
             {[["ALL", `All (${news.length})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Elevated"], ["INDUSTRIAL", "Industrial"], ["AGRI", "Crop Burns"]].map(([val, label]) => (
               <button
                 key={val}
@@ -1340,7 +1340,7 @@ export function OverlayManager() {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
             {[["ALL", `All (${notifications.length})`], ["UNREAD", `Unread (${unreadAlertCount})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Abnormal"]].map(([val, label]) => (
               <button
                 key={val}
