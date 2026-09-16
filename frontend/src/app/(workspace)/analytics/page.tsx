@@ -280,30 +280,30 @@ export default function AnalyticsPage() {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         
         {/* 2. CHRONOLOGICAL 9-DAY TIMELINE PROGRESSION BAR (Swipable Row on Mobile) */}
-        {data?.daily_history && data.daily_history.length > 0 && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs" data-tour="analytics-historical-row">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
-                  9-Day Historical Progression (Swipeable)
-                </span>
-              </div>
-              <button
-                onClick={() => handleDateChange("ALL")}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-                  selectedDate === "ALL"
-                    ? "bg-orange-600 text-white shadow-xs"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
-                }`}
-              >
-                All 9 Days
-              </button>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs" data-tour="analytics-historical-row">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                9-Day Historical Progression (Swipeable)
+              </span>
             </div>
+            <button
+              onClick={() => handleDateChange("ALL")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                selectedDate === "ALL"
+                  ? "bg-orange-600 text-white shadow-xs"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
+              }`}
+            >
+              All 9 Days
+            </button>
+          </div>
 
-            {/* Horizontally scrollable row on mobile, 9-col grid on desktop */}
-            <div className="flex md:grid md:grid-cols-9 overflow-x-auto snap-x scrollbar-none gap-2.5 pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
-              {data.daily_history.map((day: any) => {
+          {/* Horizontally scrollable row on mobile, 9-col grid on desktop */}
+          <div className="flex md:grid md:grid-cols-9 overflow-x-auto snap-x scrollbar-none gap-2.5 pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
+            {data?.daily_history && data.daily_history.length > 0 ? (
+              data.daily_history.map((day: any) => {
                 const isSelected = selectedDate === day.date;
                 return (
                   <button
@@ -330,10 +330,17 @@ export default function AnalyticsPage() {
                     </div>
                   </button>
                 );
-              })}
-            </div>
+              })
+            ) : (
+              Array.from({ length: 9 }).map((_, idx) => (
+                <div
+                  key={`skeleton-day-${idx}`}
+                  className="shrink-0 w-28 md:w-auto snap-start p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-800/40 animate-pulse h-20"
+                />
+              ))
+            )}
           </div>
-        )}
+        </div>
 
         {/* 3. UPPER INTELLIGENCE GRID: PAN-INDIA DOSSIER & ML RIGOR (Stacked Full Width on Mobile) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

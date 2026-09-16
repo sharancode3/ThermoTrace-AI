@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { usePathname, useRouter } from "next/navigation";
 import { TOUR_STEPS } from "@/config/tourSteps";
 import { TargetRect, TourStep } from "@/types/tour";
+import { fetchNationalAnalytics, fetchFacilities, fetchReports } from "@/lib/apiClient";
 
 export function openDemoEventPanel(eventId = "EVT-IN-MAD-0005") {
   if (typeof window === "undefined") return;
@@ -84,9 +85,24 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const [isWaitingForElement, setIsWaitingForElement] = useState(false);
 
-  const currentStep = isActive && TOUR_STEPS[currentStepIndex] ? TOUR_STEPS[currentStepIndex] : null;
+  const prewarmTourPages = useCallback(() => {
+    try {
+      // Prefetch Next.js route JS bundles
+      router.prefetch("/monitor");
+      router.prefetch("/facilities");
+      router.prefetch("/reports");
+      router.prefetch("/analytics");
 
-  // On mount: check localStorage for hasSeenTour
+      // Pre-fetch and cache API datasets in background
+      fetchNationalAnalytics("ALL").catch(() => {});
+      fetchFacilities().catch(() => {});
+      fetchReports().catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+  }, [router]);
+
+  // On mount: check localStorage for hasSeenTour & prewarm if new user
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -95,11 +111,12 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       } else {
         setHasSeenTour(false);
         setShowIntroModal(true);
+        prewarmTourPages();
       }
     } catch (e) {
       setHasSeenTour(false);
     }
-  }, []);
+  }, [prewarmTourPages]);
 
   // Update target rect with bounding rect calculation
   const updateTargetRect = useCallback(() => {
@@ -248,26 +265,29 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
   const startTour = useCallback(() => {
     closeDemoPanels();
+    prewarmTourPages();
     setShowIntroModal(false);
     setCurrentStepIndex(0);
     setIsActive(true);
     setIsWaitingForElement(false);
-  }, []);
+  }, [prewarmTourPages]);
 
   const startTourAtStep = useCallback((index: number) => {
     closeDemoPanels();
+    prewarmTourPages();
     setShowIntroModal(false);
     setCurrentStepIndex(index);
     setIsActive(true);
     setIsWaitingForElement(false);
-  }, []);
+  }, [prewarmTourPages]);
 
   const retriggerTour = useCallback(() => {
     closeDemoPanels();
+    prewarmTourPages();
     setIsActive(false);
     setCurrentStepIndex(0);
     setShowIntroModal(true);
-  }, []);
+  }, [prewarmTourPages]);
 
   const nextStep = useCallback(() => {
     if (currentStepIndex < TOUR_STEPS.length - 1) {
