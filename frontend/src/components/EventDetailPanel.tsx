@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { 
   X, Loader2, Activity, AlertTriangle, ShieldCheck, Flame, 
   MapPin, Clock, BarChart3, TrendingUp, TrendingDown, Cpu, 
@@ -468,6 +468,8 @@ export function EventDetailPanel({
   onWindVisibilityChange: (visible: boolean) => void;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const hasOverlay = Boolean(searchParams?.get("overlay"));
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -478,6 +480,7 @@ export function EventDetailPanel({
   const [copied, setCopied] = useState(false);
   const [mobileSnap, setMobileSnap] = useState<"peek" | "expanded">("expanded");
   const [isMobileReadMoreOpen, setIsMobileReadMoreOpen] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -512,15 +515,12 @@ export function EventDetailPanel({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
-
   const handleAskAboutEvent = () => {
     if (!eventId) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("overlay", "chat");
-    url.searchParams.set("eventId", eventId);
-    window.history.pushState({}, "", url.toString());
-    window.dispatchEvent(new CustomEvent("thermo-open-chat", { detail: { eventId } }));
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    params.set("overlay", "chat");
+    params.set("eventId", eventId);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const handleDownloadReport = async () => {

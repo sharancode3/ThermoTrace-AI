@@ -639,7 +639,7 @@ export function OverlayManager() {
         isEnlarged 
           ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
           : "w-full sm:w-[450px]",
-        (overlay === "news" || overlay === "alerts") ? "hidden md:flex" : "flex"
+        (overlay === "news" || overlay === "alerts" || overlay === "chat") ? "hidden md:flex" : "flex"
       )}>
 
       {/* Header */}
