@@ -4,18 +4,11 @@ import { openDemoEventPanel, openDemoFacilityPanel } from "@/components/tour/Tou
 export const TOUR_STEPS: TourStep[] = [
   // --- MONITOR WORKSPACE ---
   {
-    id: "step-monitor-intro",
+    id: "step-monitor-live-map",
     route: "/monitor",
-    targetSelector: '[data-tour="sidebar-monitor"]',
-    title: "Monitor Workspace",
-    description: "Your primary workspace for live spatial surveillance and real-time thermal event tracking.",
-    placement: "right",
-  },
-  {
-    id: "step-live-map",
     targetSelector: '[data-tour="map-container"]',
-    title: "Live Map",
-    description: "Explore active satellite detections, thermal hotspots, and geospatial clusters across India.",
+    title: "Monitor Workspace",
+    description: "Your primary workspace for live spatial surveillance. Explore active satellite detections, thermal hotspots, and geospatial clusters across India.",
     placement: "center",
   },
   {
@@ -48,36 +41,22 @@ export const TOUR_STEPS: TourStep[] = [
 
   // --- FACILITIES REGISTRY ---
   {
-    id: "step-facilities-intro",
-    route: "/facilities",
-    targetSelector: '[data-tour="sidebar-facilities"]',
-    title: "Facilities Registry",
-    description: "Access the sovereign database of registered industrial sites and refining baselines.",
-    placement: "right",
-  },
-  {
     id: "step-facilities-directory",
+    route: "/facilities",
     action: () => {
       openDemoFacilityPanel();
     },
     targetSelector: '[data-tour="facility-detail-drawer"]',
-    title: "Facility Directory",
-    description: "Browse and search registered facilities. Click any facility to view its detailed profile.",
+    title: "Facilities Registry",
+    description: "Access the sovereign database of registered industrial sites and browse facility profiles.",
     placement: "left",
     waitForElement: true,
   },
 
   // --- REPORTS & DOSSIERS ---
   {
-    id: "step-reports-intro",
-    route: "/reports",
-    targetSelector: '[data-tour="sidebar-reports"]',
-    title: "Reports & Dossiers",
-    description: "Access forensic intelligence briefs and legal-grade PDF incident dossiers.",
-    placement: "right",
-  },
-  {
     id: "step-reports-generate",
+    route: "/reports",
     targetSelector: '[data-tour="reports-generate-btn"]',
     title: "Generate Custom Dossier",
     description: "Compile tailored PDF forensic dossiers with verified satellite evidence.",
@@ -95,17 +74,10 @@ export const TOUR_STEPS: TourStep[] = [
 
   // --- NATIONAL ANALYTICS ---
   {
-    id: "step-analytics-intro",
-    route: "/analytics",
-    targetSelector: '[data-tour="sidebar-analytics"]',
-    title: "National Analytics",
-    description: "Understand trends and patterns through visual insights and data.",
-    placement: "right",
-  },
-  {
     id: "step-analytics-historical",
+    route: "/analytics",
     targetSelector: '[data-tour="analytics-historical-row"]',
-    title: "Historical Progression",
+    title: "National Analytics & Historical Trends",
     description: "Track day-by-day hotspot counts, peak radiative power (MW), and dominant anomaly categories over time.",
     placement: "bottom",
     waitForElement: true,
@@ -136,6 +108,3 @@ export const TOUR_STEPS: TourStep[] = [
     placement: "center",
   },
 ];
-
-
-
