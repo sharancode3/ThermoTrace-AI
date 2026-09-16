@@ -2,20 +2,20 @@ import { TourStep } from "@/types/tour";
 import { openDemoEventPanel, openDemoFacilityPanel } from "@/components/tour/TourContext";
 
 export const TOUR_STEPS: TourStep[] = [
-  // --- PHASE 3: MONITOR WALKTHROUGH ---
+  // --- MONITOR WORKSPACE ---
   {
     id: "step-monitor-intro",
     route: "/monitor",
     targetSelector: '[data-tour="sidebar-monitor"]',
     title: "Monitor Workspace",
-    description: "This is your live monitoring workspace, where you can view activity and incidents on the map.",
+    description: "Your primary workspace for live spatial surveillance and real-time thermal event tracking.",
     placement: "right",
   },
   {
     id: "step-live-map",
     targetSelector: '[data-tour="map-container"]',
     title: "Live Map",
-    description: "View detected incidents and activity directly on the map.",
+    description: "Explore active satellite detections, thermal hotspots, and geospatial clusters across India.",
     placement: "center",
   },
   {
@@ -46,13 +46,13 @@ export const TOUR_STEPS: TourStep[] = [
     waitForElement: true,
   },
 
-  // --- PHASE 4: FACILITIES WALKTHROUGH ---
+  // --- FACILITIES REGISTRY ---
   {
     id: "step-facilities-intro",
     route: "/facilities",
     targetSelector: '[data-tour="sidebar-facilities"]',
     title: "Facilities Registry",
-    description: "Explore and monitor the facilities available on the platform.",
+    description: "Access the sovereign database of registered industrial sites and refining baselines.",
     placement: "right",
   },
   {
@@ -67,13 +67,13 @@ export const TOUR_STEPS: TourStep[] = [
     waitForElement: true,
   },
 
-  // --- PHASE 5: REPORTS WALKTHROUGH ---
+  // --- REPORTS & DOSSIERS ---
   {
     id: "step-reports-intro",
     route: "/reports",
     targetSelector: '[data-tour="sidebar-reports"]',
     title: "Reports & Dossiers",
-    description: "View generated reports and access detailed information about monitored activity.",
+    description: "Access forensic intelligence briefs and legal-grade PDF incident dossiers.",
     placement: "right",
   },
   {
@@ -93,7 +93,7 @@ export const TOUR_STEPS: TourStep[] = [
     waitForElement: true,
   },
 
-  // --- PHASE 6: ANALYTICS WALKTHROUGH ---
+  // --- NATIONAL ANALYTICS ---
   {
     id: "step-analytics-intro",
     route: "/analytics",
@@ -127,7 +127,7 @@ export const TOUR_STEPS: TourStep[] = [
     waitForElement: true,
   },
 
-  // --- PHASE 7: END SCREEN ---
+  // --- TOUR END SCREEN ---
   {
     id: "step-tour-end",
     targetSelector: "",

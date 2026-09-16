@@ -289,6 +289,11 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
     - **Merged Record & Download Steps**: Replaced separate record and download steps with merged step `step-reports-downloads` targeting `[data-tour="reports-table-row-first"]`.
     - **Updated Crisp Copy**: Title *"Reports & Downloads"*, Description *"Browse generated reports and download any of them as a PDF."*.
 
+24. **Guided Tour System — Tour v2 Phase 7 (`ui: tour v2 - final step count audit`)** — [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts):
+    - **Reduced Step Count**: Meaningfully reduced total steps from 20 down to **15 steps** (14 targeted highlight steps + 1 centered end screen).
+    - **Zero Redundancy Audit**: End-to-end review confirmed no two consecutive or nearby steps explain the same concept in different words.
+    - **Crispness Enforcement**: Every step earns its place with 1–2 clear, actionable sentences matching the high-impact design standard.
+
 ---
 
 ## 9. Final System Verification Status
