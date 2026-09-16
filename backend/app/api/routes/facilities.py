@@ -164,6 +164,24 @@ def list_facilities(
         "Telangana", "Uttar Pradesh", "West Bengal"
     ]
 
+    facility_ids = [f[0] for f in facilities if f[0]]
+    critical_counts: Dict[Any, int] = {}
+    if facility_ids:
+        crit_rows = (
+            db.query(ThermalEvent.associated_facility_id, func.count(ThermalEvent.id))
+            .filter(
+                ThermalEvent.associated_facility_id.in_(facility_ids),
+                ThermalEvent.lifecycle_status != "CLOSED",
+                or_(
+                    ThermalEvent.anomaly_tier == "CRITICAL",
+                    ThermalEvent.classification == "IND_FIRE",
+                ),
+            )
+            .group_by(ThermalEvent.associated_facility_id)
+            .all()
+        )
+        critical_counts = {row[0]: row[1] for row in crit_rows if row[0]}
+
     items = [
         FacilitySummaryItem(
             id=f[0],
@@ -180,6 +198,7 @@ def list_facilities(
             baseline_frp_std=float(f[11]) if f[11] is not None else None,
             baseline_frp_median=float(f[12]) if f[12] is not None else None,
             historical_event_count=f[13] or 0,
+            critical_event_count=critical_counts.get(f[0], 0),
             is_statistically_sufficient=True,
             is_active=f[14],
             data_source=f[15],

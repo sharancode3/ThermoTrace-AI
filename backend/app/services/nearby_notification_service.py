@@ -125,7 +125,6 @@ def create_nearby_notifications(session: Session, event: ThermalEvent, redis_cli
         try:
             session.flush()
         except IntegrityError:
-            session.rollback()
             continue
         payload = {"type": "NOTIFICATION_CREATED", "user_id": str(user.id),
                    "event_id": event.event_id, "notification_id": str(notification.id),

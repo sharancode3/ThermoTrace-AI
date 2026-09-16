@@ -213,6 +213,16 @@ export function NearbyAlertCenter() {
   };
 
   const saveLocation = async () => {
+    // 1. Immediately request notification permission if default, directly on user click gesture
+    let notifPromise: Promise<NotificationPermission> | null = null;
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      try {
+        notifPromise = Notification.requestPermission();
+      } catch (err) {
+        console.warn("Notification request permission error:", err);
+      }
+    }
+
     setLoading(true); setStatus("Requesting your location…");
     try {
       const position = await requestCurrentPosition();
@@ -228,14 +238,12 @@ export function NearbyAlertCenter() {
       setStatus("Alert location updated & 25 km safety perimeter active.");
 
       if ("Notification" in window) {
-        if (Notification.permission === "default") {
-          const perm = await Notification.requestPermission();
-          if (perm === "granted" && next.vapid_public_key) {
-            try { await enableWebPush(next.vapid_public_key); setStatus("Nearby alerts, 25km geofence, and desktop notifications active."); }
-            catch (error) { setStatus(error instanceof Error ? error.message : "Browser notifications could not be enabled."); }
-          }
-        } else if (Notification.permission === "granted" && next.vapid_public_key) {
-          try { await enableWebPush(next.vapid_public_key); setStatus("Nearby alerts and browser notifications enabled."); }
+        let perm = Notification.permission;
+        if (notifPromise) {
+          try { perm = await notifPromise; } catch {}
+        }
+        if (perm === "granted" && next.vapid_public_key) {
+          try { await enableWebPush(next.vapid_public_key); setStatus("Nearby alerts, 25km geofence, and desktop notifications active."); }
           catch (error) { setStatus(error instanceof Error ? error.message : "Browser notifications could not be enabled."); }
         }
       }

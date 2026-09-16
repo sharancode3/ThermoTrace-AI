@@ -72,23 +72,9 @@ export function syncWindCorridorToMap({
 }: SyncWindCorridorOptions): boolean {
   if (!map) return false;
 
-  const styleReady = Boolean(
-    map.style &&
-    ((map.style as any)._loaded || (typeof map.isStyleLoaded === "function" && map.isStyleLoaded()))
-  );
+  const styleReady = typeof map.isStyleLoaded === "function" ? map.isStyleLoaded() : Boolean(map.style);
 
   if (!styleReady) {
-    map.once("styledata", () => {
-      syncWindCorridorToMap({
-        map,
-        sourceId,
-        layerPrefix,
-        corridorResult,
-        featureCollection,
-        isSatellite,
-        visible,
-      });
-    });
     return false;
   }
 
@@ -109,7 +95,7 @@ export function syncWindCorridorToMap({
   syncSource(map, `${sourceId}-arcs`, arcsData);
 
   // 2. Sync Layers
-  // 1. Shaded Fill (semi-transparent sector fan)
+  // 1. Downwind Sector Fill
   syncLayer(
     map,
     {
@@ -117,14 +103,14 @@ export function syncWindCorridorToMap({
       type: "fill",
       source: `${sourceId}-fill`,
       paint: {
-        "fill-color": isSatellite ? "#0284c7" : "#06b6d4",
-        "fill-opacity": isSatellite ? 0.32 : 0.24,
+        "fill-color": isSatellite ? "#38bdf8" : "#0284c7",
+        "fill-opacity": isSatellite ? 0.22 : 0.18,
       },
     },
     isVisible
   );
 
-  // 2. Sector Boundary Line
+  // 2. Sector Outer Boundary Line
   syncLayer(
     map,
     {
@@ -132,9 +118,10 @@ export function syncWindCorridorToMap({
       type: "line",
       source: `${sourceId}-outline`,
       paint: {
-        "line-color": isSatellite ? "#38bdf8" : "#0284c7",
-        "line-width": 2,
-        "line-opacity": 0.95,
+        "line-color": isSatellite ? "#7dd3fc" : "#0369a1",
+        "line-width": 1.8,
+        "line-opacity": 0.85,
+        "line-dasharray": [4, 2],
       },
     },
     isVisible
@@ -213,6 +200,45 @@ export function syncWindCorridorToMap({
 }
 
 /**
+ * Synchronizes dynamic moving chevrons/particles along the downwind centreline
+ */
+export function syncWindChevronsToMap(
+  map: MapLibreMap | any,
+  sourceId: string,
+  layerPrefix: string,
+  chevronsData: GeoJSON.FeatureCollection | null,
+  isSatellite: boolean,
+  visible: boolean = true
+): boolean {
+  if (!map) return false;
+  const isLoaded = typeof map.isStyleLoaded === "function" ? map.isStyleLoaded() : Boolean(map.style);
+  if (!isLoaded) return false;
+
+  const emptyFc: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+  const payload = visible && chevronsData ? chevronsData : emptyFc;
+
+  syncSource(map, `${sourceId}-chevrons`, payload);
+  syncLayer(
+    map,
+    {
+      id: `${layerPrefix}-chevrons`,
+      type: "circle",
+      source: `${sourceId}-chevrons`,
+      paint: {
+        "circle-radius": 3.5,
+        "circle-color": isSatellite ? "#ffffff" : "#0284c7",
+        "circle-opacity": 0.9,
+        "circle-stroke-width": 1.2,
+        "circle-stroke-color": isSatellite ? "#0284c7" : "#ffffff",
+      },
+    },
+    visible && Boolean(chevronsData?.features?.length)
+  );
+
+  return true;
+}
+
+/**
  * Cleanly removes wind corridor source and layers from a map instance.
  */
 export function removeWindCorridorFromMap(map: MapLibreMap | any, sourceId: string, layerPrefix: string): void {
@@ -230,6 +256,7 @@ export function removeWindCorridorFromMap(map: MapLibreMap | any, sourceId: stri
     "arrow-outline",
     "arcs",
     "gust-envelope",
+    "chevrons",
   ];
 
   for (const suffix of layerSuffixes) {
@@ -241,10 +268,14 @@ export function removeWindCorridorFromMap(map: MapLibreMap | any, sourceId: stri
     }
   }
 
-  if (map.getSource(sourceId)) {
-    try {
-      map.removeSource(sourceId);
-    } catch {}
+  const sourceSuffixes = ["fill", "outline", "centerline", "arrow", "arcs", "chevrons", "radial", "gust", ""];
+  for (const suffix of sourceSuffixes) {
+    const id = suffix ? `${sourceId}-${suffix}` : sourceId;
+    if (map.getSource(id)) {
+      try {
+        map.removeSource(id);
+      } catch {}
+    }
   }
 }
 
@@ -254,13 +285,9 @@ export function removeWindCorridorFromMap(map: MapLibreMap | any, sourceId: stri
 export function syncFootprintSquaresToMap(map: MapLibreMap | any, data: GeoJSON.FeatureCollection | null): boolean {
   if (!map) return false;
 
-  const styleReady = Boolean(
-    map.style &&
-    ((map.style as any)._loaded || (typeof map.isStyleLoaded === "function" && map.isStyleLoaded()))
-  );
+  const styleReady = typeof map.isStyleLoaded === "function" ? map.isStyleLoaded() : Boolean(map.style);
 
   if (!styleReady) {
-    map.once("styledata", () => syncFootprintSquaresToMap(map, data));
     return false;
   }
 

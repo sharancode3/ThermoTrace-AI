@@ -82,8 +82,47 @@ def create_critical_event_notification(
         "message": notification.message,
     }
 
-    client = redis_client or get_redis_client()
-    if client is not None:
-        client.publish(DEFAULT_CHANNEL, json.dumps(payload))
-
     return notification
+
+
+def sync_operational_notifications(session: Session) -> int:
+    """
+    Idempotent maintenance helper to sync un-notified CRITICAL or ABNORMAL events
+    into the notifications table during ingestion/clustering workflows.
+    """
+    from app.db.models import IndustrialFacility
+    from datetime import datetime, timezone
+
+    unsynced_events = (
+        session.query(ThermalEvent)
+        .filter(
+            ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"]),
+            ~ThermalEvent.id.in_(session.query(Notification.event_id))
+        )
+        .all()
+    )
+
+    if not unsynced_events:
+        return 0
+
+    count = 0
+    for evt in unsynced_events:
+        fac = session.query(IndustrialFacility).filter(IndustrialFacility.id == evt.associated_facility_id).first() if evt.associated_facility_id else None
+        fac_name = fac.name if fac else "Regional Monitored Sector"
+        title = f"{'Critical Thermal Emergency' if evt.anomaly_tier == 'CRITICAL' else 'Abnormal Thermal Flaring'}: [{evt.event_id}]"
+        msg = f"Radiance {evt.peak_frp_mw:.1f} MW near {fac_name}. Classification: {evt.classification}."
+        notif = Notification(
+            event_id=evt.id,
+            title=title,
+            message=msg,
+            severity=evt.anomaly_tier,
+            is_read=False,
+            created_at=evt.latest_detected_utc or datetime.now(timezone.utc)
+        )
+        session.add(notif)
+        count += 1
+
+    if count > 0:
+        session.commit()
+
+    return count

@@ -294,3 +294,32 @@ body {
 .dark .text-yellow-900:not([class*="dark:text-"]) {
   color: #fef08a;
 }
+
+/* Dynamic Wind Wave Flow Animations */
+@keyframes windWaveFlow {
+  0% { transform: translateX(-100%); opacity: 0.1; }
+  50% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0.1; }
+}
+
+@keyframes windPulseGlow {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.animate-wind-wave-1 {
+  animation: windWaveFlow 1.4s infinite linear;
+}
+
+.animate-wind-wave-2 {
+  animation: windWaveFlow 1.4s infinite linear 0.35s;
+}
+
+.animate-wind-wave-3 {
+  animation: windWaveFlow 1.4s infinite linear 0.7s;
+}
+
+.animate-wind-pulse {
+  animation: windPulseGlow 2s infinite ease-in-out;
+}
+

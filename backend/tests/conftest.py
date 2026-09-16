@@ -34,13 +34,19 @@ def _clean_test_db(session):
                 session.query(ThermalEvent.id).filter(ThermalEvent.event_id.like("TEST-%"))
             )
         ).delete(synchronize_session=False)
+        session.query(Notification).filter(
+            Notification.user_id.in_(
+                session.query(User.id).filter(User.email.like("nearby-%"))
+            )
+        ).delete(synchronize_session=False)
+        session.query(User).filter(User.email.like("nearby-%")).delete(synchronize_session=False)
         session.query(FacilityBaseline).filter(
             FacilityBaseline.facility_id.in_(
-                session.query(IndustrialFacility.id).filter(IndustrialFacility.facility_code.like("FAC-00%"))
+                session.query(IndustrialFacility.id).filter(IndustrialFacility.facility_code.like("FAC-TEST-%"))
             )
         ).delete(synchronize_session=False)
         session.query(ThermalEvent).filter(ThermalEvent.event_id.like("TEST-%")).delete(synchronize_session=False)
-        session.query(IndustrialFacility).filter(IndustrialFacility.facility_code.like("FAC-00%")).delete(synchronize_session=False)
+        session.query(IndustrialFacility).filter(IndustrialFacility.facility_code.like("FAC-TEST-%")).delete(synchronize_session=False)
         session.query(MlModel).filter(MlModel.version == "1.0.0").delete(synchronize_session=False)
         session.commit()
     except Exception:

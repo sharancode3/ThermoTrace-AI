@@ -44,10 +44,8 @@ def upsert(session, *, source: str, external_id: str, name: str, sector: str,
     if facility_code in SEEN_CODES:
         return False
     SEEN_CODES.add(facility_code)
-    facility = session.query(IndustrialFacility).filter_by(facility_code=facility_code).first()
-    if facility is None:
-        facility = IndustrialFacility(facility_code=facility_code)
-        session.add(facility)
+    facility = IndustrialFacility(facility_code=facility_code)
+    session.add(facility)
     delta = 0.001
     facility.name = name[:255] or "Industrial Facility"
     facility.sector_category = sector[:64] or "Industrial Facility"
@@ -112,7 +110,9 @@ def import_gem(session) -> int:
     count = 0
     gem_dir = DATA_ROOT / "gem"
     for path in sorted(gem_dir.glob("*.xlsx")) if gem_dir.exists() else []:
+        file_count = 0
         try:
+            print(f"[FACILITIES] Processing GEM file: {path.name}...")
             workbook = pd.ExcelFile(path)
             for sheet in workbook.sheet_names:
                 if "readme" in sheet.lower() or "about" in sheet.lower():
@@ -146,9 +146,13 @@ def import_gem(session) -> int:
                         operator=clean(row.get(operator_col) if operator_col is not None else None),
                         lat=lat, lon=lon,
                     ):
+                        file_count += 1
                         count += 1
                 break
+            session.commit()
+            print(f"[FACILITIES] Completed {path.name}: +{file_count} facilities imported.")
         except Exception as exc:
+            session.rollback()
             print(f"[FACILITIES] Skipped {path.name}: {exc}")
     return count
 
@@ -158,13 +162,20 @@ def main() -> None:
     parser.add_argument("--force", action="store_true", help="Refresh an already-populated database")
     args = parser.parse_args()
     with SessionLocal() as session:
-        existing = session.query(IndustrialFacility).count()
-        if existing and not args.force:
+        global SEEN_CODES
+        SEEN_CODES = {code for (code,) in session.query(IndustrialFacility.facility_code).all() if code}
+        existing = len(SEEN_CODES)
+        if existing >= 1000 and not args.force:
             print(f"[FACILITIES] Ready: {existing} records already present.")
             return
+        print(f"[FACILITIES] Starting full facility ingestion into database ({existing} existing records pre-loaded)...")
         try:
-            processed = import_wri(session) + import_gem(session)
+            wri_cnt = import_wri(session)
             session.commit()
+            print(f"[FACILITIES] WRI database imported: +{wri_cnt} facilities.")
+            gem_cnt = import_gem(session)
+            session.commit()
+            processed = wri_cnt + gem_cnt
         except Exception:
             session.rollback()
             raise

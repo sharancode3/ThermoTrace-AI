@@ -140,35 +140,63 @@ def run_bulk_recalibration(target_db="local"):
         max_k = m["max_k"]
 
         if has_facility:
-            # 1. Direct Industrial Facility Authority:
-            # Any thermal signature on or adjacent to an industrial plant/refinery is strictly INDUSTRIAL.
-            # Inside an industrial plant, emissions are NEVER AGRI_BURN or OTHER_UNCERTAIN!
-            if peak_frp >= 50.0 or max_k >= 355.0 or p_cls == "IND_FIRE":
+            # 1. Industrial Facility Context:
+            # If the trained ML model predicted IND_ROUTINE, IND_FLARE, or IND_FIRE, TRUST THE ML MODEL!
+            if p_cls in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                pass
+            elif peak_frp >= 500.0 and max_k >= 380.0:
                 p_cls = "IND_FIRE"
-            elif peak_frp >= 15.0 or max_k >= 335.0 or p_cls == "IND_FLARE":
+            elif "flare" in str(m.get("land_use", "")).lower() or "refin" in str(m.get("land_use", "")).lower():
                 p_cls = "IND_FLARE"
             else:
                 p_cls = "IND_ROUTINE"
-            conf = max(conf, 0.90)
         else:
             # 2. Non-Facility Rural / Forest Spatial Resolution:
             pct_crop = m["pct_crop"]
             pct_for = m.get("pct_forest", 0.0)
             if pct_for >= 0.40 or p_cls == "WILDFIRE":
                 p_cls = "WILDFIRE"
-                conf = max(conf, 0.85)
-            elif pct_crop >= 0.35 or p_cls in ("AGRI_BURN", "IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+            elif pct_crop >= 0.35 or p_cls == "AGRI_BURN":
                 p_cls = "AGRI_BURN"
-                conf = max(conf, 0.86)
-            else:
-                if conf < 0.50 or entropy > 1.35:
+            elif p_cls in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                # No facility nearby, model predicted industrial: disambiguate via landcover
+                if pct_crop >= 0.20:
+                    p_cls = "AGRI_BURN"
+                elif pct_for >= 0.20:
+                    p_cls = "WILDFIRE"
+                else:
                     p_cls = "OTHER_UNCERTAIN"
-            
+            else:
+                if conf < 0.45 or entropy > 1.40:
+                    p_cls = "OTHER_UNCERTAIN"
+
+        # Determine Operational Anomaly Tier based on physical reality:
+        if p_cls == "IND_FIRE":
+            tier = "CRITICAL"
+            z = 4.2
+        elif p_cls == "IND_FLARE":
+            tier = "ABNORMAL" if peak_frp >= 150.0 else "NORMAL"
+            z = 2.8 if tier == "ABNORMAL" else 1.2
+        elif p_cls == "IND_ROUTINE":
+            tier = "NORMAL"
+            z = 0.8
+        elif p_cls == "AGRI_BURN":
+            tier = "NORMAL"
+            z = 0.5
+        elif p_cls == "WILDFIRE":
+            tier = "ABNORMAL" if peak_frp >= 50.0 else "NORMAL"
+            z = 2.5 if tier == "ABNORMAL" else 1.0
+        else:
+            tier = "NORMAL"
+            z = 0.5
+
         final_classes.append(p_cls)
         batch_data.append({
             'id': ev_id,
             'conf': round(conf, 4),
             'cls': p_cls,
+            'tier': tier,
+            'z': round(float(z), 2),
             'probs': json.dumps({str(c): round(float(prob), 4) for c, prob in zip(classes, p)})
         })
         
@@ -177,12 +205,24 @@ def run_bulk_recalibration(target_db="local"):
         chunk = batch_data[i:i+200]
         cases_conf = " ".join([f"WHEN id = '{row['id']}'::uuid THEN {row['conf']}" for row in chunk])
         cases_cls = " ".join([f"WHEN id = '{row['id']}'::uuid THEN '{row['cls']}'" for row in chunk])
+        cases_tier = " ".join([f"WHEN id = '{row['id']}'::uuid THEN '{row['tier']}'" for row in chunk])
+        cases_z = " ".join([f"WHEN id = '{row['id']}'::uuid THEN {row['z']}" for row in chunk])
+        cases_ano_sev = " ".join([f"WHEN event_id = '{row['id']}'::uuid THEN '{row['tier']}'" for row in chunk])
+        cases_ano_z = " ".join([f"WHEN event_id = '{row['id']}'::uuid THEN {row['z']}" for row in chunk])
         chunk_ids = ", ".join([f"'{row['id']}'::uuid" for row in chunk])
+        
         stmt = f"""
             UPDATE thermal_events
             SET classification_confidence = CASE {cases_conf} END,
-                classification = CASE {cases_cls} END
+                classification = CASE {cases_cls} END,
+                anomaly_tier = CASE {cases_tier} END,
+                anomaly_z_score = CASE {cases_z} END
             WHERE id IN ({chunk_ids});
+            
+            UPDATE event_anomalies
+            SET anomaly_severity = CASE {cases_ano_sev} END,
+                z_score = CASE {cases_ano_z} END
+            WHERE event_id IN ({chunk_ids});
         """
         db.execute(text(stmt))
         db.commit()

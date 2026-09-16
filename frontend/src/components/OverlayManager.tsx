@@ -296,12 +296,14 @@ export function OverlayManager() {
 
   return (
     <>
-      {/* Backdrop blur overlay over main content area only (left-0 on mobile, sidebar-blur-backdrop on desktop dynamically following --sidebar-width) */}
-      <div 
-        onClick={closeOverlay}
-        className="fixed inset-0 left-0 sidebar-blur-backdrop z-30 bg-slate-900/40 backdrop-blur-md transition-all duration-300 ease-in-out animate-in fade-in cursor-pointer"
-        aria-label="Close overlay backdrop"
-      />
+      {/* Backdrop blur overlay: Rendered ONLY for genuine modal dialogs (settings, info) so monitor map remains sharp and interactive for news/alerts */}
+      {(overlay === "settings" || overlay === "info") && (
+        <div 
+          onClick={closeOverlay}
+          className="fixed inset-0 left-0 sidebar-blur-backdrop z-30 bg-slate-900/40 backdrop-blur-md transition-all duration-300 ease-in-out animate-in fade-in cursor-pointer"
+          aria-label="Close overlay backdrop"
+        />
+      )}
       {/* DEDICATED FULL-SCREEN MOBILE VIEW FOR THERMO NEWS & ALERTS (< md) */}
       {(overlay === "news" || overlay === "alerts") && (
         <div className="fixed inset-0 z-50 bg-white text-slate-900 flex flex-col md:hidden overflow-y-auto animate-in fade-in">
@@ -934,7 +936,7 @@ export function OverlayManager() {
           )}
           <div>
             <div className="text-sm font-bold text-slate-900 leading-tight">
-              {overlay === "news" && "Thermo News (Past 24h)"}
+              {overlay === "news" && (news.some((n: any) => n.is_archived) ? "Thermo News (Latest Acquisition)" : "Thermo News (Past 24h)")}
               {overlay === "alerts" && `Operational Alerts (${notifications.length})`}
               {overlay === "chat" && "Tactical AI Query"}
               {overlay === "analytics" && "National & State Thermal Analytics"}
@@ -1533,6 +1535,9 @@ export function OverlayManager() {
                     <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-400" />
                       {formatRelativeTime(item.published_at)}
+                      {item.is_archived && (
+                        <span className="ml-1 text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-semibold border border-slate-200">Archived</span>
+                      )}
                     </span>
                   </div>
 

@@ -143,9 +143,17 @@ def update_location(body: LocationUpdate, user: User = Depends(current_user), db
     user.nearby_alerts_enabled = True
     db.commit()
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    for event in db.query(ThermalEvent).filter(ThermalEvent.latest_detected_utc >= cutoff,
-                                               ThermalEvent.anomaly_tier.in_(["ABNORMAL", "CRITICAL"])).all():
-        create_nearby_notifications(db, event)
+    event_ids = [e.id for e in db.query(ThermalEvent.id).filter(
+        ThermalEvent.latest_detected_utc >= cutoff,
+        ThermalEvent.anomaly_tier.in_(["ABNORMAL", "CRITICAL"])
+    ).all()]
+    for eid in event_ids:
+        event = db.query(ThermalEvent).filter(ThermalEvent.id == eid).first()
+        if event:
+            try:
+                create_nearby_notifications(db, event)
+            except Exception as ex:
+                print(f"Error creating nearby notification for event {eid}: {ex}")
     return get_preferences(user)
 
 

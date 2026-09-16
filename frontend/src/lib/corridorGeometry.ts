@@ -390,3 +390,48 @@ export function buildAwarenessCorridorGeoJson({
     bounds: [minLon, minLat, maxLon, maxLat],
   };
 }
+
+/**
+ * Generates animated particle/chevron point features along the downwind centreline.
+ * @param startLon Event longitude
+ * @param startLat Event latitude
+ * @param reachMeters Length of downwind corridor in meters
+ * @param towardDeg Bearing direction in degrees
+ * @param progress Animation progress fraction [0.0..1.0]
+ * @param count Number of chevrons/particles (default 5)
+ */
+export function generateChevronsAlongCentreline(
+  startLon: number,
+  startLat: number,
+  reachMeters: number,
+  towardDeg: number,
+  progress: number = 0.0,
+  count: number = 5
+): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
+  const activeReach = reachMeters * 0.90;
+
+  for (let i = 0; i < count; i++) {
+    const fraction = ((i / count) + progress) % 1.0;
+    const distanceM = activeReach * fraction;
+    if (distanceM < 80) continue;
+    const pt = destinationPoint(startLon, startLat, distanceM, towardDeg);
+    features.push({
+      type: "Feature",
+      id: `chevron-${i}`,
+      geometry: {
+        type: "Point",
+        coordinates: pt,
+      },
+      properties: {
+        bearing: towardDeg,
+        fraction,
+      },
+    });
+  }
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}

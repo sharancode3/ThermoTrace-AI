@@ -118,6 +118,7 @@ class NewsItemResponse(BaseModel):
     location_name: str
     coordinates: List[float]
     published_at: datetime
+    is_archived: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

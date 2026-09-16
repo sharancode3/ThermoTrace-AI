@@ -629,8 +629,28 @@ class PDFRenderer:
                 Paragraph("<b>Spatial Buffer</b>", bold_cell_style),
                 Paragraph("Open Industrial / Rural Corridor", body_style),
             ])
+
+        # Surface Wind Telemetry & Public Safety Geofence
+        wind_avail = report_view_model.get("wind_available")
+        wind_speed = report_view_model.get("wind_speed_kmh")
+        wind_from = report_view_model.get("wind_direction_from_cardinal") or "S"
+        wind_to = report_view_model.get("wind_direction_toward_cardinal") or "N"
+        wind_deg = report_view_model.get("wind_direction_toward_degrees") or 0
+        wind_str = f"{wind_speed:.1f} km/h · {wind_from} → {wind_to} ({wind_deg:.0f}\u00b0)" if wind_avail and wind_speed is not None else "Surface wind context monitored"
+
+        notif_count = int(report_view_model.get("nearby_notifications_dispatched") or 0)
+        perim_km = report_view_model.get("nearby_perimeter_radius_km", 25)
+        safety_str = f"{notif_count} Alarms Dispatched ({perim_km} km Geofence)"
+
+        loc_data.append([
+            Paragraph("<b>Surface Wind Vector</b>", bold_cell_style),
+            Paragraph(wind_str, mono_style),
+            Paragraph("<b>Safety Alerts & Geofence</b>", bold_cell_style),
+            Paragraph(safety_str, mono_style),
+        ])
+
         story.append(section_block(
-            "Centroid Location & Associated Industrial Plant Audit",
+            "Centroid Location, Atmospheric Vector & Plant Audit",
             styled_table(loc_data, [115, 155, 115, 155], header=True),
         ))
         story.append(Spacer(1, 3))

@@ -105,7 +105,7 @@ def generate_humanized_news_bulletin(event: ThermalEvent, facility: Optional[Ind
         
     return headline, summary, severity
 
-def process_event_intelligence(session: Session, event_id: str) -> None:
+def process_event_intelligence(session: Session, event_id: str, override_features: Optional[Dict[str, Any]] = None) -> None:
     event = session.query(ThermalEvent).filter(ThermalEvent.event_id == event_id).first()
     if not event:
         return
@@ -114,6 +114,8 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
     
     # 1. Feature Extraction
     features = build_feature_vector(session, str(event.id))
+    if override_features:
+        features.update(override_features)
     feature_cols = [
         "dist_to_facility", "facility_category_encoded", "peak_frp_mw", "mean_frp_mw",
         "frp_variance", "max_brightness_k", "duration_hours", "day_night_ratio",
@@ -140,39 +142,53 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             entropy = -float(np.sum([p * np.log(p + 1e-9) for p in probs]))
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
             
-            # Physical Domain Gating & Facility Authority
-            # Physical Domain Gating & Facility Authority
+            # Physical Domain Gating & Facility Authority for class designation (preserving calibrated confidence)
             dist_fac = float(features.get("dist_to_facility", 99999.0))
             is_ind_zone = int(features.get("is_industrial_zone", 0))
             has_facility = bool(event.associated_facility_id) or (dist_fac <= 5000.0) or (is_ind_zone == 1)
             peak_frp = float(event.peak_frp_mw or 0.0)
-            max_k = float(event.max_brightness_k or 300.0)
+            raw_model_class = predicted_class
+            raw_model_confidence = confidence
 
             if has_facility:
-                # 1. Direct Industrial Facility Authority:
-                # Thermal emissions on or within 5km of an industrial complex or corridor are strictly INDUSTRIAL.
-                # Industrial operations cannot be WILDFIRE or AGRI_BURN.
-                if peak_frp >= 50.0 or max_k >= 355.0 or predicted_class == "IND_FIRE":
+                # 1. Industrial Facility Context:
+                # If the trained ML model predicted IND_ROUTINE, IND_FLARE, or IND_FIRE, TRUST THE ML MODEL!
+                if predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                    pass
+                elif peak_frp >= 500.0 and float(features.get("max_brightness_k", 300.0)) >= 380.0:
                     predicted_class = "IND_FIRE"
-                elif peak_frp >= 15.0 or max_k >= 335.0 or predicted_class == "IND_FLARE":
+                elif "flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower():
                     predicted_class = "IND_FLARE"
                 else:
                     predicted_class = "IND_ROUTINE"
-                confidence = max(confidence, 0.92)
             else:
                 # 2. Non-Facility Rural / Forest Spatial Resolution:
                 pct_crop = float(features.get("pct_cropland", 0.0))
                 pct_for = float(features.get("pct_forest", 0.0))
                 
-                if pct_for >= 0.70 or (predicted_class == "WILDFIRE" and pct_for >= 0.50):
+                if pct_for >= 0.40 or predicted_class == "WILDFIRE":
                     predicted_class = "WILDFIRE"
-                    confidence = max(confidence, 0.88)
-                elif pct_crop >= 0.70 or (predicted_class == "AGRI_BURN" and pct_crop >= 0.40):
+                elif pct_crop >= 0.35 or predicted_class == "AGRI_BURN":
                     predicted_class = "AGRI_BURN"
-                    confidence = max(confidence, 0.90)
+                elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                    # No facility nearby, model predicted industrial: disambiguate via landcover
+                    if pct_crop >= 0.20:
+                        predicted_class = "AGRI_BURN"
+                    elif pct_for >= 0.20:
+                        predicted_class = "WILDFIRE"
+                    else:
+                        predicted_class = "OTHER_UNCERTAIN"
                 else:
-                    predicted_class = "OTHER_UNCERTAIN"
-                    confidence = max(confidence, 0.70)
+                    if confidence < 0.45 or entropy > 1.40:
+                        predicted_class = "OTHER_UNCERTAIN"
+
+            if predicted_class != raw_model_class:
+                # Domain safety rule altered the operational class:
+                # Use the actual calibrated model probability for the assigned class rather than misattributing
+                # the superseded class probability, and appropriately report decision uncertainty.
+                assigned_prob = float(class_probs.get(predicted_class, 0.0))
+                confidence = assigned_prob if assigned_prob > 0 else min(raw_model_confidence, 0.50)
+                uncertainty_tier = "MODERATE" if confidence >= 0.50 else "HIGH"
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
             predicted_class = "OTHER_UNCERTAIN"
@@ -248,11 +264,13 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         z_mad = (current_frp - median_frp) / mad_frp
         tier = evaluate_anomaly_tier(z_score)
         
-        # Operational Radiance Safety Gate: Severe industrial blast, major flare, or active fire is strictly CRITICAL
-        if current_frp >= 50.0 or z_score >= 4.0 or z_mad >= 4.0 or event.classification == "IND_FIRE":
+        # Operational Radiance Safety Gate: True anomalous fires or severe statistical outliers
+        if event.classification == "IND_FIRE" or z_score >= 4.0 or z_mad >= 4.0:
             tier = "CRITICAL"
-        elif current_frp >= 20.0 or z_score >= 2.5 or event.classification == "IND_FLARE":
+        elif event.classification == "IND_FLARE" and (z_score >= 2.0 or current_frp >= 200.0):
             tier = "ABNORMAL"
+        else:
+            tier = "NORMAL"
         
         event.anomaly_z_score = round(float(z_score), 2)
         event.anomaly_tier = tier
@@ -276,16 +294,19 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             "physical_verification": phys_verification
         }
     else:
-        # Non-facility regional hotspot or agricultural/wildfire event: Grade based on physical radiative intensity
-        if current_frp >= 50.0 or (event.max_brightness_k and event.max_brightness_k >= 355.0) or event.classification == "IND_FIRE":
+        # Non-facility regional hotspot or agricultural/wildfire event
+        if event.classification == "IND_FIRE":
             tier = "CRITICAL"
             z_score = 4.2
-        elif current_frp >= 20.0 or (event.max_brightness_k and event.max_brightness_k >= 340.0) or event.classification == "IND_FLARE":
+        elif event.classification == "WILDFIRE" and current_frp >= 200.0:
             tier = "ABNORMAL"
             z_score = 2.8
+        elif event.classification == "IND_FLARE" and current_frp >= 150.0:
+            tier = "ABNORMAL"
+            z_score = 2.5
         else:
             tier = "NORMAL"
-            z_score = 0.9
+            z_score = 0.5
 
         event.anomaly_z_score = round(float(z_score), 2)
         event.anomaly_tier = tier

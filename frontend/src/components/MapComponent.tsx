@@ -289,6 +289,9 @@ export default function MapComponent({
 
   const handleCenterIndia = () => {
     setFocusedFacility(null);
+    if (onEventClick) {
+      onEventClick(null);
+    }
     mapRef.current?.flyTo({
       center: [78.9629, 22.5937],
       zoom: 4.8,
@@ -1092,7 +1095,7 @@ export default function MapComponent({
                   THERMAL RADAR // INDIA NRT
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  {eventCount} Hotspots
+                  {eventCount} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "Hotspots (Pan-India)"}
                 </span>
               </div>
 
@@ -1121,11 +1124,11 @@ export default function MapComponent({
               </div>
             </div>
 
-            {/* 30-Minute Storage-Optimized Telemetry Cadence Notice */}
+            {/* 1-Hour Storage-Optimized Telemetry Cadence Notice */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-snug">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
               <span>
-                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry refreshed on 30m cadence across 30-day window.
+                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry refreshed on 1-hour cadence across 30-day rolling window.
               </span>
             </div>
 

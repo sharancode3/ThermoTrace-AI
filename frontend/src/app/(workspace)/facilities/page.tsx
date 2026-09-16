@@ -324,96 +324,114 @@ export default function FacilitiesPage() {
             </div>
           ) : data && data.items.length > 0 ? (
             viewMode === "grid" ? (
-              /* GRID VIEW - Soft Multi-Radial Peach & Muted Orange Gradient Cards */
+              /* GRID VIEW - Clean White/Slate Surfaces with Semantic Severity Indicators */
               <>
                 <div data-tour="facilities-directory-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                  {data.items.slice(0, mobileLimit).map((facility, idx) => (
-                    <div
-                      key={facility.id}
-                      {...(idx === 0 ? { "data-tour": "facility-card-first" } : {})}
-                      onClick={() => setSelectedFacility(facility)}
-                      style={{
-                        background: `
-                          radial-gradient(circle at 5% 15%, #ffab7b 0%, #ffbe95 18%, transparent 45%),
-                          radial-gradient(circle at 20% 85%, #ffa575 0%, #ffca9d 20%, transparent 48%),
-                          radial-gradient(circle at 52% 42%, #ffe5cc 0%, #ffeedb 35%, transparent 70%),
-                          radial-gradient(circle at 100% 30%, #fee3c3 0%, #feebd2 40%, transparent 75%),
-                          linear-gradient(135deg, #ffab7b 0%, #ffc9a1 25%, #ffe5cc 52%, #fee3c3 75%, #fed9b3 100%)
-                        `
-                      }}
-                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl p-4 text-[#2b180d] shadow-[0_12px_32px_rgba(250,147,87,0.14)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(250,147,87,0.25)] cursor-pointer border border-white/40"
-                    >
-                      <div className="relative z-10 space-y-3">
-                        {/* Top Slanted White Trapezoid Header Tabs (Matching User Image Spec) */}
-                        <div className="-mx-4 -mt-4 flex items-start justify-between">
-                          {/* Left Slanted White Tab: Facility Code */}
-                          <div
-                            style={{ clipPath: 'polygon(0 0, 100% 0, 84% 100%, 0 100%)' }}
-                            className="bg-white/95 backdrop-blur-md pl-4 pr-6 py-1.5 font-mono text-[10px] font-bold text-[#3b2313] shadow-xs shrink-0"
-                          >
-                            {facility.facility_code}
+                  {data.items.slice(0, mobileLimit).map((facility, idx) => {
+                    const hasActiveEvents = Boolean(facility.historical_event_count && facility.historical_event_count > 0);
+                    const isCritical = Boolean(facility.critical_event_count && facility.critical_event_count > 0);
+                    return (
+                      <div
+                        key={facility.id}
+                        {...(idx === 0 ? { "data-tour": "facility-card-first" } : {})}
+                        onClick={() => setSelectedFacility(facility)}
+                        className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl p-4 bg-white hover:bg-slate-50/80 border transition-all duration-200 hover:-translate-y-0.5 cursor-pointer shadow-sm hover:shadow-md ${
+                          isCritical
+                            ? "border-red-200/90 shadow-red-500/5 hover:border-red-300"
+                            : hasActiveEvents
+                            ? "border-amber-200/90 shadow-amber-500/5 hover:border-amber-300"
+                            : "border-slate-200/80 hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="relative z-10 space-y-3">
+                          {/* Top Header Tabs */}
+                          <div className="-mx-4 -mt-4 flex items-start justify-between">
+                            {/* Left Tab: Facility Code */}
+                            <div
+                              style={{ clipPath: 'polygon(0 0, 100% 0, 84% 100%, 0 100%)' }}
+                              className="bg-slate-100 dark:bg-slate-800 pl-4 pr-6 py-1 font-mono text-[10px] font-bold text-slate-700 border-b border-r border-slate-200/60 shrink-0"
+                            >
+                              {facility.facility_code}
+                            </div>
+
+                            {/* Right Tab: Sector Category */}
+                            <div
+                              style={{ clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 0 100%)' }}
+                              className="bg-slate-50 dark:bg-slate-800/60 pl-6 pr-4 py-1 text-[9.5px] font-bold uppercase tracking-wider text-slate-500 border-b border-l border-slate-200/60 text-right truncate max-w-[170px]"
+                            >
+                              {facility.sector_category}
+                            </div>
                           </div>
 
-                          {/* Right Slanted White Tab: Sector Category */}
-                          <div
-                            style={{ clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 0 100%)' }}
-                            className="bg-white/95 backdrop-blur-md pl-6 pr-4 py-1.5 text-[9.5px] font-black uppercase tracking-wider text-[#3b2313] shadow-xs text-right truncate max-w-[170px]"
-                          >
-                            {facility.sector_category}
+                          {/* Main Hero Title & Subtype */}
+                          <div>
+                            <h3 className="text-sm font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-orange-600 transition-colors line-clamp-1" title={facility.name}>
+                              {facility.name}
+                            </h3>
+                            <p className="mt-0.5 text-[11px] font-medium text-slate-500 line-clamp-1">
+                              {facility.sub_type || facility.operator_name || "Independent Facility"}
+                            </p>
+                          </div>
+
+                          {/* Key-Value Stat Rows */}
+                          <div className="space-y-1.5 text-[11px] border-t border-slate-100 pt-2.5">
+                            <div className="flex justify-between items-center text-slate-500">
+                              <span>Location:</span>
+                              <span className="font-semibold text-slate-800 truncate max-w-[130px]">
+                                {facility.district ? `${facility.district}, ` : ""}{facility.state}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-500">
+                              <span>Operator:</span>
+                              <span className="font-semibold text-slate-800 truncate max-w-[130px]">
+                                {facility.operator_name || "Independent"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-500">
+                              <span>90-Day Baseline:</span>
+                              <span className="font-semibold text-slate-900 font-mono">
+                                {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined
+                                  ? `${facility.baseline_frp_mean.toFixed(1)} MW`
+                                  : "Monitored"}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Main Hero Title & Subtype */}
-                        <div>
-                          <h3 className="text-base font-extrabold text-[#231207] tracking-tight leading-snug group-hover:text-[#b43e00] transition-colors line-clamp-1" title={facility.name}>
-                            {facility.name}
-                          </h3>
-                          <p className="mt-0.5 text-[10.5px] font-semibold text-[#4e2b17] line-clamp-1">
-                            {facility.sub_type || facility.operator_name || "Independent Facility"}
-                          </p>
-                        </div>
+                        {/* Bottom Status Row with Semantic Indicators */}
+                        <div className={`relative z-10 mt-3.5 flex items-center justify-between rounded-xl px-3 py-2 border text-[11px] font-medium transition-colors ${
+                          isCritical
+                            ? "bg-red-50/80 border-red-200/80 text-red-700"
+                            : hasActiveEvents
+                            ? "bg-amber-50/80 border-amber-200/80 text-amber-700"
+                            : "bg-slate-50 border-slate-200/80 text-slate-600"
+                        }`}>
+                          <div className="flex items-center gap-1.5 font-semibold">
+                            {isCritical ? (
+                              <span className="flex items-center gap-1 text-red-700 font-bold">
+                                <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+                                +{facility.critical_event_count} Critical Spike{(facility.critical_event_count ?? 0) > 1 ? "s" : ""}
+                              </span>
+                            ) : hasActiveEvents ? (
+                              <span className="flex items-center gap-1 text-amber-700 font-bold">
+                                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                +{facility.historical_event_count} Active Thermal Event{(facility.historical_event_count ?? 0) > 1 ? "s" : ""}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                Nominal Baseline
+                              </span>
+                            )}
+                          </div>
 
-                        {/* Key-Value Stat Rows */}
-                        <div className="space-y-1.5 text-xs border-t border-black/10 pt-2.5">
-                          <div className="flex justify-between items-center text-[#4e2b17] font-semibold">
-                            <span>Location:</span>
-                            <span className="font-extrabold text-[#231207] truncate max-w-[130px]">
-                              {facility.district ? `${facility.district}, ` : ""}{facility.state}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-[#4e2b17] font-semibold">
-                            <span>Operator:</span>
-                            <span className="font-extrabold text-[#231207] truncate max-w-[130px]">
-                              {facility.operator_name || "Independent"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-[#4e2b17] font-semibold">
-                            <span>90-Day Baseline:</span>
-                            <span className="font-extrabold text-[#231207] font-mono">
-                              {facility.baseline_frp_mean !== null && facility.baseline_frp_mean !== undefined
-                                ? `${facility.baseline_frp_mean.toFixed(1)} MW`
-                                : "Active"}
-                            </span>
-                          </div>
+                          <span className="font-bold text-orange-600 group-hover:translate-x-0.5 transition-transform">
+                            Inspect →
+                          </span>
                         </div>
                       </div>
-
-                      {/* Bottom Button with #fff8ee Background and Reduced Roundness */}
-                      <div className="relative z-10 mt-4 flex items-center justify-between rounded-lg bg-[#fff8ee] px-3.5 py-2 border border-white/60 shadow-xs">
-                        <div className="text-xs font-extrabold text-[#2b180d]">
-                          {facility.historical_event_count && facility.historical_event_count > 0 ? (
-                            <span className="text-[#8c2b00] font-extrabold">+{facility.historical_event_count} Active Thermal Events</span>
-                          ) : (
-                            <span className="text-[#2b180d] font-extrabold">100% Baseline Monitored</span>
-                          )}
-                        </div>
-
-                        <span className="text-xs font-black text-[#d94800] group-hover:translate-x-0.5 transition-transform">
-                          Inspect →
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {data.items.length > mobileLimit && (

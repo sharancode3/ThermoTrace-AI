@@ -75,7 +75,7 @@ interface CacheEntry<T> {
 }
 
 const memoryCache = new Map<string, CacheEntry<any>>();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL_MS = 10 * 1000; // 10 seconds (in-memory debounce for rapid map pans)
 
 export function clearClientCache(): void {
   memoryCache.clear();
@@ -84,7 +84,7 @@ export function clearClientCache(): void {
       const keysToRemove: string[] = [];
       for (let i = 0; i < window.sessionStorage.length; i++) {
         const k = window.sessionStorage.key(i);
-        if (k && k.startsWith("thermo_cache_")) {
+        if (k && (k.startsWith("thermo_cache_") || k.includes("thermo"))) {
           keysToRemove.push(k);
         }
       }
@@ -93,6 +93,11 @@ export function clearClientCache(): void {
       // ignore
     }
   }
+}
+
+// Immediately purge stale session cache on client load
+if (typeof window !== "undefined") {
+  clearClientCache();
 }
 
 function getCached<T>(key: string): T | null {
@@ -451,6 +456,7 @@ export type FacilitySummary = {
   baseline_frp_std?: number;
   baseline_frp_median?: number;
   historical_event_count: number;
+  critical_event_count?: number;
   is_statistically_sufficient: boolean;
   is_active: boolean;
   data_source?: string;

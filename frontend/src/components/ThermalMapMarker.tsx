@@ -50,13 +50,13 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
   let strokeColor = "#059669";
 
   if (isIndustry) {
-    // 1. INDUSTRY: Normal = Yellow, Abnormal = Orange, Critical = Red, Cooled = Faded with respective color
-    if (isCritical) {
+    // 1. INDUSTRY: Normal = Yellow, Flare = Orange, Fire/Critical = Red
+    if (normClass === "IND_FIRE" || normTier === "CRITICAL") {
       fillColor = isCooled ? "#FECACA" : "#EF4444"; // Red (Emergency Fire / Critical Anomaly)
       glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
       strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else if (isAbnormal) {
-      fillColor = isCooled ? "#FED7AA" : "#F97316"; // Orange (Elevated Flare / Abnormal Radiance)
+    } else if (normClass === "IND_FLARE" || normTier === "ABNORMAL") {
+      fillColor = isCooled ? "#FED7AA" : "#F97316"; // Orange (Elevated Flare / Gas Flaring)
       glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.60)";
       strokeColor = isCooled ? "#EA580C" : "#C2410C";
     } else {
@@ -65,15 +65,11 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
       strokeColor = isCooled ? "#CA8A04" : "#854D0E";
     }
   } else if (isWildfire) {
-    // 2. WILDFIRE: Colors according to severity / heat
-    if (isCritical) {
+    // 2. WILDFIRE: Forest Teal
+    if (normTier === "CRITICAL") {
       fillColor = isCooled ? "#FECACA" : "#EF4444";
       glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
       strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else if (isAbnormal) {
-      fillColor = isCooled ? "#FED7AA" : "#F97316";
-      glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.55)";
-      strokeColor = isCooled ? "#EA580C" : "#C2410C";
     } else {
       fillColor = isCooled ? "#99F6E4" : "#0D9488"; // Forest Teal
       glowColor = isCooled ? "rgba(13, 148, 136, 0.15)" : "rgba(13, 148, 136, 0.45)";
@@ -81,14 +77,10 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
     }
   } else if (isAgri) {
     // 3. AGRICULTURE: Emerald Green
-    if (isCritical) {
+    if (normTier === "CRITICAL") {
       fillColor = isCooled ? "#FECACA" : "#EF4444";
       glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.60)";
       strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else if (isAbnormal) {
-      fillColor = isCooled ? "#FED7AA" : "#F97316";
-      glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.50)";
-      strokeColor = isCooled ? "#EA580C" : "#C2410C";
     } else {
       fillColor = isCooled ? "#A7F3D0" : "#10B981"; // Emerald Green
       glowColor = isCooled ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.45)";

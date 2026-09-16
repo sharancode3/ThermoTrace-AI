@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef } from "react";
 import Map, { Marker } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { WindData } from "@/lib/apiClient";
-import { buildAwarenessCorridorGeoJson } from "@/lib/corridorGeometry";
-import { syncWindCorridorToMap, syncFootprintSquaresToMap } from "@/lib/windLayerHelper";
+import { buildAwarenessCorridorGeoJson, generateChevronsAlongCentreline } from "@/lib/corridorGeometry";
+import { syncWindCorridorToMap, syncFootprintSquaresToMap, syncWindChevronsToMap } from "@/lib/windLayerHelper";
 import { Users } from "lucide-react";
 
 // ESRI World Imagery (High-Res Aerial Basemap with zero commercial labels)
@@ -163,6 +163,56 @@ export function DetectionFootprintCard({
     };
   }, [corridorGeo, footprintGeoJson, hasWind]);
 
+  // Moving Chevron Animation Frame Loop along downwind centreline
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !hasWind || !corridorGeo || corridorGeo.isLightVariable) return;
+
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    let animFrameId: number;
+    let startTime: number | null = null;
+    const speedMultiplier = Math.min(2.5, Math.max(0.5, speedKmh / 10));
+
+    const animate = (timestamp: number) => {
+      if (document.hidden) {
+        animFrameId = requestAnimationFrame(animate);
+        return;
+      }
+
+      if (!startTime) startTime = timestamp;
+      const elapsedSec = (timestamp - startTime) / 1000;
+      const progress = (elapsedSec * 0.35 * speedMultiplier) % 1.0;
+
+      const chevrons = generateChevronsAlongCentreline(
+        longitude,
+        latitude,
+        corridorGeo.reachMeters,
+        towardDeg,
+        progress,
+        5
+      );
+
+      syncWindChevronsToMap(
+        map,
+        "footprint-wind-corridor-source",
+        "footprint-wind-corridor",
+        chevrons,
+        true,
+        true
+      );
+
+      animFrameId = requestAnimationFrame(animate);
+    };
+
+    animFrameId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animFrameId);
+    };
+  }, [longitude, latitude, towardDeg, speedKmh, corridorGeo, hasWind]);
+
   // Camera framing using authoritative combined bounds (corridor + footprints)
   const boundsKey = corridorGeo?.bounds ? corridorGeo.bounds.join(",") : "";
   useEffect(() => {
@@ -243,26 +293,39 @@ export function DetectionFootprintCard({
             syncFootprintSquaresToMap(map, footprintGeoJson);
           }}
         >
-          {/* Geo-anchored Wind Badge placed directly at the footprint cluster */}
-          {hasWind && (
-            <Marker
-              longitude={longitude}
-              latitude={latitude}
-              anchor="bottom-left"
-              offset={[14, -14]}
-            >
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-500/80 bg-slate-950/85 backdrop-blur-md text-white font-mono text-[11px] font-bold shadow-2xl pointer-events-none whitespace-nowrap">
-                {corridorGeo?.isLightVariable ? (
-                  <span>light/variable wind (&lt; 3 km/h)</span>
-                ) : (
-                  <span>
-                    wind {Math.round(speedKmh)} km/h · {wind?.direction_from_cardinal || ""} → {wind?.direction_toward_cardinal || ""} ({Math.round(towardDeg)}°)
-                  </span>
-                )}
-              </div>
-            </Marker>
-          )}
         </Map>
+
+        {/* Single Pristine Wind Flow Badge in Top-Right Corner */}
+        {hasWind && (
+          <div className="absolute top-2.5 right-2.5 z-10 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-md border border-white/20 text-white font-mono text-[10.5px] font-bold shadow-md">
+            {!corridorGeo?.isLightVariable && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Directional Wind Arrow */}
+                <div 
+                  className="w-3.5 h-3.5 text-sky-400 flex items-center justify-center transition-transform duration-300"
+                  style={{ transform: `rotate(${Math.round(towardDeg)}deg)` }}
+                  title={`Wind flowing toward ${Math.round(towardDeg)}°`}
+                >
+                  <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2L18 20L12 16L6 20L12 2Z" />
+                  </svg>
+                </div>
+                {/* Subtle Wind Wave Lines */}
+                <div className="relative w-4 h-2.5 flex flex-col justify-between overflow-hidden">
+                  <div className="h-[1.5px] bg-sky-400 rounded-full animate-wind-wave-1" />
+                  <div className="h-[1.5px] bg-sky-300 rounded-full animate-wind-wave-2" />
+                </div>
+              </div>
+            )}
+            {corridorGeo?.isLightVariable ? (
+              <span className="text-slate-300">surface wind: light/variable (&lt; 3 km/h)</span>
+            ) : (
+              <span>
+                surface wind {Math.round(speedKmh)} km/h · {wind?.direction_from_cardinal || ""} → {wind?.direction_toward_cardinal || ""} ({Math.round(towardDeg)}°)
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Footer Bar on Aerial Canvas */}
         <div className="absolute bottom-2 left-2.5 z-10 pointer-events-none">

@@ -471,6 +471,7 @@ export function EventDetailPanel({
   const router = useRouter();
   const pathname = usePathname();
   const hasOverlay = Boolean(searchParams?.get("overlay"));
+  const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -505,6 +506,10 @@ export function EventDetailPanel({
       window.removeEventListener("resize", checkTabScroll);
     };
   }, [loading, isExpanded]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!eventId) return;
@@ -666,23 +671,6 @@ export function EventDetailPanel({
     anomalyHeadline = "ELEVATED EMISSION";
     anomalyDesc = `Moderate thermal deviation (+${data?.anomaly_z_score?.toFixed(1)}σ). Continues under monitoring.`;
     anomalyStyle = "bg-amber-50 dark:bg-amber-950/80 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
-    AnomalyIcon = AlertTriangle;
-  }
-
-  if (isCritical) {
-    anomalyHeadline = "CRITICAL ANOMALY DETECTED";
-    anomalyDesc = `Current intensity (${data?.peak_frp_mw?.toFixed(1)} MW) is significantly above historical 90-day baseline (+${data?.anomaly_z_score?.toFixed(1)}σ). Potential emergency flare or incident.`;
-    anomalyStyle = "bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100";
-    AnomalyIcon = AlertOctagon;
-  } else if (isAbnormal) {
-    anomalyHeadline = "ABNORMAL THERMAL ACTIVITY";
-    anomalyDesc = `Elevated heat signature (+${data?.anomaly_z_score?.toFixed(1)}σ above baseline). Activity exceeds typical operational variance.`;
-    anomalyStyle = "bg-orange-50 dark:bg-orange-950/80 border-orange-200 dark:border-orange-800 text-orange-900 dark:text-orange-100";
-    AnomalyIcon = AlertTriangle;
-  } else if (isElevated) {
-    anomalyHeadline = "ELEVATED EMISSION";
-    anomalyDesc = `Moderate thermal deviation (+${data?.anomaly_z_score?.toFixed(1)}σ). Continues under monitoring.`;
-    anomalyStyle = "bg-amber-50 dark:bg-amber-950/80 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
     AnomalyIcon = Activity;
   }
 
@@ -701,10 +689,14 @@ export function EventDetailPanel({
   const worldviewUrl = data?.satellite_context?.live_inspection_links?.nasa_worldview_url ?? 
     `https://worldview.earthdata.nasa.gov/?v=${((data?.longitude || 85)-0.2).toFixed(3)},${((data?.latitude || 22)-0.2).toFixed(3)},${((data?.longitude || 85)+0.2).toFixed(3)},${((data?.latitude || 22)+0.2).toFixed(3)}`;
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <>
       {/* DEDICATED FULL-SCREEN MOBILE EVENT VIEW (< sm) */}
-      <div className="fixed inset-x-0 bottom-0 top-14 z-50 bg-slate-950 text-white flex flex-col sm:hidden overflow-y-auto animate-in fade-in">
+      <div suppressHydrationWarning className="fixed inset-x-0 bottom-0 top-14 z-50 bg-slate-950 text-white flex flex-col sm:hidden overflow-y-auto animate-in fade-in">
         {/* Top Sticky Header with Prominent Back Button */}
         <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md px-4 py-3 border-b border-slate-800 flex items-center justify-between shadow-lg">
           <button
@@ -896,6 +888,7 @@ export function EventDetailPanel({
 
       {/* DESKTOP EVENT SIDEBAR PANEL (>= sm) */}
       <div 
+        suppressHydrationWarning
         data-tour="event-detail-drawer"
         style={{
           right: hasOverlay ? 'clamp(0px, 450px, calc(100vw - 480px))' : '0px',
