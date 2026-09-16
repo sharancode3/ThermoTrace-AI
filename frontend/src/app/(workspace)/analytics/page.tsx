@@ -281,11 +281,11 @@ export default function AnalyticsPage() {
         
         {/* 2. CHRONOLOGICAL 9-DAY TIMELINE PROGRESSION BAR (Swipable Row on Mobile) */}
         {data?.daily_history && data.daily_history.length > 0 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs" data-tour="analytics-historical-row">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs" data-tour="analytics-historical-row">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-orange-600 shrink-0" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                <Activity className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
                   9-Day Historical Progression (Swipeable)
                 </span>
               </div>
@@ -294,7 +294,7 @@ export default function AnalyticsPage() {
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${
                   selectedDate === "ALL"
                     ? "bg-orange-600 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
                 All 9 Days
@@ -311,21 +311,21 @@ export default function AnalyticsPage() {
                     onClick={() => handleDateChange(day.date)}
                     className={`shrink-0 w-28 md:w-auto snap-start text-left p-3 rounded-xl border transition-all ${
                       isSelected
-                        ? "bg-orange-50/70 border-orange-400 shadow-sm ring-2 ring-orange-400/30"
-                        : "bg-slate-50/60 border-slate-200 hover:border-slate-300 hover:bg-slate-100/80"
+                        ? "bg-orange-50 dark:bg-orange-950/80 border-orange-400 dark:border-orange-500 shadow-sm ring-2 ring-orange-400/30 dark:ring-orange-500/40 text-slate-900 dark:text-orange-100"
+                        : "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-100/80 dark:hover:bg-slate-700/80 text-slate-800 dark:text-slate-100"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-mono font-bold text-slate-600">{day.date.slice(5)}</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold bg-white border border-slate-200 text-slate-700">
+                      <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300">{day.date.slice(5)}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">
                         {day.dominant_category === "AGRI_BURN" ? "AGRI" : day.dominant_category === "WILDFIRE" ? "WILD" : "IND"}
                       </span>
                     </div>
-                    <div className="text-base font-black text-slate-900 mt-1">
+                    <div className="text-base font-black text-slate-900 dark:text-white mt-1">
                       {day.event_count}
-                      <span className="text-[11px] font-medium text-slate-500 ml-1">evts</span>
+                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-300 ml-1">evts</span>
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono truncate mt-0.5">
+                    <div className="text-[10px] text-slate-500 dark:text-slate-300 font-mono truncate mt-0.5">
                       Peak: {day.max_frp_mw} MW
                     </div>
                   </button>

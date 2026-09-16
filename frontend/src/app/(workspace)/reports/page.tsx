@@ -220,20 +220,20 @@ export default function ReportsPage() {
       </div>
 
       {/* Reports Container & Controls */}
-      <div className="mt-4 md:mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="mt-4 md:mt-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
         {/* Table/Card Search Toolbar */}
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/90">
           <div className="relative flex-1 w-full" data-tour="reports-search-bar">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by Report ID, Event ID, or Title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-orange-500 transition"
+              className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-orange-500 transition"
             />
           </div>
-          <div className="text-xs text-slate-500 font-medium self-end sm:self-auto shrink-0">
+          <div className="text-xs text-slate-500 dark:text-slate-300 font-medium self-end sm:self-auto shrink-0">
             Showing {filteredReports.length} of {reports.length} report(s)
           </div>
         </div>
@@ -242,7 +242,7 @@ export default function ReportsPage() {
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-300 font-semibold uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-5">Report ID</th>
                 <th className="py-3 px-4">Event Ref</th>
                 <th className="py-3 px-4">Dossier Title</th>
@@ -252,20 +252,20 @@ export default function ReportsPage() {
                 <th className="py-3 px-5 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-600" />
+                  <td colSpan={7} className="py-12 text-center text-slate-400 dark:text-slate-300">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-600 dark:text-orange-400" />
                     Loading generated dossiers...
                   </td>
                 </tr>
               ) : filteredReports.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-500">
-                    <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-                    <p className="font-semibold text-slate-700">No reports found</p>
-                    <p className="text-xs text-slate-400 mt-1">Click "Generate Custom Dossier" to produce a tailored PDF forensic brief.</p>
+                  <td colSpan={7} className="py-16 text-center text-slate-500 dark:text-slate-300">
+                    <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">No reports found</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">Click "Generate Custom Dossier" to produce a tailored PDF forensic brief.</p>
                   </td>
                 </tr>
               ) : (
@@ -273,7 +273,7 @@ export default function ReportsPage() {
                   <tr 
                     key={r.id || r.report_id} 
                     data-tour={idx === 0 ? "reports-table-row-first" : undefined}
-                    className="hover:bg-slate-100/80 dark:hover:bg-slate-800/90 text-slate-800 dark:text-slate-100 transition"
+                    className="bg-white dark:bg-slate-900 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 text-slate-800 dark:text-slate-100 transition"
                   >
                     <td className="py-3.5 px-5 font-bold font-mono text-slate-900 dark:text-white">
                       {r.report_id}
@@ -286,18 +286,18 @@ export default function ReportsPage() {
                     </td>
                     <td className="py-3.5 px-4">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        r.anomaly_tier === "CRITICAL" ? "bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 border border-red-200 dark:border-red-800" :
-                        r.anomaly_tier === "ABNORMAL" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-200 dark:border-orange-800" :
-                        r.anomaly_tier === "ELEVATED" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800" :
-                        "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                        r.anomaly_tier === "CRITICAL" ? "bg-red-100 text-red-800 dark:bg-red-950/90 dark:text-red-300 border border-red-200 dark:border-red-800" :
+                        r.anomaly_tier === "ABNORMAL" ? "bg-orange-100 text-orange-800 dark:bg-orange-950/90 dark:text-orange-300 border border-orange-200 dark:border-orange-800" :
+                        r.anomaly_tier === "ELEVATED" ? "bg-amber-100 text-amber-800 dark:bg-amber-950/90 dark:text-amber-300 border border-amber-200 dark:border-amber-800" :
+                        "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                       }`}>
                         {r.anomaly_tier || "NORMAL"}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-300 text-[11px]">
+                    <td className="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-300 text-[11px]">
                       {r.generated_at ? new Date(r.generated_at).toLocaleString() : "N/A"}
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-400 dark:text-slate-400 text-[10px]" title={r.sha256_hash}>
+                    <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-300 text-[10px]" title={r.sha256_hash}>
                       {r.sha256_hash ? `${r.sha256_hash.slice(0, 12)}...` : "VERIFIED"}
                     </td>
                     <td className="py-3.5 px-5 text-right">

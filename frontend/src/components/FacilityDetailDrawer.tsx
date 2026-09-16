@@ -464,35 +464,35 @@ export default function FacilityDetailDrawer({
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">Mean Flaring (μ)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">Mean Flaring (μ)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900 dark:text-white">
                             {intel.baseline_profile.mean_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">Std Deviation (σ)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">Std Deviation (σ)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900 dark:text-white">
                             ±{intel.baseline_profile.std_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">Median (Q50)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">Median (Q50)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-slate-900 dark:text-white">
                             {intel.baseline_profile.median_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
-                        <div className="rounded-lg bg-slate-50 p-3">
-                          <div className="text-xs text-slate-500">95th Percentile (Q95)</div>
-                          <div className="mt-0.5 font-mono text-lg font-bold text-amber-700">
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3">
+                          <div className="text-xs text-slate-500 dark:text-slate-300">95th Percentile (Q95)</div>
+                          <div className="mt-0.5 font-mono text-lg font-bold text-amber-700 dark:text-yellow-400">
                             {intel.baseline_profile.q95_frp_mw.toFixed(1)} MW
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-900">
-                        <strong>Analytical Grounding:</strong> Thermal detections exceeding{" "}
-                        <span className="font-mono font-bold">
+                      <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800/80 bg-blue-50 dark:bg-blue-950/70 p-3.5 text-xs text-blue-950 dark:text-blue-100 shadow-xs">
+                        <strong className="font-extrabold text-blue-900 dark:text-blue-200">Analytical Grounding:</strong> Thermal detections exceeding{" "}
+                        <span className="font-mono font-bold text-blue-950 dark:text-white">
                           {(
                             intel.baseline_profile.mean_frp_mw +
                             2.5 * intel.baseline_profile.std_frp_mw
@@ -503,8 +503,8 @@ export default function FacilityDetailDrawer({
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
-                      <strong>Insufficient Historical Baseline:</strong> Fewer than 10 sovereign
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/70 p-5 text-sm text-amber-900 dark:text-amber-200">
+                      <strong className="font-bold text-amber-950 dark:text-amber-100">Insufficient Historical Baseline:</strong> Fewer than 10 sovereign
                       satellite passes recorded for this specific facility coordinate. Anomaly
                       classification operates in exploratory mode.
                     </div>
