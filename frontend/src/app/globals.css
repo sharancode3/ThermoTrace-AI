@@ -6,6 +6,26 @@
   --background: #ffffff;
   --foreground: #0f172a;
   --sidebar-width: 16rem;
+
+  /* Semantic Theme Tokens - Light Mode */
+  --bg-surface: #ffffff;
+  --bg-muted: #f8fafc;
+  --bg-subtle: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f5f9;
+
+  --text-primary: #0f172a;    /* Contrast 15.6:1 against #ffffff */
+  --text-secondary: #334155;  /* Contrast 9.8:1 against #ffffff */
+  --text-muted: #64748b;      /* Contrast 4.6:1 against #ffffff */
+
+  --border-subtle: #e2e8f0;
+  --border-default: #cbd5e1;
+
+  /* Accent Blue Theme Palette */
+  --accent-blue-bg: #eff6ff;
+  --accent-blue-border: #bfdbfe;
+  --accent-blue-text: #1e40af;
+  --accent-blue-solid: #2563eb;
 }
 
 @media (min-width: 768px) {
@@ -24,6 +44,26 @@
 .dark {
   --background: #020617;
   --foreground: #f8fafc;
+
+  /* Semantic Theme Tokens - Dark Mode (WCAG AA Compliant) */
+  --bg-surface: #0f172a;      /* Slate-900 */
+  --bg-muted: #1e293b;        /* Slate-800 */
+  --bg-subtle: #090d16;       /* Slate-950/deep */
+  --bg-card: #0f172a;         /* Slate-900 */
+  --bg-hover: #1e293b;        /* Slate-800 hover */
+
+  --text-primary: #f8fafc;    /* Slate-50 - Contrast 17.1:1 against #0f172a */
+  --text-secondary: #e2e8f0;  /* Slate-200 - Contrast 13.5:1 against #0f172a */
+  --text-muted: #cbd5e1;      /* Slate-300 - Contrast 10.9:1 against #0f172a */
+
+  --border-subtle: #1e293b;
+  --border-default: #334155;
+
+  /* Accent Blue Theme Palette - Dark Mode */
+  --accent-blue-bg: #1e3a8a;      /* Blue-900 */
+  --accent-blue-border: #3b82f6;  /* Blue-500 */
+  --accent-blue-text: #eff6ff;    /* Blue-50 - Contrast 10.4:1 against #1e3a8a */
+  --accent-blue-solid: #3b82f6;
 }
 
 body {
@@ -42,7 +82,7 @@ body {
   to { opacity: 0; transform: translateY(6px); }
 }
 
-/* Dark Mode Aerospace Theme Styling */
+/* Dark Mode Aerospace Theme Styling & Contrast Overrides */
 .dark body {
   background-color: #020617;
   color: #f8fafc;
@@ -70,7 +110,7 @@ body {
 
 .dark .text-slate-600,
 .dark .text-slate-500 {
-  color: #94a3b8 !important;
+  color: #cbd5e1 !important;
 }
 
 .dark .border-slate-200,

@@ -273,31 +273,31 @@ export default function ReportsPage() {
                   <tr 
                     key={r.id || r.report_id} 
                     data-tour={idx === 0 ? "reports-table-row-first" : undefined}
-                    className="hover:bg-slate-50 transition"
+                    className="hover:bg-slate-100/80 dark:hover:bg-slate-800/90 text-slate-800 dark:text-slate-100 transition"
                   >
-                    <td className="py-3.5 px-5 font-bold font-mono text-slate-900">
+                    <td className="py-3.5 px-5 font-bold font-mono text-slate-900 dark:text-white">
                       {r.report_id}
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-medium text-orange-600">
+                    <td className="py-3.5 px-4 font-mono font-medium text-orange-600 dark:text-orange-400">
                       {r.event_id}
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-800 max-w-xs truncate">
+                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-100 max-w-xs truncate">
                       {r.title}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        r.anomaly_tier === "CRITICAL" ? "bg-red-100 text-red-700 border border-red-200" :
-                        r.anomaly_tier === "ABNORMAL" ? "bg-orange-100 text-orange-700 border border-orange-200" :
-                        r.anomaly_tier === "ELEVATED" ? "bg-amber-100 text-amber-700 border border-amber-200" :
-                        "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                        r.anomaly_tier === "CRITICAL" ? "bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 border border-red-200 dark:border-red-800" :
+                        r.anomaly_tier === "ABNORMAL" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-200 dark:border-orange-800" :
+                        r.anomaly_tier === "ELEVATED" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800" :
+                        "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                       }`}>
                         {r.anomaly_tier || "NORMAL"}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                    <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-300 text-[11px]">
                       {r.generated_at ? new Date(r.generated_at).toLocaleString() : "N/A"}
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-400 text-[10px]" title={r.sha256_hash}>
+                    <td className="py-3.5 px-4 font-mono text-slate-400 dark:text-slate-400 text-[10px]" title={r.sha256_hash}>
                       {r.sha256_hash ? `${r.sha256_hash.slice(0, 12)}...` : "VERIFIED"}
                     </td>
                     <td className="py-3.5 px-5 text-right">
@@ -306,7 +306,7 @@ export default function ReportsPage() {
                         target="_blank"
                         rel="noreferrer"
                         data-tour={idx === 0 ? "reports-download-btn-first" : undefined}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-orange-600 text-white rounded-lg font-medium text-xs transition shadow-2xs"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 dark:bg-orange-600 hover:bg-orange-600 dark:hover:bg-orange-500 text-white rounded-lg font-medium text-xs transition shadow-2xs"
                       >
                         <ArrowDownToLine className="w-3.5 h-3.5" />
                         Download PDF
@@ -320,7 +320,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Mobile Stacked Card View */}
-        <div className="block md:hidden divide-y divide-slate-100">
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {loading ? (
             <div className="py-12 text-center text-slate-400">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-orange-600" />
@@ -329,8 +329,8 @@ export default function ReportsPage() {
           ) : filteredReports.length === 0 ? (
             <div className="py-12 text-center text-slate-500 p-4">
               <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-              <p className="font-semibold text-slate-700">No reports found</p>
-              <p className="text-xs text-slate-400 mt-1">Click "Generate Custom Dossier" to produce a tailored PDF forensic brief.</p>
+              <p className="font-semibold text-slate-700 dark:text-slate-200">No reports found</p>
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">Click "Generate Custom Dossier" to produce a tailored PDF forensic brief.</p>
             </div>
           ) : (
             filteredReports.map((r, idx) => {
@@ -340,7 +340,7 @@ export default function ReportsPage() {
                 <div 
                   key={reportKey} 
                   data-tour={idx === 0 ? "reports-table-row-first" : undefined}
-                  className="p-4 bg-white space-y-3"
+                  className="p-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition space-y-3"
                 >
                   {/* Card Header: Title, Date, Tier */}
                   <div className="flex items-start justify-between gap-3">

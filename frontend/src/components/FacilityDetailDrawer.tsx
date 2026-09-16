@@ -530,61 +530,61 @@ export default function FacilityDetailDrawer({
                       </div>
                     ) : facilityWind && facilityWind.available ? (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 rounded-xl border border-cyan-200/70">
+                        <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 dark:bg-cyan-950/40 rounded-xl border border-cyan-200/70 dark:border-cyan-800/80">
                           <div
-                            className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-cyan-700 shadow-sm"
+                            className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white dark:bg-slate-900 border-2 border-cyan-500 text-cyan-700 dark:text-cyan-400 shadow-sm"
                             style={{
                               transform: `rotate(${Number(facilityWind.direction_toward_degrees) || 0}deg)`,
                             }}
                           >
-                            <NavigationIcon className="w-5 h-5 text-cyan-600 fill-cyan-500" />
+                            <NavigationIcon className="w-5 h-5 text-cyan-600 dark:text-cyan-400 fill-cyan-500" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                            <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-cyan-300 tracking-wider">
                               Surface Transport Vector
                             </div>
-                            <div className="font-mono font-bold text-slate-900 text-sm">
+                            <div className="font-mono font-bold text-slate-900 dark:text-cyan-100 text-sm">
                               Blowing from {facilityWind.direction_from_cardinal || "N/A"} ({facilityWind.direction_from_degrees ?? "—"}°) toward {facilityWind.direction_toward_cardinal || "N/A"} ({facilityWind.direction_toward_degrees ?? "—"}°)
                             </div>
-                            <div className="text-xs font-mono text-slate-600 mt-0.5">
-                              Speed: <span className="font-bold text-cyan-700">{facilityWind.speed_kmh} km/h</span>
+                            <div className="text-xs font-mono text-slate-600 dark:text-cyan-200 mt-0.5">
+                              Speed: <span className="font-bold text-cyan-700 dark:text-cyan-300">{facilityWind.speed_kmh} km/h</span>
                               {facilityWind.gusts_kmh !== undefined && (
-                                <span> · Gusts: <span className="font-bold text-slate-800">{facilityWind.gusts_kmh} km/h</span></span>
+                                <span> · Gusts: <span className="font-bold text-slate-800 dark:text-cyan-100">{facilityWind.gusts_kmh} km/h</span></span>
                               )}
                             </div>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Surface Temp</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Surface Temp</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.temperature_c !== undefined ? `${facilityWind.temperature_c.toFixed(1)} °C` : "N/A"}
                             </p>
                           </div>
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Humidity</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Humidity</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.relative_humidity_pct !== undefined ? `${facilityWind.relative_humidity_pct}%` : "N/A"}
                             </p>
                           </div>
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Pressure</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Pressure</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.surface_pressure_hpa !== undefined ? `${facilityWind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
                             </p>
-                            <p className="text-[9px] text-slate-400 mt-0.5">Surface pressure</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Surface pressure</p>
                           </div>
-                          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                            <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Precipitation</p>
-                            <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                            <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Precipitation</p>
+                            <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
                               {facilityWind.precipitation_mm !== undefined ? `${facilityWind.precipitation_mm} mm` : "0.0 mm"}
                             </p>
                           </div>
                         </div>
 
-                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-[11px] text-slate-600 leading-relaxed">
-                          <strong className="text-slate-800">Scientific Context:</strong> Ambient surface wind context at facility location. Does not assert or model facility emissions or particulate dispersion.
+                        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-2.5 text-[11px] text-slate-600 dark:text-slate-200 leading-relaxed">
+                          <strong className="text-slate-800 dark:text-slate-100">Scientific Context:</strong> Ambient surface wind context at facility location. Does not assert or model facility emissions or particulate dispersion.
                         </div>
                       </div>
                     ) : (

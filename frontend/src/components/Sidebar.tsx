@@ -139,14 +139,14 @@ export function Sidebar() {
                 href={item.href}
                 data-tour={dataTourKey}
                 className={cn(
-                  "flex items-center py-2 px-3 rounded-lg transition-colors w-full group",
+                  "flex items-center py-2 px-3 rounded-lg transition-colors w-full group font-medium",
                   isCollapsed ? "justify-center" : "justify-start",
                   isActive 
-                    ? "bg-slate-100 text-orange-600 font-medium" 
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-slate-100 dark:bg-slate-800/90 text-orange-600 dark:text-orange-400 font-semibold" 
+                    : "text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
-                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-300 group-hover:text-slate-700 dark:group-hover:text-white")} />
                 {!isCollapsed && <span className="ml-3 truncate">{item.label}</span>}
               </Link>
 
@@ -161,7 +161,7 @@ export function Sidebar() {
         })}
 
         {!isCollapsed && (
-          <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider px-3">
+          <div className="text-xs font-bold text-slate-400 dark:text-slate-300 mt-5 mb-1.5 uppercase tracking-wider px-3">
             Intelligence
           </div>
         )}
@@ -172,18 +172,18 @@ export function Sidebar() {
             onClick={() => toggleOverlay("news")}
             data-tour="sidebar-news"
             className={cn(
-              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative cursor-pointer", 
+              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative cursor-pointer font-medium", 
               isCollapsed ? "justify-center" : "",
-              currentOverlay === "news" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              currentOverlay === "news" ? "bg-slate-100 dark:bg-slate-800/90 text-orange-600 dark:text-orange-400 font-semibold" : "text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
             )}
             type="button"
           >
             <div className={cn("flex items-center", isCollapsed ? "justify-center" : "")}>
-              <Newspaper className={cn("w-5 h-5 shrink-0", currentOverlay === "news" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+              <Newspaper className={cn("w-5 h-5 shrink-0", currentOverlay === "news" ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-300 group-hover:text-slate-700 dark:group-hover:text-white")} />
               {!isCollapsed && <span className="ml-3 truncate">Thermo News</span>}
             </div>
             {!isCollapsed && (
-              <span className="flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+              <span className="flex items-center gap-1 bg-orange-50 dark:bg-orange-950/70 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-600 animate-ping" />
                 LIVE NRT
               </span>
@@ -202,14 +202,14 @@ export function Sidebar() {
             onClick={() => toggleOverlay("alerts")}
             data-tour="sidebar-alerts"
             className={cn(
-              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative cursor-pointer", 
+              "flex items-center justify-between py-2 px-3 rounded-lg transition-colors group w-full text-left relative cursor-pointer font-medium", 
               isCollapsed ? "justify-center" : "",
-              currentOverlay === "alerts" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              currentOverlay === "alerts" ? "bg-slate-100 dark:bg-slate-800/90 text-orange-600 dark:text-orange-400 font-semibold" : "text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
             )}
             type="button"
           >
             <div className={cn("flex items-center", isCollapsed ? "justify-center" : "")}>
-              <Bell className={cn("w-5 h-5 shrink-0", currentOverlay === "alerts" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+              <Bell className={cn("w-5 h-5 shrink-0", currentOverlay === "alerts" ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-300 group-hover:text-slate-700 dark:group-hover:text-white")} />
               {!isCollapsed && <span className="ml-3 truncate">Alerts</span>}
             </div>
             {unreadAlerts > 0 && (
@@ -234,9 +234,9 @@ export function Sidebar() {
             onClick={() => toggleOverlay("chat")}
             data-tour="sidebar-chat"
             className={cn(
-              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left cursor-pointer", 
+              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left cursor-pointer font-medium", 
               isCollapsed ? "justify-center" : "",
-              currentOverlay === "chat" ? "bg-slate-100 text-orange-600 font-medium" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              currentOverlay === "chat" ? "bg-slate-100 dark:bg-slate-800/90 text-orange-600 dark:text-orange-400 font-semibold" : "text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
             )}
             type="button"
           >
@@ -251,7 +251,7 @@ export function Sidebar() {
         </div>
 
         {!isCollapsed && (
-          <div className="text-xs font-semibold text-slate-400 mt-5 mb-1.5 uppercase tracking-wider px-3">
+          <div className="text-xs font-bold text-slate-400 dark:text-slate-300 mt-5 mb-1.5 uppercase tracking-wider px-3">
             System & Guide
           </div>
         )}
@@ -262,14 +262,14 @@ export function Sidebar() {
             href="/guide"
             data-tour="sidebar-guide"
             className={cn(
-              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left",
+              "flex items-center py-2 px-3 rounded-lg transition-colors group w-full text-left font-medium",
               isCollapsed ? "justify-center" : "",
               pathname === "/guide"
-                ? "bg-slate-100 text-orange-600 font-semibold"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-slate-100 dark:bg-slate-800/90 text-orange-600 dark:text-orange-400 font-semibold"
+                : "text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <BookOpen className={cn("w-5 h-5 shrink-0", pathname === "/guide" ? "text-orange-600" : "text-slate-500 group-hover:text-slate-700")} />
+            <BookOpen className={cn("w-5 h-5 shrink-0", pathname === "/guide" ? "text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-300 group-hover:text-slate-700 dark:group-hover:text-white")} />
             {!isCollapsed && <span className="ml-3 truncate">System Guide & Info</span>}
           </Link>
           {isCollapsed && (

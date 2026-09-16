@@ -385,30 +385,30 @@ export function NearbyAlertCenter() {
           </div>
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
-          {alerts.length === 0 ? <div className="py-12 text-center"><BellOff className="mx-auto h-7 w-7 text-slate-400"/><p className="mt-3 font-semibold">No nearby alerts.</p><p className="mt-1 text-xs text-slate-500">Your area has no qualifying ThermoTrace thermal notifications during this period.</p></div> : visibleAlerts.length === 0 ? <div className="py-12 text-center"><Search className="mx-auto h-7 w-7 text-slate-400"/><p className="mt-3 font-semibold">No alerts match your search.</p><p className="mt-1 text-xs text-slate-500">Try another search term or filter.</p></div> : visibleAlerts.map((alert) => {
+          {alerts.length === 0 ? <div className="py-12 text-center"><BellOff className="mx-auto h-7 w-7 text-slate-400 dark:text-slate-300"/><p className="mt-3 font-semibold text-slate-800 dark:text-slate-100">No nearby alerts.</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-300">Your area has no qualifying ThermoTrace thermal notifications during this period.</p></div> : visibleAlerts.length === 0 ? <div className="py-12 text-center"><Search className="mx-auto h-7 w-7 text-slate-400 dark:text-slate-300"/><p className="mt-3 font-semibold text-slate-800 dark:text-slate-100">No alerts match your search.</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-300">Try another search term or filter.</p></div> : visibleAlerts.map((alert) => {
             const critical = alert.severity === "CRITICAL";
-            return <article key={alert.id} className={`rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md ${alert.is_read ? "border-slate-200" : critical ? "border-red-200" : "border-orange-200"}`}>
+            return <article key={alert.id} className={`rounded-lg border bg-white dark:bg-slate-900 p-3 shadow-sm transition-shadow hover:shadow-md ${alert.is_read ? "border-slate-200 dark:border-slate-800" : critical ? "border-red-200 dark:border-red-900/60" : "border-orange-200 dark:border-orange-900/60"}`}>
               <div className="flex items-center gap-2">
-                <span className={`rounded px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${critical ? "bg-red-50 text-red-700" : "bg-orange-50 text-orange-700"}`}>{alert.severity}</span>
+                <span className={`rounded px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${critical ? "bg-red-50 dark:bg-red-950/80 text-red-700 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-800" : "bg-orange-50 dark:bg-orange-950/80 text-orange-700 dark:text-orange-300 ring-1 ring-orange-200 dark:ring-orange-800"}`}>{alert.severity}</span>
                 {alert.is_downwind_hazard && (
-                  <span className="flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-800 ring-1 ring-amber-300">
-                    <Wind className="h-3 w-3 text-amber-600" /> Downwind Hazard
+                  <span className="flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-950/80 px-1.5 py-0.5 text-[9px] font-bold text-amber-800 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-800">
+                    <Wind className="h-3 w-3 text-amber-600 dark:text-amber-400" /> Downwind Hazard
                   </span>
                 )}
-                <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-semibold text-slate-500" title={alert.event_id}>{alert.event_id}</span>
-                <span className="shrink-0 text-[11px] text-slate-400">{relativeTime(alert.created_at)}</span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-bold text-slate-500 dark:text-slate-300" title={alert.event_id}>{alert.event_id}</span>
+                <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-300">{relativeTime(alert.created_at)}</span>
               </div>
-              <h3 className="mt-1.5 text-[13px] font-bold leading-5 text-slate-950">{alert.title}</h3>
-              {alert.message && <p className="mt-0.5 text-[11px] leading-[1.45] text-slate-600">{alert.message}</p>}
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <h3 className="mt-1.5 text-[13px] font-bold leading-5 text-slate-950 dark:text-slate-50">{alert.title}</h3>
+              {alert.message && <p className="mt-0.5 text-[11px] leading-[1.45] text-slate-600 dark:text-slate-200">{alert.message}</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 dark:border-slate-800 pt-2 text-[10px] text-slate-500 dark:text-slate-300">
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                  {alert.peak_frp_mw != null && <span className={`font-mono font-bold ${critical ? "text-red-700" : "text-orange-700"}`}>{alert.peak_frp_mw.toFixed(1)} MW</span>}
-                  {alert.classification && <span className="font-mono font-semibold text-slate-600">{alert.classification}</span>}
-                  {alert.distance_km != null && <span className="font-medium text-slate-700"><MapPin className="mr-0.5 inline h-3 w-3"/> {alert.distance_km.toFixed(1)} km {alert.bearing_cardinal ? `(${alert.bearing_cardinal})` : ""}</span>}
+                  {alert.peak_frp_mw != null && <span className={`font-mono font-bold ${critical ? "text-red-700 dark:text-red-300" : "text-orange-700 dark:text-orange-300"}`}>{alert.peak_frp_mw.toFixed(1)} MW</span>}
+                  {alert.classification && <span className="font-mono font-semibold text-slate-600 dark:text-slate-300">{alert.classification}</span>}
+                  {alert.distance_km != null && <span className="font-semibold text-slate-700 dark:text-slate-200"><MapPin className="mr-0.5 inline h-3 w-3 text-slate-400 dark:text-slate-300"/> {alert.distance_km.toFixed(1)} km {alert.bearing_cardinal ? `(${alert.bearing_cardinal})` : ""}</span>}
                 </div>
                 <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                  <button aria-label={`View event ${alert.event_id} on map`} className="flex min-h-7 items-center justify-center gap-1 rounded-md border border-orange-300 px-2 text-[10px] font-semibold text-orange-700 transition-colors hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void viewOnMap(alert)}><MapPin className="h-3 w-3"/> Show on Map</button>
-                  {alert.is_read ? <span className="flex min-h-7 items-center gap-1 px-1 text-[10px] font-semibold text-emerald-700"><CircleCheck className="h-3.5 w-3.5"/> Read</span> : <button type="button" className="min-h-7 rounded-md border border-slate-300 px-2 text-[10px] font-semibold text-slate-700 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void acknowledge(alert)}>Acknowledge</button>}
+                  <button aria-label={`View event ${alert.event_id} on map`} className="flex min-h-7 items-center justify-center gap-1 rounded-md border border-orange-300 dark:border-orange-700 px-2 text-[10px] font-semibold text-orange-700 dark:text-orange-300 transition-colors hover:bg-orange-50 dark:hover:bg-orange-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void viewOnMap(alert)}><MapPin className="h-3 w-3"/> Show on Map</button>
+                  {alert.is_read ? <span className="flex min-h-7 items-center gap-1 px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"><CircleCheck className="h-3.5 w-3.5"/> Read</span> : <button type="button" className="min-h-7 rounded-md border border-slate-300 dark:border-slate-700 px-2 text-[10px] font-semibold text-slate-700 dark:text-slate-200 transition-colors hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/50 hover:text-orange-700 dark:hover:text-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void acknowledge(alert)}>Acknowledge</button>}
                 </div>
               </div>
             </article>;

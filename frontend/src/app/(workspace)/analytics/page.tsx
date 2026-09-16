@@ -582,21 +582,21 @@ export default function AnalyticsPage() {
                       }}
                       className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
                         isSelected
-                          ? "bg-orange-50/80 border-orange-400 shadow-xs ring-1 ring-orange-400/30"
-                          : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80"
+                          ? "bg-orange-50/90 dark:bg-orange-950/80 border-orange-400 dark:border-orange-500 shadow-xs ring-1 ring-orange-500/30"
+                          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/80 dark:hover:bg-slate-800/80"
                       }`}
                     >
                       <div className="min-w-0 flex-1 pr-3">
                         <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-orange-600" : "bg-slate-400"}`} />
-                          <span className="text-xs font-bold text-slate-900 truncate">{st.state}</span>
-                          <span className="text-[11px] font-mono font-medium text-slate-500">({st.percentage_of_national}%)</span>
+                          <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-orange-600 dark:bg-orange-400" : "bg-slate-400 dark:bg-slate-500"}`} />
+                          <span className={`text-xs font-extrabold truncate ${isSelected ? "text-slate-900 dark:text-orange-50 font-extrabold" : "text-slate-900 dark:text-slate-100"}`}>{st.state}</span>
+                          <span className={`text-[11px] font-mono font-semibold ${isSelected ? "text-slate-700 dark:text-orange-200" : "text-slate-600 dark:text-slate-300"}`}>({st.percentage_of_national}%)</span>
                         </div>
                         <div className="flex items-center gap-2 mt-1.5">
                           <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold border ${theme.badgeBg}`}>
                             {topCat}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-mono">
+                          <span className={`text-[11px] font-mono font-semibold ${isSelected ? "text-slate-700 dark:text-orange-200" : "text-slate-600 dark:text-slate-300"}`}>
                             Peak: {st.max_frp_mw} MW
                           </span>
                         </div>

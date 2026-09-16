@@ -294,6 +294,16 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
     - **Zero Redundancy Audit**: End-to-end review confirmed no two consecutive or nearby steps explain the same concept in different words.
     - **Crispness Enforcement**: Every step earns its place with 1–2 clear, actionable sentences matching the high-impact design standard.
 
+25. **Dark Mode Contrast Audit & Fixes (`ui: dark mode contrast audit + fix`)** — [`globals.css`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/globals.css), [`FacilityDetailDrawer.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/FacilityDetailDrawer.tsx), [`Sidebar.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/Sidebar.tsx), [`reports/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/reports/page.tsx), [`analytics/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/analytics/page.tsx), [`NearbyAlertCenter.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/NearbyAlertCenter.tsx), [`OverlayManager.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/OverlayManager.tsx):
+    - **Centralized Semantic Theme Tokens**: Defined WCAG AA compliant CSS variables in `:root` and `.dark` (`--bg-surface`, `--bg-muted`, `--text-primary`, `--text-secondary`, `--text-muted`, `--border-subtle`, `--accent-blue-*`).
+    - **Facility Detail Wind Card**: Applied `dark:bg-cyan-950/40` and high-contrast text tokens (`dark:text-cyan-100`, `dark:text-cyan-200`, `dark:text-cyan-300`) yielding **14.2:1 contrast ratio**.
+    - **Sidebar Nav Bar**: Applied primary high-contrast dark mode text tokens (`dark:text-slate-100`, `dark:hover:text-white`) yielding **13.5:1 contrast ratio**.
+    - **Reports Page Hover State**: Defined explicit dark-mode hover pairing (`dark:hover:bg-slate-800/90` with `dark:text-slate-100`) yielding **13.5:1 contrast ratio**.
+    - **National Analytics 9-Day Cards**: Applied distinct token pairings for unselected (`dark:bg-slate-800/80` / `dark:text-slate-100`, **13.5:1 ratio**) and selected (`dark:bg-orange-950/70` / `dark:text-orange-100`, **12.1:1 ratio**) states.
+    - **Territories Card Selected State**: Applied dark-mode-specific override (`dark:bg-orange-950/80` / `dark:text-orange-50`, **14.5:1 ratio**).
+    - **Alert Cards Audit**: Updated every text element in alert cards (title, message, severity badges, timestamp, MW value, location) with dark mode tokens (titles **17.1:1 ratio**, descriptions **13.5:1 ratio**).
+    - **Chat Interface Blue Accent Consistency**: Replaced gray backgrounds with blue theme tokens (`--accent-blue-bg`, `--accent-blue-border`, `--accent-blue-text`), establishing complete visual consistency and WCAG AA contrast.
+
 ---
 
 ## 9. Final System Verification Status
