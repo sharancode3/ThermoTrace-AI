@@ -1970,7 +1970,7 @@ export function EventDetailPanel({
       </div>
 
       {/* Footer Actions matching site UI */}
-      <div className="p-4 border-t border-slate-200 shrink-0 bg-white flex flex-col gap-2">
+      <div data-tour="take-action-cluster" className="p-4 border-t border-slate-200 shrink-0 bg-white flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <button 
             onClick={handleAskAboutEvent}

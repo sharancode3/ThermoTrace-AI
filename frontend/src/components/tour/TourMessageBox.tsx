@@ -77,7 +77,7 @@ export function TourMessageBox() {
     });
   }, [isActive, currentStep, targetRect]);
 
-  if (!isActive || !currentStep) return null;
+  if (!isActive || !currentStep || isWaitingForElement) return null;
 
   const isLastStep = currentStepIndex === totalSteps - 1;
   const isCentered = currentStep.placement === "center";

@@ -1,5 +1,5 @@
 import { TourStep } from "@/types/tour";
-import { openDemoEventPanel } from "@/components/tour/TourContext";
+import { openDemoEventPanel, openDemoFacilityPanel } from "@/components/tour/TourContext";
 
 export const TOUR_STEPS: TourStep[] = [
   // --- PHASE 3: MONITOR WALKTHROUGH ---
@@ -38,18 +38,10 @@ export const TOUR_STEPS: TourStep[] = [
     waitForElement: true,
   },
   {
-    id: "step-ask-ai",
-    targetSelector: '[data-tour="ask-ai-button"]',
-    title: "Ask AI",
-    description: "Get AI-powered insights and ask questions about the selected incident.",
-    placement: "top",
-    waitForElement: true,
-  },
-  {
-    id: "step-download",
-    targetSelector: '[data-tour="download-report-button"]',
-    title: "Download Report",
-    description: "Download the available incident information for further use.",
+    id: "step-take-action",
+    targetSelector: '[data-tour="take-action-cluster"]',
+    title: "Take Action",
+    description: "Ask AI questions about this incident, download the full report, or export the data — all from here.",
     placement: "top",
     waitForElement: true,
   },
@@ -64,27 +56,14 @@ export const TOUR_STEPS: TourStep[] = [
     placement: "right",
   },
   {
-    id: "step-facilities-filter",
-    targetSelector: '[data-tour="facilities-filter-bar"]',
-    title: "Search & Sector Filters",
-    description: "Filter industrial units by name, state, operator, or sector category.",
-    placement: "bottom",
-    waitForElement: true,
-  },
-  {
-    id: "step-facilities-grid",
-    targetSelector: '[data-tour="facilities-directory-grid"]',
+    id: "step-facilities-directory",
+    action: () => {
+      openDemoFacilityPanel();
+    },
+    targetSelector: '[data-tour="facility-detail-drawer"]',
     title: "Facility Directory",
-    description: "Browse priority industrial units with live flaring baseline metrics.",
-    placement: "top",
-    waitForElement: true,
-  },
-  {
-    id: "step-facility-card",
-    targetSelector: '[data-tour="facility-card-first"]',
-    title: "Facility Intelligence",
-    description: "Click any facility card to inspect historical baselines, coordinates, and telemetry.",
-    placement: "top",
+    description: "Browse and search registered facilities. Click any facility to view its detailed profile.",
+    placement: "left",
     waitForElement: true,
   },
 

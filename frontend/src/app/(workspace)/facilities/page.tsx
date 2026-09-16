@@ -72,6 +72,39 @@ export default function FacilitiesPage() {
     loadFacilities();
   }, [loadFacilities]);
 
+  useEffect(() => {
+    const handleOpenDrawer = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      const targetId = customEvt.detail?.facilityId;
+      if (data && data.items.length > 0) {
+        const found = targetId && targetId !== "demo" ? data.items.find((f) => f.id === targetId || f.facility_code === targetId) : null;
+        setSelectedFacility(found || data.items[0]);
+      }
+    };
+
+    const handleCloseDrawer = () => {
+      setSelectedFacility(null);
+    };
+
+    window.addEventListener("thermo-open-facility-drawer", handleOpenDrawer);
+    window.addEventListener("thermo-close-facility-drawer", handleCloseDrawer);
+
+    return () => {
+      window.removeEventListener("thermo-open-facility-drawer", handleOpenDrawer);
+      window.removeEventListener("thermo-close-facility-drawer", handleCloseDrawer);
+    };
+  }, [data]);
+
+  useEffect(() => {
+    if (!data || data.items.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("facilityId") && !selectedFacility) {
+      const facId = params.get("facilityId");
+      const found = facId && facId !== "demo" ? data.items.find((f) => f.id === facId || f.facility_code === facId) : null;
+      setSelectedFacility(found || data.items[0]);
+    }
+  }, [data, selectedFacility]);
+
   const getSectorIcon = (sector: string) => {
     switch (sector.toLowerCase()) {
       case "refinery":

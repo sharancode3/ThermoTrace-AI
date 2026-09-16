@@ -255,14 +255,45 @@ We audited why 312 events were classified as `OTHER_UNCERTAIN` and resolved them
     - **Desktop Top Nav & Sidebar Access**: Persistent *"Take a Tour"* button in the sidebar navigation rail and system guide section.
     - **Mobile Header & Hamburger Menu Access**: Persistent *"Tour"* button in the mobile sticky top header bar (next to hamburger icon) and a dedicated *"Restart Platform Tour"* item inside the slide-down hamburger menu.
 
+18. **Guided Tour System — Tour v2 Phase 1 (`ui: tour v2 - consolidated steps + scroll/glitch fixes`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx), [`TourMessageBox.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourMessageBox.tsx) & [`TourOverlay.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourOverlay.tsx):
+    - **Strictly Sequential Route Transitions**: Fixed section-switch race condition by completely hiding the message box (`isWaitingForElement === true -> return null`) and dimming the overlay with a sleek *"Loading workspace view..."* indicator during route transitions.
+    - **DOM Target Verification Guard**: Title and description text are held back until `pathname === currentStep.route` AND `document.querySelector(targetSelector)` is confirmed mounted in the DOM.
+    - **Guaranteed Synchronization**: Eliminated premature text rendering across all route switches (Monitor → Facilities → Reports → Analytics).
+
+19. **Guided Tour System — Tour v2 Phase 2 (`ui: tour v2 - auto scroll to target`)** — [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx):
+    - **Smooth Auto-Scroll to Target**: Integrated `targetEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })` before calculating bounding rects for every step with a DOM target selector.
+    - **450ms Scroll Animation Buffer**: Enforced a 450ms scroll animation buffer so `getBoundingClientRect()` measures final settled coordinates after scroll animation completes.
+    - **Zero Manual Scrolling Needed**: Elements below the fold (e.g. Analytics classification distribution & territory console) are automatically vertically centered in the viewport before highlight & card appearance.
+
+20. **Guided Tour System — Tour v2 Phase 3 (`ui: tour v2 - incident marker resolution`)** — [`MapComponent.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/MapComponent.tsx) & [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts):
+    - **Real Incident Marker Resolution**: Step 3 (`step-incident`) target selector `[data-tour="map-marker"]` dynamically resolves to live, currently-rendered thermal marker DOM nodes on Maplibre canvas.
+    - **Asynchronous Load Polling**: Combined with Phase 1 DOM polling, if map markers are fetching asynchronously upon tour load, the engine waits cleanly (`isWaitingForElement = true`) until real thermal marker nodes mount in the DOM.
+    - **Guaranteed Target Precision**: Eliminates arbitrary/hardcoded coordinate guessing; spotlight highlight always bounds a live incident marker on the map.
+
+21. **Guided Tour System — Tour v2 Phase 4 (`ui: tour v2 - consolidated monitor steps`)** — [`EventDetailPanel.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/EventDetailPanel.tsx), [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts) & [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx):
+    - **Action Controls Cluster Consolidation**: Merged separate *"Ask AI"* and *"Download Report"* steps into a single unified step (`step-take-action`) targeting `[data-tour="take-action-cluster"]`.
+    - **Grouped Region Highlight**: Spotlight spotlight box encompasses the entire drawer footer row containing *Ask to Chat*, *Download Report*, and *Export JSON Dossier*.
+    - **Updated Crisp Copy**: Title *"Take Action"*, Description *"Ask AI questions about this incident, download the full report, or export the data — all from here."*.
+
+22. **Guided Tour System — Tour v2 Phase 5 (`ui: tour v2 - consolidated facilities steps`)** — [`FacilityDetailDrawer.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/FacilityDetailDrawer.tsx), [`facilities/page.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/app/%28workspace%29/facilities/page.tsx), [`TourContext.tsx`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/components/tour/TourContext.tsx) & [`tourSteps.ts`](file:///c:/Users/gjaya/OneDrive/Desktop/PROJECTS/ThermoTrace/frontend/src/config/tourSteps.ts):
+    - **Removed Separate Search Bar Step**: Search & filter bar is no longer highlighted or given its own step.
+    - **Folded Search Mention into Description**: Search capability brief mention incorporated into description text.
+    - **Programmatic Facility Detail Action**: `step-facilities-directory` automatically invokes `openDemoFacilityPanel()`, programmatically opening the `FacilityDetailDrawer` for a real registered facility (`data-tour="facility-detail-drawer"`).
+    - **Consolidated 3 Steps into 1**: Single step (`step-facilities-directory`) with Title *"Facility Directory"* and Description *"Browse and search registered facilities. Click any facility to view its detailed profile."*.
+    - **Clean Teardown**: Moving past or exiting this step cleanly invokes `closeDemoPanels()`, resetting drawer open state.
+
 ---
 
 ## 9. Final System Verification Status
 - **Next.js Production Build**: Compiled 100% cleanly (0 TypeScript/syntax errors across all static/dynamic routes).
 - **Phase 0 Rules Upheld**: Zero backend, API, DB, env, or ML model changes.
-- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: collapsible nav`, `ui: mobile filter icon`, `ui: mobile event detail`, `ui: mobile nav redesign`, `ui: mobile panel trimming`, `ui: mobile news and alerts full screen`, `ui: remove mobile bottom nav bar`, `ui: rebuild mobile top nav bar`, `ui: rebuild mobile monitor screen`, `ui: fix mobile ai chat`, `ui: fix mobile national analytics`, `ui: fix mobile reports page`, `ui: guided tour reports walkthrough`, `ui: guided tour analytics walkthrough`, `ui: guided tour end screen`, `ui: guided tour exit handlers`, `ui: guided tour manual retrigger`).
+- **Git Commit Isolation**: All separate isolated commits matching Phase 0 instructions (`ui: tour v2 - consolidated steps + scroll/glitch fixes`).
 - **Live Localhost Status**:
   - Frontend: `http://localhost:3000/` & `http://localhost:3000/monitor`
   - Backend: `http://127.0.0.1:8000/api/v1/health` (HTTP 200 OK)
+
+
+
+
 
 

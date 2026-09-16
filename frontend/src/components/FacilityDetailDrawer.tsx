@@ -179,7 +179,7 @@ export default function FacilityDetailDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300">
-      <div className="relative flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl transition-all duration-300">
+      <div data-tour="facility-detail-drawer" className="relative flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl transition-all duration-300">
         {/* Header Bar */}
         <div className="flex items-start justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
           <div className="flex items-start gap-3">

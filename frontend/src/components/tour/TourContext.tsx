@@ -14,15 +14,40 @@ export function openDemoEventPanel(eventId = "EVT-IN-MAD-0005") {
   window.dispatchEvent(new CustomEvent("thermo-open-event-drawer", { detail: { eventId } }));
 }
 
+export function openDemoFacilityPanel(facilityId?: string) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (facilityId) {
+    url.searchParams.set("facilityId", facilityId);
+  } else {
+    url.searchParams.set("facilityId", "demo");
+  }
+  window.history.pushState({}, "", url.toString());
+  window.dispatchEvent(new Event("popstate"));
+  window.dispatchEvent(new CustomEvent("thermo-open-facility-drawer", { detail: { facilityId } }));
+}
+
 export function closeDemoPanels() {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
-  if (url.searchParams.has("eventId") || url.searchParams.has("overlay")) {
+  let changed = false;
+  if (url.searchParams.has("eventId")) {
     url.searchParams.delete("eventId");
+    changed = true;
+  }
+  if (url.searchParams.has("overlay")) {
     url.searchParams.delete("overlay");
+    changed = true;
+  }
+  if (url.searchParams.has("facilityId")) {
+    url.searchParams.delete("facilityId");
+    changed = true;
+  }
+  if (changed) {
     window.history.pushState({}, "", url.toString());
     window.dispatchEvent(new Event("popstate"));
   }
+  window.dispatchEvent(new CustomEvent("thermo-close-facility-drawer"));
 }
 
 interface TourContextType {
@@ -125,8 +150,9 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     let isSubscribed = true;
     setIsWaitingForElement(true);
+    setTargetRect(null);
 
-    // 1. Navigation if step defines a route
+    // 1. Navigation if step defines a route different from current pathname
     if (currentStep.route && pathname !== currentStep.route) {
       router.push(currentStep.route);
     }
@@ -140,25 +166,45 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 3. Poll/observe for element to mount in DOM
+    // 3. Poll/observe for element to mount in DOM and for route to match
     let pollCount = 0;
-    const maxPolls = 20; // 2 seconds max
+    const maxPolls = 60; // 3 seconds max (50ms interval)
     const pollInterval = setInterval(() => {
       if (!isSubscribed) return;
       pollCount++;
 
-      const el = currentStep.targetSelector ? document.querySelector(currentStep.targetSelector) : null;
-      if (el || currentStep.placement === "center" || pollCount >= maxPolls) {
+      const routeMatched = !currentStep.route || pathname === currentStep.route;
+      const isCenterPlacement = currentStep.placement === "center" || !currentStep.targetSelector;
+      const targetEl = currentStep.targetSelector ? document.querySelector(currentStep.targetSelector) : null;
+
+      if ((routeMatched && (targetEl || isCenterPlacement)) || pollCount >= maxPolls) {
         clearInterval(pollInterval);
         
-        // 4. Short buffer (300ms) for UI transitions/animations to finish
+        if (pollCount >= maxPolls && !targetEl && !isCenterPlacement) {
+          console.warn(`[Tour Engine] Target selector not found after 3s: ${currentStep.targetSelector}`);
+        }
+
+        // Auto-scroll target element into view before measuring bounding rect
+        if (targetEl && !isCenterPlacement) {
+          try {
+            targetEl.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+              inline: "nearest",
+            });
+          } catch (e) {
+            console.error("[Tour Engine] scrollIntoView failed:", e);
+          }
+        }
+
+        // Wait 450ms for smooth scroll animation & reflow to complete before measuring position
         setTimeout(() => {
           if (!isSubscribed) return;
-          setIsWaitingForElement(false);
           updateTargetRect();
-        }, 300);
+          setIsWaitingForElement(false);
+        }, 450);
       }
-    }, 100);
+    }, 50);
 
     return () => {
       isSubscribed = false;
@@ -178,6 +224,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setShowIntroModal(false);
     setCurrentStepIndex(0);
     setIsActive(true);
+    setIsWaitingForElement(true);
   }, []);
 
   const startTourAtStep = useCallback((index: number) => {
@@ -185,6 +232,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setShowIntroModal(false);
     setCurrentStepIndex(index);
     setIsActive(true);
+    setIsWaitingForElement(true);
   }, []);
 
   const retriggerTour = useCallback(() => {
@@ -197,10 +245,15 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const nextStep = useCallback(() => {
     if (currentStepIndex < TOUR_STEPS.length - 1) {
       const nextIdx = currentStepIndex + 1;
-      // If moving past step-download (step 6) or navigating to another section, close demo panels
-      if (TOUR_STEPS[currentStepIndex]?.id === "step-download") {
+      // If moving past step-take-action or step-facilities-directory, close demo panels
+      if (
+        TOUR_STEPS[currentStepIndex]?.id === "step-take-action" ||
+        TOUR_STEPS[currentStepIndex]?.id === "step-facilities-directory"
+      ) {
         closeDemoPanels();
       }
+      setIsWaitingForElement(true);
+      setTargetRect(null);
       setCurrentStepIndex(nextIdx);
     } else {
       closeDemoPanels();
@@ -211,6 +264,14 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
   const prevStep = useCallback(() => {
     if (currentStepIndex > 0) {
+      if (
+        TOUR_STEPS[currentStepIndex]?.id === "step-facilities-directory" ||
+        TOUR_STEPS[currentStepIndex]?.id === "step-take-action"
+      ) {
+        closeDemoPanels();
+      }
+      setIsWaitingForElement(true);
+      setTargetRect(null);
       setCurrentStepIndex((prev) => prev - 1);
     }
   }, [currentStepIndex]);
