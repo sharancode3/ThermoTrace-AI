@@ -27,6 +27,7 @@ class CanonicalAnomalyTier(str, Enum):
 class CanonicalLifecycleStatus(str, Enum):
     ACTIVE = "ACTIVE"
     COOLING = "COOLING"
+    EXTINGUISHED = "EXTINGUISHED"
     RESOLVED = "RESOLVED"
 
 class CanonicalThermalTrend(str, Enum):
@@ -70,6 +71,10 @@ class EventResponse(BaseModel):
     anomaly_tier: str = "NORMAL"
     anomaly_z_score: Optional[float] = None
     lifecycle_status: str = "ACTIVE"
+    freshness_status: str = "FRESH_OBSERVATION"
+    is_active: bool = True
+    freshness_label: str = "Active (< 24h)"
+    model_version: str = "thermo_xgb_v1.1.0"
     thermal_trend: str = "INSUFFICIENT_DATA"
     evidence_completeness: str = "LIMITED"
     evidence_strength: str = "LIMITED"
@@ -89,7 +94,7 @@ class EventResponse(BaseModel):
     contributing_factors: Dict[str, Any] = Field(default_factory=dict)
     humanized_summary: Optional[Dict[str, Any]] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 
 class GeoJSONFeature(BaseModel):
     type: str = "Feature"

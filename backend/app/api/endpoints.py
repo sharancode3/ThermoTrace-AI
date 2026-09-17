@@ -25,6 +25,7 @@ from app.schemas.events import (
     EventResponse, GeoJSONFeatureCollection, GeoJSONFeature,
     NewsItemResponse, FirmsStatusResponse
 )
+from app.domain.lifecycle import evaluate_lifecycle, normalize_legacy_status
 from app.domain.features import get_thermal_trend, batch_get_thermal_trends, get_evidence_completeness, get_evidence_strength
 from app.domain.llm_humanizer import humanize_intelligence
 from app.domain.geocoding import resolve_indian_location
@@ -189,6 +190,7 @@ def get_gis_events(
     features = []
 
     for evt in events:
+        life_info = evaluate_lifecycle(evt.latest_detected_utc, current_persisted_status=evt.lifecycle_status)
         feature = GeoJSONFeature(
             geometry={
                 "type": "Point",
@@ -257,15 +259,12 @@ def get_gis_events(
                     else None
                 ),
 
-                "lifecycle_status": (
-                    evt.lifecycle_status
-                    if evt.lifecycle_status
-                    else (
-                        "ACTIVE"
-                        if evt.latest_detected_utc and evt.latest_detected_utc >= now_utc - timedelta(hours=24)
-                        else "EXTINGUISHED"
-                    )
-                )
+                "lifecycle_status": life_info["lifecycle_status"],
+                "freshness_status": life_info["freshness_status"],
+                "is_active": life_info["is_active"],
+                "freshness_label": life_info["freshness_label"],
+                "elapsed_hours": life_info["elapsed_hours"],
+                "model_version": "thermo_xgb_v1.1.0"
             }
         )
 
@@ -879,6 +878,7 @@ def get_event_intelligence(event_id: str, db: Session = Depends(get_db)):
     }
     
     llm_output = humanize_intelligence(intel_dict)
+    life_info = evaluate_lifecycle(evt.latest_detected_utc, current_persisted_status=evt.lifecycle_status)
     
     return EventResponse(
         event_id=evt.event_id,
@@ -904,7 +904,11 @@ def get_event_intelligence(event_id: str, db: Session = Depends(get_db)):
         persistence_tier=evt.persistence_tier,
         anomaly_tier=anomaly_tier_final,
         anomaly_z_score=anomaly_z_score_final,
-        lifecycle_status=evt.lifecycle_status,
+        lifecycle_status=life_info["lifecycle_status"],
+        freshness_status=life_info["freshness_status"],
+        is_active=life_info["is_active"],
+        freshness_label=life_info["freshness_label"],
+        model_version="thermo_xgb_v1.1.0",
         thermal_trend=trend,
         evidence_completeness=evidence_comp,
         evidence_strength=evidence_tag,

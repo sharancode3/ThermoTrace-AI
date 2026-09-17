@@ -802,9 +802,18 @@ export default function MapComponent({
         {/* Thermal Event Markers (Guaranteed Selected Event Inclusion) */}
         {displayFeatures.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
-          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
+          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status, is_active, latest_detected_utc } = feature.properties;
           const isSelected = selectedEventId === event_id;
-          const isCooled = lifecycle_status === "EXTINGUISHED" || lifecycle_status === "COOLING";
+          const normLife = String(lifecycle_status || "").toUpperCase();
+          const isFreshByTimestamp = latest_detected_utc
+            ? (Date.now() - new Date(latest_detected_utc).getTime()) < 24 * 3600 * 1000
+            : false;
+          const isCooled = is_active === false ||
+            normLife === "EXTINGUISHED" ||
+            normLife === "RESOLVED" ||
+            normLife === "COOLING" ||
+            normLife === "HISTORICAL" ||
+            !isFreshByTimestamp;
 
           return (
             <Marker
@@ -859,12 +868,10 @@ export default function MapComponent({
                       </span>
                     </>
                   )}
-                  {isCooled && (
-                    <>
-                      <span className="text-slate-500">·</span>
-                      <span className="text-sky-400 text-[10px] uppercase font-semibold">Cooled</span>
-                    </>
-                  )}
+                  <span className="text-slate-500">·</span>
+                  <span className={`text-[10px] font-semibold uppercase ${isCooled ? "text-sky-300" : "text-emerald-400"}`}>
+                    {isCooled ? (normLife === "COOLING" ? "Aging (24-72h)" : "Historical (>72h)") : "Active (<24h)"}
+                  </span>
                 </div>
               </div>
             </Marker>

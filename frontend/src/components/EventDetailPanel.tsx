@@ -639,6 +639,30 @@ export function EventDetailPanel({
     sourceSubtitle = "Vegetation Wildfire in Forested Terrain";
   }
 
+  // Freshness & Lifecycle Derivation
+  const isAgedOrCooled = data?.is_active === false || 
+    data?.freshness_status === "AGING" || 
+    data?.freshness_status === "HISTORICAL" || 
+    data?.lifecycle_status === "COOLING" || 
+    data?.lifecycle_status === "EXTINGUISHED" || 
+    data?.lifecycle_status === "RESOLVED";
+
+  const isHistorical = data?.freshness_status === "HISTORICAL" || 
+    data?.lifecycle_status === "EXTINGUISHED" || 
+    data?.lifecycle_status === "RESOLVED";
+
+  const freshnessStatus = data?.freshness_status || (isHistorical ? "HISTORICAL" : isAgedOrCooled ? "AGING" : "ACTIVE");
+  
+  let freshnessBadgeText = "Active Satellite Observation (<24h)";
+  let freshnessBadgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-700";
+  if (freshnessStatus === "HISTORICAL") {
+    freshnessBadgeText = "Historical Record — No Detection in >72h";
+    freshnessBadgeStyle = "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+  } else if (freshnessStatus === "AGING") {
+    freshnessBadgeText = "Aging Hotspot — No Detection in 24–72h";
+    freshnessBadgeStyle = "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700";
+  }
+
   // Humanized Anomaly Text
   const isCritical = data?.anomaly_tier === "CRITICAL";
   const isAbnormal = data?.anomaly_tier === "ABNORMAL";
@@ -736,6 +760,16 @@ export function EventDetailPanel({
                     {data?.district ? `${data.district}, ` : ""}{data?.state || "Sovereign Territory"}
                   </h2>
                   <p className="text-xs text-slate-400 font-medium">{sourceCategory}</p>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold border ${freshnessBadgeStyle}`}>
+                      {!isAgedOrCooled ? (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      ) : (
+                        <Clock className="w-2.5 h-2.5" />
+                      )}
+                      {freshnessBadgeText}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1002,6 +1036,18 @@ export function EventDetailPanel({
               <span>·</span>
               <span>{data?.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Active"}</span>
             </div>
+
+            {/* Operational Freshness Status */}
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${freshnessBadgeStyle}`}>
+                {!isAgedOrCooled ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                ) : (
+                  <Clock className="w-3 h-3" />
+                )}
+                {freshnessBadgeText}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -1178,7 +1224,7 @@ export function EventDetailPanel({
 
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between py-1 border-b border-slate-50">
-                          <span className="text-slate-500">Peak Radiance (FRP):</span>
+                          <span className="text-slate-500">Peak Radiance (at detection):</span>
                           <span className="font-mono font-bold text-slate-900 text-sm">{data.peak_frp_mw?.toFixed(1)} MW</span>
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-50">
@@ -1197,6 +1243,10 @@ export function EventDetailPanel({
                           <span className="text-slate-500">Event Duration:</span>
                           <span className="font-mono font-semibold text-slate-800">{data.duration_hours?.toFixed(1)} hours</span>
                         </div>
+                        <div className="flex justify-between py-1 border-b border-slate-50">
+                          <span className="text-slate-500">Operational Freshness:</span>
+                          <span className="font-mono font-bold text-xs text-slate-800">{freshnessBadgeText}</span>
+                        </div>
                         <div className="flex justify-between py-1">
                           <span className="text-slate-500">Temperature Trend:</span>
                           <span className="font-mono font-bold flex items-center gap-1">
@@ -1209,6 +1259,14 @@ export function EventDetailPanel({
                           </span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Scientific Orbital Cadence Disclaimer */}
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-[11px] leading-relaxed flex items-start gap-2">
+                      <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-slate-900 font-semibold">Orbital Cadence Note:</strong> Absence of recent satellite detection does not confirm physical cooling or extinction; cloud cover, orbital pass intervals (~10–12h), or sensor sensitivity thresholds may limit satellite visibility.
+                      </span>
                     </div>
 
                     <div className={`p-4 rounded-xl border ${anomalyStyle} space-y-2`}>
@@ -1569,7 +1627,11 @@ export function EventDetailPanel({
                         <div className="space-y-0.5">
                           <div className="text-[10px] text-slate-500 font-medium">Latest Pass</div>
                           <div className="font-mono font-bold text-orange-600 text-xs flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
+                            {!isAgedOrCooled ? (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
+                            ) : (
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
+                            )}
                             {data.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Just now"}
                           </div>
                           <div className="text-[10px] text-slate-500">
@@ -1596,9 +1658,17 @@ export function EventDetailPanel({
                       </div>
                     </div>
 
+                    {/* Scientific Orbital Cadence Disclaimer */}
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-[11px] leading-relaxed flex items-start gap-2">
+                      <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-slate-900 font-semibold">Orbital Cadence Note:</strong> Absence of recent satellite detection does not confirm physical cooling or extinction; cloud cover, orbital pass intervals (~10–12h), or sensor sensitivity thresholds may limit satellite visibility.
+                      </span>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                        <div className="text-[11px] text-slate-500 font-medium">Peak Radiance (FRP)</div>
+                        <div className="text-[11px] text-slate-500 font-medium">Peak Radiance (at detection)</div>
                         <div className="text-lg font-bold text-slate-900 mt-0.5">{data.peak_frp_mw?.toFixed(1)} <span className="text-xs font-normal text-slate-500">MW</span></div>
                       </div>
                       <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">

@@ -100,19 +100,26 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
     <div
       onClick={onClick}
       className={`group relative flex items-center justify-center transition-all duration-300 cursor-pointer select-none ${
-        isCooled ? "opacity-60 hover:opacity-100 grayscale-[20%]" : ""
+        isCooled ? "opacity-55 hover:opacity-90 grayscale-[25%]" : ""
       } ${
         isSelected ? "scale-125 z-40" : "hover:scale-115 z-10"
       }`}
       style={{ width: size, height: size }}
-      title={`${normClass} — ${normTier}${isCooled ? " (Cooled)" : ""} (${peakFrp.toFixed(1)} MW)`}
+      title={`${normClass} — ${normTier} · ${isCooled ? "Aged / Historical" : "Active"} (${peakFrp.toFixed(1)} MW)`}
     >
       {/* Outer Selection / Pulse Glow Ring */}
       {isSelected ? (
-        <span 
-          className="absolute -inset-2.5 rounded-full animate-ping opacity-75 pointer-events-none"
-          style={{ backgroundColor: glowColor }}
-        />
+        isCooled ? (
+          <span 
+            className="absolute -inset-1.5 rounded-full ring-2 ring-slate-400 opacity-80 pointer-events-none"
+            style={{ borderColor: strokeColor }}
+          />
+        ) : (
+          <span 
+            className="absolute -inset-2.5 rounded-full animate-ping opacity-75 pointer-events-none"
+            style={{ backgroundColor: glowColor }}
+          />
+        )
       ) : (!isCooled && (isCritical || isAbnormal || isHighThermal)) ? (
         <span 
           className="absolute -inset-1 rounded-full animate-pulse opacity-45 pointer-events-none"

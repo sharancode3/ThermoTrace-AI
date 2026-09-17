@@ -142,72 +142,78 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
             entropy = -float(np.sum([p * np.log(p + 1e-9) for p in probs]))
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
             
-            # Physical Domain Gating & Facility Authority for class designation (preserving calibrated confidence)
+            # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
             dist_fac = float(features.get("dist_to_facility", 99999.0))
             is_ind_zone = int(features.get("is_industrial_zone", 0))
             has_facility = bool(event.associated_facility_id) or (dist_fac <= 5000.0) or (is_ind_zone == 1)
+            is_immediate_plant_boundary = bool(event.associated_facility_id) and (dist_fac <= 500.0)
             peak_frp = float(event.peak_frp_mw or 0.0)
+            max_bright = float(features.get("max_brightness_k", 300.0))
             raw_model_class = predicted_class
             raw_model_confidence = confidence
+            rule_applied = None
 
             if has_facility:
                 # 1. Industrial Facility Context:
-                # If the trained ML model predicted IND_ROUTINE, IND_FLARE, or IND_FIRE, TRUST THE ML MODEL!
+                # If the trained 14-D ML model predicted an industrial class, trust the ML model!
                 if predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
                     pass
-                elif peak_frp >= 500.0 and float(features.get("max_brightness_k", 300.0)) >= 380.0:
+                elif is_immediate_plant_boundary and peak_frp >= 500.0 and max_bright >= 380.0:
+                    # Extreme radiant intensity directly within immediate plant parcel
                     predicted_class = "IND_FIRE"
-                elif "flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower():
+                    rule_applied = "DIRECT_PLANT_PARCEL_EXTREME_FIRE_GATE"
+                elif is_immediate_plant_boundary and ("flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower()):
                     predicted_class = "IND_FLARE"
-                else:
+                    rule_applied = "DIRECT_REFINERY_FLARE_STACK_GATE"
+                elif is_immediate_plant_boundary and confidence < 0.50:
+                    # Only override ambiguous model output if directly inside immediate facility footprint
                     predicted_class = "IND_ROUTINE"
+                    rule_applied = "DIRECT_PLANT_BOUNDARY_NOMINAL_CONTEXT"
+                else:
+                    # Hotspot is near facility (e.g. 1-5km outskirts) but model confidently predicted AGRI_BURN, WILDFIRE, or OTHER_UNCERTAIN:
+                    # Respect the authentic ML model prediction! Agricultural clearing and vegetation fires routinely occur near industrial outskirts.
+                    pass
             else:
-                # 2. Non-Facility Rural / Forest Spatial Resolution:
+                # 2. Non-Facility Rural / Forest Spatial Context:
                 pct_crop = float(features.get("pct_cropland", 0.0))
                 pct_for = float(features.get("pct_forest", 0.0))
                 
-                if pct_for >= 0.40 or predicted_class == "WILDFIRE":
-                    predicted_class = "WILDFIRE"
-                elif pct_crop >= 0.35 or predicted_class == "AGRI_BURN":
-                    predicted_class = "AGRI_BURN"
-                elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
-                    # No facility nearby, model predicted industrial: disambiguate via landcover
-                    if pct_crop >= 0.20:
-                        predicted_class = "AGRI_BURN"
-                    elif pct_for >= 0.20:
+                if predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                    # Model predicted industrial emitter, but no facility exists within regional buffer:
+                    # Disambiguate using landcover evidence
+                    if pct_for >= 0.35:
                         predicted_class = "WILDFIRE"
+                        rule_applied = "NON_FACILITY_FOREST_CORROBORATION"
+                    elif pct_crop >= 0.30:
+                        predicted_class = "AGRI_BURN"
+                        rule_applied = "NON_FACILITY_CROPLAND_CORROBORATION"
                     else:
                         predicted_class = "OTHER_UNCERTAIN"
-                else:
-                    if confidence < 0.45 or entropy > 1.40:
-                        predicted_class = "OTHER_UNCERTAIN"
+                        rule_applied = "NON_FACILITY_AMBIGUOUS_HOTSPOT"
+                elif confidence < 0.45 or entropy > 1.40:
+                    predicted_class = "OTHER_UNCERTAIN"
+                    rule_applied = "EPISTEMIC_UNCERTAINTY_GATE"
 
             if predicted_class != raw_model_class:
-                # Domain safety rule altered the operational class:
-                # Use the actual calibrated model probability for the assigned class rather than misattributing
-                # the superseded class probability, and appropriately report decision uncertainty.
+                # Domain safety rule altered the operational decision:
+                # Explicitly use the actual calibrated model probability for the assigned class.
+                # NEVER reuse the probability of a superseded class as confidence in a replacement class!
                 assigned_prob = float(class_probs.get(predicted_class, 0.0))
-                confidence = assigned_prob if assigned_prob > 0 else min(raw_model_confidence, 0.50)
+                confidence = assigned_prob if assigned_prob > 0.05 else min(raw_model_confidence, 0.45)
                 uncertainty_tier = "MODERATE" if confidence >= 0.50 else "HIGH"
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
             predicted_class = "OTHER_UNCERTAIN"
             confidence = 0.50
+            rule_applied = "INFERENCE_EXCEPTION_FALLBACK"
 
     event.classification = predicted_class
     event.classification_confidence = round(confidence, 4)
-    # Ensure lifecycle_status remains compliant with ACTIVE / COOLING / EXTINGUISHED lifecycle
-    now_utc = datetime.now(timezone.utc)
-    if event.latest_detected_utc:
-        lat_t = event.latest_detected_utc if event.latest_detected_utc.tzinfo else event.latest_detected_utc.replace(tzinfo=timezone.utc)
-        if (now_utc - lat_t).total_seconds() < 86400:
-            event.lifecycle_status = "ACTIVE"
-        elif (now_utc - lat_t).total_seconds() < 259200:
-            event.lifecycle_status = "COOLING"
-        else:
-            event.lifecycle_status = "EXTINGUISHED"
-    else:
-        event.lifecycle_status = "ACTIVE"
+
+    # 2b. Authoritative Freshness & Lifecycle Policy (Injectable Clock & Consistent Bounds)
+    from app.domain.lifecycle import evaluate_lifecycle
+    life_info = evaluate_lifecycle(event.latest_detected_utc, current_persisted_status=event.lifecycle_status)
+    event.lifecycle_status = life_info["lifecycle_status"]
     
     # 3. Industrial Facility Association & Baseline
     facility = session.query(IndustrialFacility).filter(IndustrialFacility.id == event.associated_facility_id).first() if event.associated_facility_id else None
@@ -420,10 +426,10 @@ def compute_tier2_shap_explainability(session: Session, event: ThermalEvent, mod
             # Native C++ TreeSHAP calculation: shape (1, n_classes, n_features + 1)
             contribs = booster.predict(dm, pred_contribs=True)
             
-            # Identify predicted class index
+            # Identify booster top predicted class index (explain the model's actual tree evaluation)
             class_list = list(classes)
-            pred_class = event.classification or "OTHER_UNCERTAIN"
-            pred_idx = class_list.index(pred_class) if pred_class in class_list else 0
+            raw_probs = model.predict_proba(pd.DataFrame([features])[feature_cols].astype(np.float64))[0]
+            pred_idx = int(np.argmax(raw_probs))
             
             # Extract the 14 feature contributions for this specific event and class
             class_contribs = contribs[0, pred_idx, :len(feature_cols)]

@@ -111,5 +111,33 @@ export const GUIDE_GLOSSARY: GuideGlossaryTerm[] = [
     shortDef: "Deterministic SHA-256 digital signature embedded in every exported intelligence report.",
     technicalDetails: "Generated over canonical report parameters and stored in response headers (X-Report-SHA256) ensuring regulatory immutability and provenance tracking.",
     sourceRef: "PDFRenderer / CPCB Regulatory Audit Trail"
+  },
+  {
+    term: "Temporal Freshness Windows",
+    category: "Baselines & Anomaly",
+    shortDef: "Operational classification of hot-spots into Active (<24h), Aging (24–72h), and Historical (>72h) records based on elapsed hours since latest satellite observation.",
+    technicalDetails: "Evaluates elapsed time: t < 24h = ACTIVE (rendered with solid vibrant stroke and glow), 24h <= t < 72h = AGING / COOLING (rendered with dashed border and subdued opacity), t >= 72h = HISTORICAL / EXTINGUISHED (retains original anomaly tier while acknowledging lack of recent satellite activity).",
+    sourceRef: "ThermoTrace Lifecycle Policy (backend/app/domain/lifecycle.py)"
+  },
+  {
+    term: "Canonical Lifecycle Status",
+    category: "Baselines & Anomaly",
+    shortDef: "Authoritative state machine governing thermal event life stages: ACTIVE, COOLING, EXTINGUISHED, and legacy RESOLVED.",
+    technicalDetails: "A transition model ensuring historical severity (CRITICAL, ABNORMAL, ELEVATED, NORMAL) is preserved for forensic audits, while status reflects whether satellites have detected continuing radiant energy in current orbital passes.",
+    sourceRef: "CanonicalLifecycleStatus Schema / PostGIS Event Engine"
+  },
+  {
+    term: "Satellite Orbital Revisits",
+    category: "Space & Telemetry",
+    shortDef: "Discrete sun-synchronous orbital overpasses by VIIRS and MODIS sensors (typically 10–12 hours between passes).",
+    technicalDetails: "Absence of a detection during an interval does not guarantee physical extinction, as orbital blind spots, heavy cloud cover, sensor view angles, and sub-pixel saturation thresholds limit detection opportunity.",
+    sourceRef: "NASA LANCE EOSDIS Orbital Ephemeris"
+  },
+  {
+    term: "Tactical Symbology System",
+    category: "Architecture",
+    shortDef: "Sovereign 4-icon visual standard paired with 3-tier severity color tints and operational freshness states.",
+    technicalDetails: "Distinct SVG geometries for Industry (twin factory stacks), Forest Wildfire (pine silhouette with flame tongues), Agricultural Crop Residue (curved grain stalk), and Other/Uncertain (radar diamond). Tinted Red for Critical/Fire, Amber for Abnormal/Flare, and Yellow/Green for Routine/Normal, with dashed strokes for aged events.",
+    sourceRef: "ThermalMapMarker (frontend/src/components/ThermalMapMarker.tsx)"
   }
 ];
