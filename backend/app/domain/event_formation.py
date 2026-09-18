@@ -77,24 +77,27 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
 
         if fac_res and fac_res[5] is not None:
             dist_to_fac = float(fac_res[5])
-            if dist_to_fac <= 5000.0:  # Within 5.0km industrial boundary
+            if dist_to_fac <= 1000.0:  # Within 1.0km immediate plant parcel boundary
                 associated_fac_id = fac_res[0]
                 primary_land_use = fac_res[2] or "Industrial"
             else:
+                associated_fac_id = None
                 primary_land_use = "Cropland" if c_lat > 24.0 else "Regional Hotspot"
 
         # Check if an existing event covers this cluster:
-        # 1. By facility association (strict priority: update existing event for this plant)
+        # 1. By facility association (within 1.0km AND within 24h window)
         # 2. By centroid spatial proximity (within 1500m)
         existing_event = None
         if associated_fac_id:
             existing_event = session.query(ThermalEvent).filter(
-                ThermalEvent.associated_facility_id == associated_fac_id
+                ThermalEvent.associated_facility_id == associated_fac_id,
+                ThermalEvent.latest_detected_utc >= first_utc - timedelta(hours=24)
             ).order_by(ThermalEvent.latest_detected_utc.desc()).first()
 
         if not existing_event:
             existing_event = session.query(ThermalEvent).filter(
-                text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 1500)")
+                text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 1500)"),
+                ThermalEvent.latest_detected_utc >= first_utc - timedelta(hours=24)
             ).params(lon=c_lon, lat=c_lat).order_by(ThermalEvent.latest_detected_utc.desc()).first()
 
         if existing_event:

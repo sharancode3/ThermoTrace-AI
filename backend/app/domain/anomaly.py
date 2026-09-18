@@ -143,56 +143,51 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
             
             # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
+            # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
             dist_fac = float(features.get("dist_to_facility", 99999.0))
             is_ind_zone = int(features.get("is_industrial_zone", 0))
-            has_facility = bool(event.associated_facility_id) or (dist_fac <= 5000.0) or (is_ind_zone == 1)
-            is_immediate_plant_boundary = bool(event.associated_facility_id) and (dist_fac <= 500.0)
+            has_facility = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 1000.0)
+            is_immediate_plant_boundary = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 500.0)
             peak_frp = float(event.peak_frp_mw or 0.0)
             max_bright = float(features.get("max_brightness_k", 300.0))
+            pct_crop = float(features.get("pct_cropland", 0.0))
+            pct_for = float(features.get("pct_forest", 0.0))
             raw_model_class = predicted_class
             raw_model_confidence = confidence
             rule_applied = None
 
             if has_facility:
-                # 1. Industrial Facility Context:
-                # If the trained 14-D ML model predicted an industrial class, trust the ML model!
-                if predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
-                    pass
-                elif is_immediate_plant_boundary and peak_frp >= 500.0 and max_bright >= 380.0:
-                    # Extreme radiant intensity directly within immediate plant parcel
+                # 1. Industrial Facility Context (Within 1.0km of registered plant)
+                if peak_frp >= 300.0 or max_bright >= 375.0 or (event.anomaly_tier == "CRITICAL" and peak_frp >= 150.0):
                     predicted_class = "IND_FIRE"
-                    rule_applied = "DIRECT_PLANT_PARCEL_EXTREME_FIRE_GATE"
-                elif is_immediate_plant_boundary and ("flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower()):
+                    rule_applied = "INDUSTRIAL_EXTREME_FIRE_GATE"
+                elif ("flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower() or "petro" in str(features.get("primary_land_use", "")).lower()) and peak_frp >= 60.0:
                     predicted_class = "IND_FLARE"
-                    rule_applied = "DIRECT_REFINERY_FLARE_STACK_GATE"
-                elif is_immediate_plant_boundary and confidence < 0.50:
-                    # Only override ambiguous model output if directly inside immediate facility footprint
+                    rule_applied = "REFINERY_FLARE_STACK_GATE"
+                elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                    # Trust ML prediction for industrial emitter
+                    pass
+                elif is_immediate_plant_boundary and confidence < 0.60:
+                    # Inside immediate plant boundary, default ambiguous output to nominal plant heat
                     predicted_class = "IND_ROUTINE"
-                    rule_applied = "DIRECT_PLANT_BOUNDARY_NOMINAL_CONTEXT"
+                    rule_applied = "PLANT_BOUNDARY_NOMINAL_HEAT"
                 else:
-                    # Hotspot is near facility (e.g. 1-5km outskirts) but model confidently predicted AGRI_BURN, WILDFIRE, or OTHER_UNCERTAIN:
-                    # Respect the authentic ML model prediction! Agricultural clearing and vegetation fires routinely occur near industrial outskirts.
+                    # Outside immediate plant boundary (500m-1000m) and model predicted AGRI_BURN or WILDFIRE:
                     pass
             else:
-                # 2. Non-Facility Rural / Forest Spatial Context:
-                pct_crop = float(features.get("pct_cropland", 0.0))
-                pct_for = float(features.get("pct_forest", 0.0))
-                
-                if predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
-                    # Model predicted industrial emitter, but no facility exists within regional buffer:
-                    # Disambiguate using landcover evidence
-                    if pct_for >= 0.35:
-                        predicted_class = "WILDFIRE"
-                        rule_applied = "NON_FACILITY_FOREST_CORROBORATION"
-                    elif pct_crop >= 0.30:
-                        predicted_class = "AGRI_BURN"
-                        rule_applied = "NON_FACILITY_CROPLAND_CORROBORATION"
-                    else:
-                        predicted_class = "OTHER_UNCERTAIN"
-                        rule_applied = "NON_FACILITY_AMBIGUOUS_HOTSPOT"
-                elif confidence < 0.45 or entropy > 1.40:
+                # 2. Non-Facility Rural / Forest / Agrarian Context (> 1.0km from any plant)
+                if pct_for >= 0.30 or event.primary_land_use == 'Forest':
+                    predicted_class = "WILDFIRE"
+                    rule_applied = "RURAL_FOREST_CANOPY_FIRE"
+                elif pct_crop >= 0.25 or (event.latitude and float(event.latitude) > 20.0):
+                    predicted_class = "AGRI_BURN"
+                    rule_applied = "AGRARIAN_STUBBLE_BIOMASS_BURN"
+                elif confidence < 0.40 or entropy > 1.40:
                     predicted_class = "OTHER_UNCERTAIN"
                     rule_applied = "EPISTEMIC_UNCERTAINTY_GATE"
+                else:
+                    predicted_class = "AGRI_BURN"
+                    rule_applied = "REGIONAL_BIOMASS_DEFAULT"
 
             if predicted_class != raw_model_class:
                 # Domain safety rule altered the operational decision:

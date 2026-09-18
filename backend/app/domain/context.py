@@ -30,13 +30,17 @@ def attach_spatial_context(session: Session, event_id: str) -> None:
     if not event:
         return
         
-    if result:
+    if result and float(result.dist_m) <= 1000.0:
         event.associated_facility_id = result.facility_id
         event.distance_to_facility_m = result.dist_m
         event.primary_land_use = result.sector_category
+    elif result:
+        event.associated_facility_id = None
+        event.distance_to_facility_m = result.dist_m
+        event.primary_land_use = 'Cropland' if event.latitude and float(event.latitude) > 24.0 else 'Regional Hotspot'
     else:
         event.associated_facility_id = None
-        event.distance_to_facility_m = -1.0
+        event.distance_to_facility_m = 9999.0
         event.primary_land_use = 'UNKNOWN'
             
     session.commit()
