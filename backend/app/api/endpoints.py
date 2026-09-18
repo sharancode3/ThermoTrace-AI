@@ -48,7 +48,24 @@ def get_zoom_limit(zoom: float) -> int:
     return 5000
 
 _GIS_CACHE = {}
-_GIS_CACHE_TTL = 20.0 # 20s in-memory cache to eliminate redundant Supabase free-tier egress
+_GIS_CACHE_TTL = 900.0 # 15 min in-memory cache to eliminate redundant Supabase free-tier egress
+
+_FACILITIES_CACHE = {}
+_FACILITIES_CACHE_TTL = 3600.0 # 1 hour cache for static industrial facilities
+
+_OBSERVATIONS_CACHE = {}
+_OBSERVATIONS_CACHE_TTL = 300.0 # 5 min cache for raw satellite observations
+
+_ANALYTICS_CACHE = {}
+_ANALYTICS_CACHE_TTL = 300.0 # 5 min cache for national analytics summary
+
+def clear_gis_cache():
+    global _GIS_CACHE, _FACILITIES_CACHE, _OBSERVATIONS_CACHE, _ANALYTICS_CACHE
+    _GIS_CACHE.clear()
+    _FACILITIES_CACHE.clear()
+    _OBSERVATIONS_CACHE.clear()
+    _ANALYTICS_CACHE.clear()
+
 
 @router.get("/gis/events", response_model=GeoJSONFeatureCollection)
 def get_gis_events(
@@ -384,6 +401,13 @@ def get_gis_facilities(
             detail="south must be less than north"
         )
 
+    cache_key = (round(west, 2), round(south, 2), round(east, 2), round(north, 2), sector, limit)
+    now_ts = datetime.now(timezone.utc).timestamp()
+    if cache_key in _FACILITIES_CACHE:
+        cached_ts, cached_result = _FACILITIES_CACHE[cache_key]
+        if now_ts - cached_ts < _FACILITIES_CACHE_TTL:
+            return cached_result
+
     query = db.query(IndustrialFacility).filter(
         IndustrialFacility.is_active.is_(True)
     )
@@ -443,9 +467,11 @@ def get_gis_facilities(
 
         features.append(feature)
 
-    return GeoJSONFeatureCollection(
+    result = GeoJSONFeatureCollection(
         features=features
     )
+    _FACILITIES_CACHE[cache_key] = (now_ts, result)
+    return result
 
 @router.get("/gis/observations", response_model=GeoJSONFeatureCollection)
 def get_gis_observations(

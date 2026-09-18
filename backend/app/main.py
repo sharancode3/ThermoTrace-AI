@@ -39,6 +39,8 @@ def _run_sync_poller_cycle():
         """))
         session.commit()
         session.close()
+        endpoints.clear_gis_cache()
+        print("[FIRMS DAEMON] GIS in-memory cache successfully invalidated following telemetry poll.")
     except Exception as e:
         print(f"[FIRMS DAEMON ERROR] {e}")
 
