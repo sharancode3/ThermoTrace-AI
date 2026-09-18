@@ -40,54 +40,43 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
   const isAgri = normClass === "AGRI_BURN" || normClass === "AGRICULTURE" || normClass === "STUBBLE";
   const isIndustry = normClass.startsWith("IND_") || normClass === "INDUSTRIAL" || normClass === "INDUSTRY";
 
-  // Authoritative severity level: Critical (Red), Abnormal (Orange), Normal (Yellow for industry)
-  const isCritical = normTier === "CRITICAL" || normClass === "IND_FIRE";
-  const isAbnormal = !isCritical && (normTier === "ABNORMAL" || normClass === "IND_FLARE");
+  // Canonical Symbology Separation:
+  // Icon Shape conveys Source Category; Color / Outline conveys Criticality Tier.
+  const isCritical = normTier === "CRITICAL";
+  const isAbnormal = !isCritical && (normTier === "ABNORMAL" || normTier === "ELEVATED");
   const isNormal = !isCritical && !isAbnormal;
 
   let fillColor = "#10B981";
   let glowColor = "rgba(16, 185, 129, 0.45)";
   let strokeColor = "#059669";
 
-  if (isIndustry) {
-    // 1. INDUSTRY: Normal = Yellow, Flare = Orange, Fire/Critical = Red
-    if (normClass === "IND_FIRE" || normTier === "CRITICAL") {
-      fillColor = isCooled ? "#FECACA" : "#EF4444"; // Red (Emergency Fire / Critical Anomaly)
-      glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
-      strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else if (normClass === "IND_FLARE" || normTier === "ABNORMAL") {
-      fillColor = isCooled ? "#FED7AA" : "#F97316"; // Orange (Elevated Flare / Gas Flaring)
-      glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.60)";
-      strokeColor = isCooled ? "#EA580C" : "#C2410C";
-    } else {
-      fillColor = isCooled ? "#FEF08A" : "#FACC15"; // Yellow (Nominal Routine Industrial Process)
-      glowColor = isCooled ? "rgba(250, 204, 21, 0.15)" : "rgba(250, 204, 21, 0.55)";
-      strokeColor = isCooled ? "#CA8A04" : "#854D0E";
-    }
+  if (isCritical) {
+    // Red across ALL source categories for Critical Anomaly Tier
+    fillColor = isCooled ? "#FECACA" : "#EF4444";
+    glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
+    strokeColor = isCooled ? "#DC2626" : "#B91C1C";
+  } else if (isAbnormal) {
+    // Orange across ALL source categories for Abnormal / Elevated Anomaly Tier
+    fillColor = isCooled ? "#FED7AA" : "#F97316";
+    glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.60)";
+    strokeColor = isCooled ? "#EA580C" : "#C2410C";
+  } else if (isIndustry) {
+    // Nominal Routine Industrial Process: Yellow
+    fillColor = isCooled ? "#FEF08A" : "#FACC15";
+    glowColor = isCooled ? "rgba(250, 204, 21, 0.15)" : "rgba(250, 204, 21, 0.55)";
+    strokeColor = isCooled ? "#CA8A04" : "#854D0E";
   } else if (isWildfire) {
-    // 2. WILDFIRE: Forest Teal
-    if (normTier === "CRITICAL") {
-      fillColor = isCooled ? "#FECACA" : "#EF4444";
-      glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
-      strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else {
-      fillColor = isCooled ? "#99F6E4" : "#0D9488"; // Forest Teal
-      glowColor = isCooled ? "rgba(13, 148, 136, 0.15)" : "rgba(13, 148, 136, 0.45)";
-      strokeColor = isCooled ? "#0D9488" : "#042F2E";
-    }
+    // Nominal Wildfire / Forest Canopy: Forest Teal
+    fillColor = isCooled ? "#99F6E4" : "#0D9488";
+    glowColor = isCooled ? "rgba(13, 148, 136, 0.15)" : "rgba(13, 148, 136, 0.45)";
+    strokeColor = isCooled ? "#0D9488" : "#042F2E";
   } else if (isAgri) {
-    // 3. AGRICULTURE: Emerald Green
-    if (normTier === "CRITICAL") {
-      fillColor = isCooled ? "#FECACA" : "#EF4444";
-      glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.60)";
-      strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else {
-      fillColor = isCooled ? "#A7F3D0" : "#10B981"; // Emerald Green
-      glowColor = isCooled ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.45)";
-      strokeColor = isCooled ? "#059669" : "#047857";
-    }
+    // Nominal Crop Residue / Agriculture: Emerald Green
+    fillColor = isCooled ? "#A7F3D0" : "#10B981";
+    glowColor = isCooled ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.45)";
+    strokeColor = isCooled ? "#059669" : "#047857";
   } else {
-    // 4. UNCERTAIN: Neutral Slate Grey
+    // Neutral Uncertain Source: Slate Grey
     fillColor = isCooled ? "#CBD5E1" : "#64748B";
     glowColor = isCooled ? "rgba(100, 116, 139, 0.15)" : "rgba(100, 116, 139, 0.35)";
     strokeColor = isCooled ? "#64748B" : "#334155";

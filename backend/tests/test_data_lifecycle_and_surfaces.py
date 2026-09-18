@@ -102,48 +102,61 @@ def test_thermo_news_continuous_24h_rolling_window(db: Session):
         lifecycle_status="ACTIVE",
         associated_facility_id=fac.id
     )
-    db.add_all([evt_a, evt_b, evt_c])
-    db.commit()
+    # Cleanup pre-existing test records if present
+    existing_evts = db.query(ThermalEvent).filter(ThermalEvent.event_id.in_(["TEST-NEWS-EVT-A", "TEST-NEWS-EVT-B", "TEST-NEWS-EVT-C"])).all()
+    if existing_evts:
+        evt_ids = [e.id for e in existing_evts]
+        db.query(ThermoNews).filter(ThermoNews.event_id.in_(evt_ids)).delete(synchronize_session=False)
+        db.query(ThermalEvent).filter(ThermalEvent.id.in_(evt_ids)).delete(synchronize_session=False)
+        db.commit()
 
-    # Create corresponding ThermoNews items
-    news_a = ThermoNews(
-        event_id=evt_a.id,
-        headline="Test News A - 12h ago",
-        summary="Summary A",
-        severity_tag="ABNORMAL",
-        published_at=now - timedelta(hours=12),
-        is_active=True
-    )
-    news_b = ThermoNews(
-        event_id=evt_b.id,
-        headline="Test News B - 23.5h ago",
-        summary="Summary B",
-        severity_tag="NORMAL",
-        published_at=now - timedelta(hours=23, minutes=30),
-        is_active=True
-    )
-    news_c = ThermoNews(
-        event_id=evt_c.id,
-        headline="Test News C - 26h ago",
-        summary="Summary C",
-        severity_tag="CRITICAL",
-        published_at=now - timedelta(hours=26),
-        is_active=True
-    )
-    db.add_all([news_a, news_b, news_c])
-    db.commit()
+    try:
+        db.add_all([evt_a, evt_b, evt_c])
+        db.commit()
 
-    # Call /news?hours=24
-    response = client.get("/api/v1/news?hours=24")
-    assert response.status_code == 200
-    items = response.json()
-    
-    event_ids = [item["event_id"] for item in items]
-    assert "TEST-NEWS-EVT-A" in event_ids
+        # Create corresponding ThermoNews items
+        news_a = ThermoNews(
+            event_id=evt_a.id,
+            headline="Test News A - 12h ago",
+            summary="Summary A",
+            severity_tag="ABNORMAL",
+            published_at=now - timedelta(hours=12),
+            is_active=True
+        )
+        news_b = ThermoNews(
+            event_id=evt_b.id,
+            headline="Test News B - 23.5h ago",
+            summary="Summary B",
+            severity_tag="NORMAL",
+            published_at=now - timedelta(hours=23, minutes=30),
+            is_active=True
+        )
+        news_c = ThermoNews(
+            event_id=evt_c.id,
+            headline="Test News C - 26h ago",
+            summary="Summary C",
+            severity_tag="CRITICAL",
+            published_at=now - timedelta(hours=26),
+            is_active=True
+        )
+        db.add_all([news_a, news_b, news_c])
+        db.commit()
 
-    # Verify NON-DESTRUCTIVE: Database still contains Event C
-    db_evt_c = db.query(ThermalEvent).filter(ThermalEvent.event_id == "TEST-NEWS-EVT-C").first()
-    assert db_evt_c is not None, "Older news events must NEVER be deleted from PostgreSQL!"
+        # Call /news?hours=24
+        response = client.get("/api/v1/news?hours=24")
+        assert response.status_code == 200
+        items = response.json()
+        
+        event_ids = [item["event_id"] for item in items]
+        assert "TEST-NEWS-EVT-A" in event_ids
+
+        # Verify NON-DESTRUCTIVE: Database still contains Event C
+        db_evt_c = db.query(ThermalEvent).filter(ThermalEvent.event_id == "TEST-NEWS-EVT-C").first()
+        assert db_evt_c is not None, "Older news events must NEVER be deleted from PostgreSQL!"
+    finally:
+        db.query(ThermoNews).filter(ThermoNews.event_id.in_([evt_a.id, evt_b.id, evt_c.id])).delete(synchronize_session=False)
+        db.query(ThermalEvent).filter(ThermalEvent.id.in_([evt_a.id, evt_b.id, evt_c.id])).delete(synchronize_session=False)
+        db.commit()
 
 
 def test_alerts_top_100_query_limit_and_non_destructive(db: Session):

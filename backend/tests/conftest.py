@@ -14,11 +14,22 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app.db.database import SessionLocal
 from app.db.models import (
     ThermalEvent, IndustrialFacility, EventClassification, 
-    EventAnomaly, FacilityBaseline, EventObservation, MlModel
+    EventAnomaly, FacilityBaseline, EventObservation, MlModel,
+    Notification, User, ThermoNews
 )
 
 def _clean_test_db(session):
     try:
+        session.query(ThermoNews).filter(
+            ThermoNews.event_id.in_(
+                session.query(ThermalEvent.id).filter(ThermalEvent.event_id.like("TEST-%"))
+            )
+        ).delete(synchronize_session=False)
+        session.query(Notification).filter(
+            Notification.event_id.in_(
+                session.query(ThermalEvent.id).filter(ThermalEvent.event_id.like("TEST-%"))
+            )
+        ).delete(synchronize_session=False)
         session.query(EventObservation).filter(
             EventObservation.event_id.in_(
                 session.query(ThermalEvent.id).filter(ThermalEvent.event_id.like("TEST-%"))

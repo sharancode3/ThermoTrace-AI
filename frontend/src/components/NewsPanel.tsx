@@ -282,7 +282,7 @@ export function NewsPanel({
           <div>
             <div className="flex items-center gap-2">
               <span>Thermo News Feed</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-mono font-bold tracking-tight">30M CADENCE</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-mono font-bold tracking-tight">1H CADENCE</span>
             </div>
             <div className="text-[11px] font-normal text-slate-500 flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -297,7 +297,7 @@ export function NewsPanel({
               </span>
               <span>·</span>
               <span className="font-mono text-slate-600 font-medium">
-                {lastPolledAt ? `Polled ${formatRelativeTime(lastPolledAt)}` : "30m Cadence"}
+                {lastPolledAt ? `Polled ${formatRelativeTime(lastPolledAt)}` : "1h Cadence"}
               </span>
             </div>
           </div>

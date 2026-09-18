@@ -131,8 +131,9 @@ def get_gis_events(
     elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
     elif not show_all:
-        # Default rolling 30-day retention window
-        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        # Default rolling 30-day retention window anchored to latest satellite telemetry
+        anchor_time = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar() or datetime.now(timezone.utc)
+        thirty_days_ago = anchor_time - timedelta(days=30)
         query = query.filter(ThermalEvent.latest_detected_utc >= thirty_days_ago)
 
     if end_time is not None:

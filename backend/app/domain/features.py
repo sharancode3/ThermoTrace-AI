@@ -345,9 +345,55 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
     geo = resolve_indian_location(lat, lon, None, session=session)
     
     dist_to_fac = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 9999.0
-    fac_cat = 0
-    if event.primary_land_use and event.primary_land_use not in ['UNKNOWN', 'Cropland', 'Forest', 'Regional Hotspot']:
-        fac_cat = abs(hash(event.primary_land_use)) % 100
+DETERMINISTIC_CATEGORY_MAP = {
+    "REFINERY": 1,
+    "PETROCHEMICAL": 2,
+    "STEEL": 3,
+    "POWER": 4,
+    "CEMENT": 5,
+    "CHEMICAL": 6,
+    "ALUMINIUM": 7,
+    "MINING": 8,
+    "FERTILIZER": 9,
+    "PAPER": 10,
+    "SOLAR": 11,
+    "OIL_GAS": 12,
+}
+
+def encode_facility_category(category_name: Optional[str]) -> int:
+    """
+    Deterministic process-independent facility category encoder.
+    Guarantees stable integer encoding across process restarts, batch scripts, and production servers.
+    """
+    if not category_name or category_name.upper() in ['UNKNOWN', 'CROPLAND', 'FOREST', 'REGIONAL HOTSPOT', 'NONE', 'UNKNOWN']:
+        return 0
+    clean = category_name.strip().upper()
+    for key, code in DETERMINISTIC_CATEGORY_MAP.items():
+        if key in clean:
+            return code
+    import hashlib
+    digest = hashlib.md5(clean.encode('utf-8')).hexdigest()
+    return (int(digest, 16) % 90) + 10
+
+def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
+    event = session.query(ThermalEvent).filter(ThermalEvent.id == event_uuid).first()
+    if not event:
+        raise ValueError(f"Event UUID {event_uuid} not found.")
+        
+    event.bounding_area_ha = calculate_convex_hull(session, str(event.id))
+    session.commit()
+    
+    dn_ratio = get_day_night_ratio(session, str(event.id))
+    frp_var = get_frp_variance(session, str(event.id))
+    
+    lat, lon = float(event.latitude), float(event.longitude)
+    hist_days, hist_peak = get_historical_stats(session, lat, lon, event.first_detected_utc)
+    
+    # Resolve geographic and land cover context
+    geo = resolve_indian_location(lat, lon, None, session=session)
+    
+    dist_to_fac = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 9999.0
+    fac_cat = encode_facility_category(event.primary_land_use)
 
     state = geo.get("state", "")
     is_fac = bool(event.associated_facility_id) and (0.0 <= dist_to_fac <= 1000.0)
@@ -379,6 +425,7 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
         "pct_forest": pct_forest,
         "pct_urban": pct_urban,
         "is_industrial_zone": is_ind,
+        "primary_land_use": event.primary_land_use or "",
     }
     return features
 
@@ -390,12 +437,12 @@ def build_physical_verification_payload(event: ThermalEvent, facility: Optional[
     """
     dist_m = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 99999.0
     peak_frp = float(event.peak_frp_mw or 0.0)
-    inside_polygon = bool(event.associated_facility_id) and (0.0 <= dist_m <= 1000.0)
+    inside_polygon = bool(event.associated_facility_id) and (0.0 <= dist_m <= 2500.0)
     
     if inside_polygon and peak_frp >= 150.0:
         note = f"High radiant intensity ({peak_frp:.1f} MW) within registered {facility.sector_category if facility else 'industrial'} facility boundary"
     elif inside_polygon:
-        note = f"Thermal activity within 1.0km buffer of {facility.name if facility else 'registered industrial complex'}"
+        note = f"Thermal activity within 2.5km buffer of {facility.name if facility else 'registered industrial complex'}"
     elif float(event.latitude or 0.0) > 24.0 and peak_frp >= 20.0:
         note = "Intense thermal signature in Northern agrarian belt"
     else:

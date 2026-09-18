@@ -350,7 +350,7 @@ export function OverlayManager() {
                         </span>
                       </div>
                       <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
-                        30M CADENCE
+                        1H CADENCE
                       </span>
                     </div>
                   </div>
@@ -1269,11 +1269,11 @@ export function OverlayManager() {
                 </span>
               </div>
               <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
-                30M CADENCE
+                1H CADENCE
               </span>
             </div>
             <p className="text-[10px] text-orange-800/90 leading-tight border-t border-orange-200/60 pt-1">
-              Notice: NASA FIRMS satellite telemetry is polled on an optimized 30-minute cadence. A curated prototype dataset is active for live deployment & cloud storage constraints; the full nationwide telemetry stream will be continuously ingested during the hackathon evaluation.
+              Notice: NASA FIRMS satellite telemetry is refreshed on a 1-hour cadence across a 30-day rolling window.
             </p>
           </div>
 

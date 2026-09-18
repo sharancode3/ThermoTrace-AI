@@ -158,7 +158,7 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
 
             if has_facility:
                 # 1. Industrial Facility Context (Within 1.0km of registered plant)
-                if peak_frp >= 300.0 or max_bright >= 375.0 or (event.anomaly_tier == "CRITICAL" and peak_frp >= 150.0):
+                if peak_frp >= 300.0 or max_bright >= 375.0:
                     predicted_class = "IND_FIRE"
                     rule_applied = "INDUSTRIAL_EXTREME_FIRE_GATE"
                 elif ("flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower() or "petro" in str(features.get("primary_land_use", "")).lower()) and peak_frp >= 60.0:
@@ -172,29 +172,29 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
                     predicted_class = "IND_ROUTINE"
                     rule_applied = "PLANT_BOUNDARY_NOMINAL_HEAT"
                 else:
-                    # Outside immediate plant boundary (500m-1000m) and model predicted AGRI_BURN or WILDFIRE:
+                    # Outside immediate plant boundary (500m-1000m): trust ML model prediction
                     pass
             else:
                 # 2. Non-Facility Rural / Forest / Agrarian Context (> 1.0km from any plant)
-                if pct_for >= 0.30 or event.primary_land_use == 'Forest':
+                if pct_for >= 0.40 or event.primary_land_use == 'Forest':
                     predicted_class = "WILDFIRE"
                     rule_applied = "RURAL_FOREST_CANOPY_FIRE"
-                elif pct_crop >= 0.25 or (event.latitude and float(event.latitude) > 20.0):
+                elif pct_crop >= 0.50 or event.primary_land_use == 'Cropland':
                     predicted_class = "AGRI_BURN"
                     rule_applied = "AGRARIAN_STUBBLE_BIOMASS_BURN"
                 elif confidence < 0.40 or entropy > 1.40:
                     predicted_class = "OTHER_UNCERTAIN"
                     rule_applied = "EPISTEMIC_UNCERTAINTY_GATE"
                 else:
-                    predicted_class = "AGRI_BURN"
-                    rule_applied = "REGIONAL_BIOMASS_DEFAULT"
+                    # Trust raw XGBoost model prediction for non-facility locations
+                    pass
 
             if predicted_class != raw_model_class:
                 # Domain safety rule altered the operational decision:
                 # Explicitly use the actual calibrated model probability for the assigned class.
                 # NEVER reuse the probability of a superseded class as confidence in a replacement class!
                 assigned_prob = float(class_probs.get(predicted_class, 0.0))
-                confidence = assigned_prob if assigned_prob > 0.05 else min(raw_model_confidence, 0.45)
+                confidence = assigned_prob if assigned_prob > 0.0 else round(min(raw_model_confidence, 0.40), 4)
                 uncertainty_tier = "MODERATE" if confidence >= 0.50 else "HIGH"
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
@@ -295,31 +295,27 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
             "physical_verification": phys_verification
         }
     else:
-        # Non-facility regional hotspot or agricultural/wildfire event
-        if event.classification == "IND_FIRE":
+        # Non-facility event or facility with insufficient baseline history (< 10 samples)
+        # Assess operational anomaly tier via physical radiance thresholds without manufacturing statistical z-scores
+        if event.classification == "IND_FIRE" or current_frp >= 300.0:
             tier = "CRITICAL"
-            z_score = 4.2
-        elif event.classification == "WILDFIRE" and current_frp >= 200.0:
+        elif current_frp >= 80.0 or (event.classification == "WILDFIRE" and current_frp >= 50.0) or (event.classification == "IND_FLARE" and current_frp >= 100.0):
             tier = "ABNORMAL"
-            z_score = 2.8
-        elif event.classification == "IND_FLARE" and current_frp >= 150.0:
-            tier = "ABNORMAL"
-            z_score = 2.5
         else:
             tier = "NORMAL"
-            z_score = 0.5
 
-        event.anomaly_z_score = round(float(z_score), 2)
+        z_score = 0.0
+        event.anomaly_z_score = 0.0
         event.anomaly_tier = tier
-        anomaly_record.baseline_mean_frp_mw = 25.0
-        anomaly_record.baseline_std_frp_mw = 15.0
-        anomaly_record.z_score = round(float(z_score), 2)
+        anomaly_record.baseline_mean_frp_mw = 0.0
+        anomaly_record.baseline_std_frp_mw = 0.0
+        anomaly_record.z_score = 0.0
         anomaly_record.percentile_rank = 0.0
         anomaly_record.anomaly_severity = tier
         anomaly_record.contributing_factors = {
             "status": "REGIONAL_PHYSICAL_THRESHOLD",
             "sample_count": sample_count,
-            "reason": f"Graded via physical radiance threshold (Peak FRP: {current_frp:.1f} MW).",
+            "reason": f"Graded via physical radiance threshold (Peak FRP: {current_frp:.1f} MW). Statistical baseline unavailable.",
             "physical_verification": phys_verification
         }
 

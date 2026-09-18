@@ -17,6 +17,8 @@ def projected_point(db, distance_m: float):
 
 
 def make_user(db):
+    db.query(User).filter(User.alert_latitude == 85.0, User.alert_longitude == 175.0).delete(synchronize_session=False)
+    db.commit()
     user = User(id=uuid.uuid4(), email=f"nearby-{uuid.uuid4()}@test.local", hashed_password="test",
                 full_name="Nearby Test", nearby_alerts_enabled=True,
                 alert_latitude=85.0, alert_longitude=175.0,

@@ -642,16 +642,23 @@ export function EventDetailPanel({
   // Freshness & Lifecycle Derivation
   const isAgedOrCooled = data?.is_active === false || 
     data?.freshness_status === "AGING" || 
+    data?.freshness_status === "AGING_UNCONFIRMED" ||
     data?.freshness_status === "HISTORICAL" || 
+    data?.freshness_status === "HISTORICAL_UNCONFIRMED" ||
     data?.lifecycle_status === "COOLING" || 
     data?.lifecycle_status === "EXTINGUISHED" || 
     data?.lifecycle_status === "RESOLVED";
 
   const isHistorical = data?.freshness_status === "HISTORICAL" || 
+    data?.freshness_status === "HISTORICAL_UNCONFIRMED" ||
     data?.lifecycle_status === "EXTINGUISHED" || 
     data?.lifecycle_status === "RESOLVED";
 
-  const freshnessStatus = data?.freshness_status || (isHistorical ? "HISTORICAL" : isAgedOrCooled ? "AGING" : "ACTIVE");
+  const freshnessStatus = (data?.freshness_status === "HISTORICAL_UNCONFIRMED" || data?.freshness_status === "HISTORICAL" || isHistorical) 
+    ? "HISTORICAL" 
+    : (data?.freshness_status === "AGING_UNCONFIRMED" || data?.freshness_status === "AGING" || isAgedOrCooled) 
+    ? "AGING" 
+    : "ACTIVE";
   
   let freshnessBadgeText = "Active Satellite Observation (<24h)";
   let freshnessBadgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-700";
