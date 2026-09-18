@@ -105,7 +105,7 @@ def generate_humanized_news_bulletin(event: ThermalEvent, facility: Optional[Ind
         
     return headline, summary, severity
 
-def process_event_intelligence(session: Session, event_id: str) -> None:
+def process_event_intelligence(session: Session, event_id: str, override_features: Optional[Dict[str, Any]] = None) -> None:
     event = session.query(ThermalEvent).filter(ThermalEvent.event_id == event_id).first()
     if not event:
         return
@@ -114,6 +114,8 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
     
     # 1. Feature Extraction
     features = build_feature_vector(session, str(event.id))
+    if override_features:
+        features.update(override_features)
     feature_cols = [
         "dist_to_facility", "facility_category_encoded", "peak_frp_mw", "mean_frp_mw",
         "frp_variance", "max_brightness_k", "duration_hours", "day_night_ratio",
@@ -140,58 +142,73 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             entropy = -float(np.sum([p * np.log(p + 1e-9) for p in probs]))
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
             
-            # Physical Domain Gating & Facility Authority
-            # Physical Domain Gating & Facility Authority
+            # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
+            # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
             dist_fac = float(features.get("dist_to_facility", 99999.0))
             is_ind_zone = int(features.get("is_industrial_zone", 0))
-            has_facility = bool(event.associated_facility_id) or (dist_fac <= 5000.0) or (is_ind_zone == 1)
+            has_facility = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 1000.0)
+            is_immediate_plant_boundary = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 500.0)
             peak_frp = float(event.peak_frp_mw or 0.0)
-            max_k = float(event.max_brightness_k or 300.0)
+            max_bright = float(features.get("max_brightness_k", 300.0))
+            pct_crop = float(features.get("pct_cropland", 0.0))
+            pct_for = float(features.get("pct_forest", 0.0))
+            raw_model_class = predicted_class
+            raw_model_confidence = confidence
+            rule_applied = None
 
             if has_facility:
-                # 1. Direct Industrial Facility Authority:
-                # Thermal emissions on or within 5km of an industrial complex or corridor are strictly INDUSTRIAL.
-                # Industrial operations cannot be WILDFIRE or AGRI_BURN.
-                if peak_frp >= 50.0 or max_k >= 355.0 or predicted_class == "IND_FIRE":
+                # 1. Industrial Facility Context (Within 1.0km of registered plant)
+                if peak_frp >= 300.0 or max_bright >= 375.0 or (event.anomaly_tier == "CRITICAL" and peak_frp >= 150.0):
                     predicted_class = "IND_FIRE"
-                elif peak_frp >= 15.0 or max_k >= 335.0 or predicted_class == "IND_FLARE":
+                    rule_applied = "INDUSTRIAL_EXTREME_FIRE_GATE"
+                elif ("flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower() or "petro" in str(features.get("primary_land_use", "")).lower()) and peak_frp >= 60.0:
                     predicted_class = "IND_FLARE"
-                else:
+                    rule_applied = "REFINERY_FLARE_STACK_GATE"
+                elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
+                    # Trust ML prediction for industrial emitter
+                    pass
+                elif is_immediate_plant_boundary and confidence < 0.60:
+                    # Inside immediate plant boundary, default ambiguous output to nominal plant heat
                     predicted_class = "IND_ROUTINE"
-                confidence = max(confidence, 0.92)
-            else:
-                # 2. Non-Facility Rural / Forest Spatial Resolution:
-                pct_crop = float(features.get("pct_cropland", 0.0))
-                pct_for = float(features.get("pct_forest", 0.0))
-                
-                if pct_for >= 0.70 or (predicted_class == "WILDFIRE" and pct_for >= 0.50):
-                    predicted_class = "WILDFIRE"
-                    confidence = max(confidence, 0.88)
-                elif pct_crop >= 0.70 or (predicted_class == "AGRI_BURN" and pct_crop >= 0.40):
-                    predicted_class = "AGRI_BURN"
-                    confidence = max(confidence, 0.90)
+                    rule_applied = "PLANT_BOUNDARY_NOMINAL_HEAT"
                 else:
+                    # Outside immediate plant boundary (500m-1000m) and model predicted AGRI_BURN or WILDFIRE:
+                    pass
+            else:
+                # 2. Non-Facility Rural / Forest / Agrarian Context (> 1.0km from any plant)
+                if pct_for >= 0.30 or event.primary_land_use == 'Forest':
+                    predicted_class = "WILDFIRE"
+                    rule_applied = "RURAL_FOREST_CANOPY_FIRE"
+                elif pct_crop >= 0.25 or (event.latitude and float(event.latitude) > 20.0):
+                    predicted_class = "AGRI_BURN"
+                    rule_applied = "AGRARIAN_STUBBLE_BIOMASS_BURN"
+                elif confidence < 0.40 or entropy > 1.40:
                     predicted_class = "OTHER_UNCERTAIN"
-                    confidence = max(confidence, 0.70)
+                    rule_applied = "EPISTEMIC_UNCERTAINTY_GATE"
+                else:
+                    predicted_class = "AGRI_BURN"
+                    rule_applied = "REGIONAL_BIOMASS_DEFAULT"
+
+            if predicted_class != raw_model_class:
+                # Domain safety rule altered the operational decision:
+                # Explicitly use the actual calibrated model probability for the assigned class.
+                # NEVER reuse the probability of a superseded class as confidence in a replacement class!
+                assigned_prob = float(class_probs.get(predicted_class, 0.0))
+                confidence = assigned_prob if assigned_prob > 0.05 else min(raw_model_confidence, 0.45)
+                uncertainty_tier = "MODERATE" if confidence >= 0.50 else "HIGH"
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
             predicted_class = "OTHER_UNCERTAIN"
             confidence = 0.50
+            rule_applied = "INFERENCE_EXCEPTION_FALLBACK"
 
     event.classification = predicted_class
     event.classification_confidence = round(confidence, 4)
-    # Ensure lifecycle_status remains compliant with ACTIVE / COOLING / EXTINGUISHED lifecycle
-    now_utc = datetime.now(timezone.utc)
-    if event.latest_detected_utc:
-        lat_t = event.latest_detected_utc if event.latest_detected_utc.tzinfo else event.latest_detected_utc.replace(tzinfo=timezone.utc)
-        if (now_utc - lat_t).total_seconds() < 86400:
-            event.lifecycle_status = "ACTIVE"
-        elif (now_utc - lat_t).total_seconds() < 259200:
-            event.lifecycle_status = "COOLING"
-        else:
-            event.lifecycle_status = "EXTINGUISHED"
-    else:
-        event.lifecycle_status = "ACTIVE"
+
+    # 2b. Authoritative Freshness & Lifecycle Policy (Injectable Clock & Consistent Bounds)
+    from app.domain.lifecycle import evaluate_lifecycle
+    life_info = evaluate_lifecycle(event.latest_detected_utc, current_persisted_status=event.lifecycle_status)
+    event.lifecycle_status = life_info["lifecycle_status"]
     
     # 3. Industrial Facility Association & Baseline
     facility = session.query(IndustrialFacility).filter(IndustrialFacility.id == event.associated_facility_id).first() if event.associated_facility_id else None
@@ -248,11 +265,13 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
         z_mad = (current_frp - median_frp) / mad_frp
         tier = evaluate_anomaly_tier(z_score)
         
-        # Operational Radiance Safety Gate: Severe industrial blast, major flare, or active fire is strictly CRITICAL
-        if current_frp >= 50.0 or z_score >= 4.0 or z_mad >= 4.0 or event.classification == "IND_FIRE":
+        # Operational Radiance Safety Gate: True anomalous fires or severe statistical outliers
+        if event.classification == "IND_FIRE" or z_score >= 4.0 or z_mad >= 4.0:
             tier = "CRITICAL"
-        elif current_frp >= 20.0 or z_score >= 2.5 or event.classification == "IND_FLARE":
+        elif event.classification == "IND_FLARE" and (z_score >= 2.0 or current_frp >= 200.0):
             tier = "ABNORMAL"
+        else:
+            tier = "NORMAL"
         
         event.anomaly_z_score = round(float(z_score), 2)
         event.anomaly_tier = tier
@@ -276,16 +295,19 @@ def process_event_intelligence(session: Session, event_id: str) -> None:
             "physical_verification": phys_verification
         }
     else:
-        # Non-facility regional hotspot or agricultural/wildfire event: Grade based on physical radiative intensity
-        if current_frp >= 50.0 or (event.max_brightness_k and event.max_brightness_k >= 355.0) or event.classification == "IND_FIRE":
+        # Non-facility regional hotspot or agricultural/wildfire event
+        if event.classification == "IND_FIRE":
             tier = "CRITICAL"
             z_score = 4.2
-        elif current_frp >= 20.0 or (event.max_brightness_k and event.max_brightness_k >= 340.0) or event.classification == "IND_FLARE":
+        elif event.classification == "WILDFIRE" and current_frp >= 200.0:
             tier = "ABNORMAL"
             z_score = 2.8
+        elif event.classification == "IND_FLARE" and current_frp >= 150.0:
+            tier = "ABNORMAL"
+            z_score = 2.5
         else:
             tier = "NORMAL"
-            z_score = 0.9
+            z_score = 0.5
 
         event.anomaly_z_score = round(float(z_score), 2)
         event.anomaly_tier = tier
@@ -399,10 +421,10 @@ def compute_tier2_shap_explainability(session: Session, event: ThermalEvent, mod
             # Native C++ TreeSHAP calculation: shape (1, n_classes, n_features + 1)
             contribs = booster.predict(dm, pred_contribs=True)
             
-            # Identify predicted class index
+            # Identify booster top predicted class index (explain the model's actual tree evaluation)
             class_list = list(classes)
-            pred_class = event.classification or "OTHER_UNCERTAIN"
-            pred_idx = class_list.index(pred_class) if pred_class in class_list else 0
+            raw_probs = model.predict_proba(pd.DataFrame([features])[feature_cols].astype(np.float64))[0]
+            pred_idx = int(np.argmax(raw_probs))
             
             # Extract the 14 feature contributions for this specific event and class
             class_contribs = contribs[0, pred_idx, :len(feature_cols)]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { fetchEventWind, fetchFacilityWind, WindData } from "@/lib/apiClient";
 
 export type TargetWindStatus =
@@ -31,7 +31,7 @@ export function useTargetWind(
   const [error, setError] = useState<string | null>(null);
   const sequenceRef = useRef(0);
 
-  const fetchWind = () => {
+  const fetchWind = useCallback(() => {
     if (!targetType || !targetId) {
       setWind(null);
       setStatus("IDLE");
@@ -40,8 +40,6 @@ export function useTargetWind(
     }
 
     const currentSequence = ++sequenceRef.current;
-    // Immediately clear previous target corridor and enter LOADING
-    setWind(null);
     setStatus("LOADING");
     setError(null);
 
@@ -60,7 +58,6 @@ export function useTargetWind(
 
     promise
       .then((res) => {
-        // Drop response if a newer selection occurred
         if (sequenceRef.current !== currentSequence) return;
 
         if (res.available) {
@@ -94,15 +91,14 @@ export function useTargetWind(
           target_id: targetId,
         });
       });
-  };
+  }, [targetType, targetId, targetCoords?.latitude, targetCoords?.longitude, timestamp]);
 
   useEffect(() => {
     fetchWind();
     return () => {
-      // Invalidate current in-flight sequence on unmount or change
       sequenceRef.current++;
     };
-  }, [targetType, targetId, targetCoords?.latitude, targetCoords?.longitude, timestamp]);
+  }, [fetchWind]);
 
   return {
     wind,

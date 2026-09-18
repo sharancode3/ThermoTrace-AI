@@ -38,7 +38,7 @@ SUPPORTED_SENSORS = [
 ]
 
 LAST_POLL_TIMESTAMP = None
-POLL_INTERVAL_SECONDS = max(1, int(os.getenv("FIRMS_POLL_INTERVAL_MINUTES", "30"))) * 60
+POLL_INTERVAL_SECONDS = max(1, int(os.getenv("FIRMS_POLL_INTERVAL_MINUTES", "60"))) * 60
 
 def compute_dedup_key(lat: float, lon: float, acq_date: str, acq_time: str, sensor: str) -> str:
     """Computes a deterministic SHA-256 deduplication key for a satellite observation with 4-decimal rounding."""

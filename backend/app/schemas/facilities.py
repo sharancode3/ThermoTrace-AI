@@ -20,6 +20,7 @@ class FacilitySummaryItem(BaseModel):
     baseline_frp_std: Optional[float] = None
     baseline_frp_median: Optional[float] = None
     historical_event_count: int = 0
+    critical_event_count: int = 0
     is_statistically_sufficient: bool = True
     is_active: bool = True
     data_source: Optional[str] = None

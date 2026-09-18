@@ -194,6 +194,7 @@ export default function MapComponent({
   const [showFacilities, setShowFacilities] = useState(true);
   const [showObservations, setShowObservations] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Data States
   const [geoData, setGeoData] = useState<GeoCollection | null>(null);
@@ -288,6 +289,9 @@ export default function MapComponent({
 
   const handleCenterIndia = () => {
     setFocusedFacility(null);
+    if (onEventClick) {
+      onEventClick(null);
+    }
     mapRef.current?.flyTo({
       center: [78.9629, 22.5937],
       zoom: 4.8,
@@ -676,7 +680,7 @@ export default function MapComponent({
   }, [windGeometry?.lon, windGeometry?.lat, windGeometry?.toward]);
 
   return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
+    <div data-tour="map-container" className="relative w-full h-full bg-slate-950 overflow-hidden font-sans">
       <Map
         ref={mapRef}
         initialViewState={{
@@ -798,9 +802,18 @@ export default function MapComponent({
         {/* Thermal Event Markers (Guaranteed Selected Event Inclusion) */}
         {displayFeatures.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
-          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
+          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status, is_active, latest_detected_utc } = feature.properties;
           const isSelected = selectedEventId === event_id;
-          const isCooled = lifecycle_status === "EXTINGUISHED" || lifecycle_status === "COOLING";
+          const normLife = String(lifecycle_status || "").toUpperCase();
+          const isFreshByTimestamp = latest_detected_utc
+            ? (Date.now() - new Date(latest_detected_utc).getTime()) < 24 * 3600 * 1000
+            : false;
+          const isCooled = is_active === false ||
+            normLife === "EXTINGUISHED" ||
+            normLife === "RESOLVED" ||
+            normLife === "COOLING" ||
+            normLife === "HISTORICAL" ||
+            !isFreshByTimestamp;
 
           return (
             <Marker
@@ -815,6 +828,7 @@ export default function MapComponent({
               }}
             >
               <div 
+                data-tour="map-marker"
                 className="relative group cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -854,12 +868,10 @@ export default function MapComponent({
                       </span>
                     </>
                   )}
-                  {isCooled && (
-                    <>
-                      <span className="text-slate-500">·</span>
-                      <span className="text-sky-400 text-[10px] uppercase font-semibold">Cooled</span>
-                    </>
-                  )}
+                  <span className="text-slate-500">·</span>
+                  <span className={`text-[10px] font-semibold uppercase ${isCooled ? "text-sky-300" : "text-emerald-400"}`}>
+                    {isCooled ? (normLife === "COOLING" ? "Aging (24-72h)" : "Historical (>72h)") : "Active (<24h)"}
+                  </span>
                 </div>
               </div>
             </Marker>
@@ -907,12 +919,12 @@ export default function MapComponent({
               latitude={windGeometry.lat}
               anchor="bottom-left"
               offset={[14, -14]}
-              style={{ zIndex: 45, pointerEvents: "none" }}
+              style={{ zIndex: 15, pointerEvents: "none" }}
             >
               <div
                 data-testid="wind-vector-overlay"
                 aria-label={`Wind ${windGeometry.fromCardinal} to ${windGeometry.toCardinal} at ${Math.round(windGeometry.speed)} kilometres per hour, bearing ${Math.round(windGeometry.toward)} degrees`}
-                className="pointer-events-none rounded-lg border border-slate-700/90 bg-slate-950/90 px-2.5 py-1 shadow-2xl backdrop-blur-md select-none font-mono text-left flex items-center gap-1.5"
+                className="hidden md:flex pointer-events-none rounded-lg border border-slate-700/90 bg-slate-950/90 px-2.5 py-1 shadow-2xl backdrop-blur-md select-none font-mono text-left items-center gap-1.5"
               >
                 <div 
                   className="w-4 h-4 rounded-full bg-cyan-500/20 border border-cyan-400/80 flex items-center justify-center text-cyan-400 shrink-0"
@@ -1045,10 +1057,40 @@ export default function MapComponent({
           </Marker>
         )}
 
-        {/* UNIFIED TACTICAL RADAR TOOLBAR (TOP-LEFT) */}
-        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg">
-          {/* Main Control Card */}
-          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl text-white flex flex-col gap-2.5">
+        {/* UNIFIED TACTICAL RADAR TOOLBAR */}
+        <div className="absolute top-4 left-4 right-4 md:right-auto z-20 max-w-full md:max-w-2xl">
+          {/* Mobile Top Floating Bar (<= 768px): Single Filter Icon Button + Live Header */}
+          <div className="flex md:hidden items-center justify-between bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl px-3 py-2 shadow-2xl text-white">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-bold font-mono tracking-wider text-slate-200 truncate">
+                THERMAL RADAR
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 shrink-0">
+                {eventCount}
+              </span>
+            </div>
+
+            {/* Single Mobile Filter Icon Button with Active Badge */}
+            <button
+              onClick={() => setIsMobileFilterOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition cursor-pointer relative shrink-0"
+              title="Open Radar Filters"
+              type="button"
+            >
+              <Filter className="w-4 h-4 text-orange-400" />
+              <span>Filters</span>
+              {isFilterActive && (
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse border border-slate-900" />
+              )}
+            </button>
+          </div>
+
+          {/* Desktop Control Card (>= 768px): Full Box Unchanged */}
+          <div className="hidden md:flex bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl text-white flex-col gap-2.5">
             {/* Header + Time Window */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2">
@@ -1060,7 +1102,7 @@ export default function MapComponent({
                   THERMAL RADAR // INDIA NRT
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  {eventCount} Hotspots
+                  {eventCount} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "Hotspots (Pan-India)"}
                 </span>
               </div>
 
@@ -1089,17 +1131,16 @@ export default function MapComponent({
               </div>
             </div>
 
-            {/* 30-Minute Storage-Optimized Telemetry Cadence Notice */}
+            {/* 1-Hour Storage-Optimized Telemetry Cadence Notice */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-snug">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
               <span>
-                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry is refreshed on an active 30-minute cadence across a 30-day operational retention window.
+                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry refreshed on 1-hour cadence across 30-day rolling window.
               </span>
             </div>
 
-            {/* View Mode + Filters + Layer Checkboxes */}
+            {/* View Mode + Filters */}
             <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-800 text-xs">
-              {/* Priority vs All Hotspots Toggle */}
               <button
                 onClick={() => setShowAllDetections((prev) => !prev)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${
@@ -1107,14 +1148,13 @@ export default function MapComponent({
                     ? "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
                     : "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
                 }`}
-                title="Toggle between all detected thermal events and high-priority anomalies"
+                title="Toggle high-priority anomalies"
                 type="button"
               >
                 {showAllDetections ? <Eye className="w-3.5 h-3.5 text-slate-400" /> : <EyeOff className="w-3.5 h-3.5 text-amber-400" />}
                 <span>{showAllDetections ? "All Hotspots" : "Priority Only"}</span>
               </button>
 
-              {/* Severity Dropdown */}
               <select
                 aria-label="Severity Filter"
                 value={severityFilter}
@@ -1123,9 +1163,7 @@ export default function MapComponent({
                   setSeverityFilter(val);
                   if (val) {
                     setShowAllDetections(true);
-                    if (val === "CRITICAL" && windowHours === 6) {
-                      setWindowHours(168);
-                    }
+                    if (val === "CRITICAL" && windowHours === 6) setWindowHours(168);
                   }
                 }}
                 className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
@@ -1137,7 +1175,6 @@ export default function MapComponent({
                 <option value="NORMAL">⚪ Nominal</option>
               </select>
 
-              {/* Classification Dropdown */}
               <select
                 aria-label="Classification Filter"
                 value={classFilter}
@@ -1154,8 +1191,7 @@ export default function MapComponent({
                 <option value="OTHER_UNCERTAIN">❓ Other / Uncertain</option>
               </select>
 
-              {/* Dynamic Reset Filters Button */}
-              {(classFilter || severityFilter || !showAllDetections || windowHours !== 6) && (
+              {isFilterActive && (
                 <button
                   onClick={handleClearFilters}
                   type="button"
@@ -1163,13 +1199,10 @@ export default function MapComponent({
                   title="Reset all filters to defaults"
                 >
                   <RotateCcw className="w-3 h-3" />
-                  <span>Reset Filters</span>
+                  <span>Reset</span>
                 </button>
               )}
 
-
-
-              {/* Symbology Legend Button */}
               <button
                 onClick={() => setShowLegend((prev) => !prev)}
                 className={`p-1.5 rounded-xl border transition ${
@@ -1183,23 +1216,136 @@ export default function MapComponent({
                 <Info className="w-4 h-4" />
               </button>
 
-              {/* Clear Filters (if modified) */}
-              {isFilterActive && (
-                <button
-                  onClick={handleClearFilters}
-                  className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 font-medium px-2 py-1 bg-orange-500/10 rounded-lg transition"
-                  type="button"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Reset
-                </button>
-              )}
               <div className="ml-auto pl-1">
                 <NearbyAlertCenter />
               </div>
             </div>
           </div>
         </div>
+
+        {/* MOBILE BOTTOM SHEET FILTER OVERLAY MODAL (< md) */}
+        {isMobileFilterOpen && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center md:hidden bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
+            <div className="w-full bg-slate-900 border-t border-slate-800 rounded-t-2xl p-4 shadow-2xl text-white space-y-4 max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+              {/* Header + Close Button */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-5 h-5 text-orange-400" />
+                  <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
+                    Radar Filter Settings
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                  type="button"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Time Window Section */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Time Horizon Window
+                </label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {([
+                    [6, "6h"],
+                    [24, "24h"],
+                    [168, "7d"],
+                    [720, "30d"],
+                    [null, "All"],
+                  ] as const).map(([hours, label]) => (
+                    <button
+                      key={label}
+                      onClick={() => setWindowHours(hours)}
+                      className={`py-2 rounded-xl text-xs font-bold transition text-center ${
+                        windowHours === hours
+                          ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
+                          : "bg-slate-800 text-slate-300 border border-slate-700"
+                      }`}
+                      type="button"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Severity & Classification Filters */}
+              <div className="space-y-3 pt-1">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Thermal Severity Level
+                  </label>
+                  <select
+                    value={severityFilter}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSeverityFilter(val);
+                      if (val) {
+                        setShowAllDetections(true);
+                        if (val === "CRITICAL" && windowHours === 6) setWindowHours(168);
+                      }
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl p-2.5 text-xs font-medium focus:outline-none focus:border-orange-500"
+                  >
+                    <option value="">All Severities</option>
+                    <option value="CRITICAL">🔴 Critical Only</option>
+                    <option value="ABNORMAL">🟠 Abnormal</option>
+                    <option value="ELEVATED">🟢 Elevated</option>
+                    <option value="NORMAL">⚪ Nominal</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Emitter Category
+                  </label>
+                  <select
+                    value={classFilter}
+                    onChange={(e) => {
+                      setClassFilter(e.target.value);
+                      if (e.target.value) setShowAllDetections(true);
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl p-2.5 text-xs font-medium focus:outline-none focus:border-orange-500"
+                  >
+                    <option value="">All Categories</option>
+                    <option value="INDUSTRY">🏭 Industry (All Levels)</option>
+                    <option value="AGRI_BURN">🌾 Agriculture (Crop)</option>
+                    <option value="WILDFIRE">🌲 Forest Wildfire</option>
+                    <option value="OTHER_UNCERTAIN">❓ Other / Uncertain</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-800 gap-2">
+                {isFilterActive ? (
+                  <button
+                    onClick={handleClearFilters}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/30 flex items-center gap-1.5"
+                    type="button"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset Defaults
+                  </button>
+                ) : (
+                  <span className="text-xs text-slate-500 font-mono">Default 6h Filter</span>
+                )}
+
+                <button
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-orange-600 text-white shadow-lg shadow-orange-900/40 hover:bg-orange-500 transition"
+                  type="button"
+                >
+                  Apply & Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TACTICAL SYMBOLOGY LEGEND CARD */}
         {showLegend && (

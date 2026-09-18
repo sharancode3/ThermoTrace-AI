@@ -65,9 +65,9 @@ export default function SystemGuidePage() {
     { id: "problem", label: "02. The Problem" },
     { id: "pipeline", label: "03. How It Works" },
     { id: "data-sources", label: "04. Data Lifecycle" },
-    { id: "event-formation", label: "05. Event Formation" },
+    { id: "event-formation", label: "05. Event Formation & Lifecycle" },
     { id: "context-fusion", label: "06. Context Fusion" },
-    { id: "ml-classifier", label: "07. ML Classification" },
+    { id: "ml-classifier", label: "07. ML Classification & Symbology" },
     { id: "explainability", label: "08. TreeSHAP & Confidence" },
     { id: "anomaly-engine", label: "09. Baseline & Anomaly" },
     { id: "gis-investigation", label: "10. GIS Investigation" },
@@ -309,7 +309,40 @@ export default function SystemGuidePage() {
               </h2>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-5 shadow-sm">
+              {/* Visual Pipeline Flow Ribbon */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
+                <div className="flex items-center gap-1.5 min-w-[760px] text-[11px] font-mono justify-between">
+                  <div className="px-2.5 py-1.5 rounded-lg bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 font-bold border border-orange-300 dark:border-orange-800 shrink-0">
+                    1. FIRMS NRT
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="px-2.5 py-1.5 rounded-lg bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 font-bold border border-orange-300 dark:border-orange-800 shrink-0">
+                    2. Geofence Gate
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="px-2.5 py-1.5 rounded-lg bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 font-bold border border-orange-300 dark:border-orange-800 shrink-0">
+                    3. ST-DBSCAN
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="px-2.5 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold border border-blue-300 dark:border-blue-800 shrink-0">
+                    4. 14-D Vector
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="px-2.5 py-1.5 rounded-lg bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 font-bold border border-purple-300 dark:border-purple-800 shrink-0">
+                    5. XGBoost + SHAP
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="px-2.5 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-800 shrink-0">
+                    6. 90d Baseline
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="px-2.5 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800 shrink-0">
+                    7. Freshness & Map
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div className="space-y-3">
                   <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
@@ -341,9 +374,7 @@ export default function SystemGuidePage() {
                       </p>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-3">
                   <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
                     <div className="font-mono font-bold text-blue-600 text-sm shrink-0">04</div>
                     <div>
@@ -353,9 +384,11 @@ export default function SystemGuidePage() {
                       </p>
                     </div>
                   </div>
+                </div>
 
+                <div className="space-y-3">
                   <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <div className="font-mono font-bold text-blue-600 text-sm shrink-0">05</div>
+                    <div className="font-mono font-bold text-purple-600 text-sm shrink-0">05</div>
                     <div>
                       <div className="font-bold text-slate-900 dark:text-slate-100">Calibrated XGBoost & TreeSHAP Explainability</div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -365,11 +398,21 @@ export default function SystemGuidePage() {
                   </div>
 
                   <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <div className="font-mono font-bold text-emerald-600 text-sm shrink-0">06</div>
+                    <div className="font-mono font-bold text-amber-600 text-sm shrink-0">06</div>
                     <div>
                       <div className="font-bold text-slate-900 dark:text-slate-100">90-Day Baseline & Anomaly Classification</div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Calculates statistical Z-score against facility baseline and publishes to GIS Command Map, Thermo News, Alerts, and PDF Reports.
+                        Calculates statistical Z-score against facility baseline to determine whether heat signature is routine, elevated, abnormal, or critical.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div className="font-mono font-bold text-emerald-600 text-sm shrink-0">07</div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-slate-100">Temporal Freshness & Lifecycle State Policy</div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Classifies events by satellite pass recency into Active (&lt;24h), Aging (24–72h), and Historical (&gt;72h), preserving severity while updating marker symbology.
                       </p>
                     </div>
                   </div>
@@ -519,6 +562,65 @@ export default function SystemGuidePage() {
                   </p>
                 </div>
               )}
+
+              {/* Authoritative Lifecycle & Freshness Timeline */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                    <Clock className="w-4 h-4" /> Operational Freshness Windows & Lifecycle State Machine
+                  </span>
+                  <span className="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-400">
+                    Injectable Temporal Policy
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-emerald-900 dark:text-emerald-200">Stage 1: ACTIVE</span>
+                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-200/70 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200">
+                        &lt; 24h
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 dark:text-emerald-300/90 leading-relaxed">
+                      Confirmed satellite detection in current 24-hour cycle. Rendered on map with 100% opacity, solid stroke, and active pulse ring for tactical operator triage.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-900 dark:text-amber-200">Stage 2: AGING (COOLING)</span>
+                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200/70 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                        24h – 72h
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300/90 leading-relaxed">
+                      No satellite pass detection in 24–72 hours. Rendered with dashed border (3,1.5) and 55% faded opacity. Anomaly tier (e.g. CRITICAL/ABNORMAL) is strictly preserved.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 dark:text-slate-100">Stage 3: HISTORICAL</span>
+                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300">
+                        &gt; 72h
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Extinguished / resolved status. Retained permanently for facility baseline modeling and regulatory audits without active map pulsing.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Satellite Orbital Reality Callout */}
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs leading-relaxed flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-slate-900 dark:text-slate-100 font-semibold">Scientific Fact & Orbital Reality:</strong>{" "}
+                    Absence of recent satellite detection indicates no radiant infrared anomaly exceeded sensor threshold during orbital overpass; it does not confirm physical extinguishing. Heavy monsoon cloud cover, solar glint, orbital blind intervals (~10–12 hours between satellite passes), or sub-pixel thermal attenuation can obscure ground activity.
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -612,18 +714,125 @@ export default function SystemGuidePage() {
                 The classification subsystem uses a production <strong className="text-slate-900 dark:text-slate-100">XGBoost</strong> multi-class model (<code className="font-mono text-purple-600 bg-purple-50 dark:bg-purple-950 px-1 py-0.5 rounded">thermo_xgb_v1.1.0.joblib</code>) attributes events across 4 tactical emitter classes with unified 3-color level severity:
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                {[
-                  { name: "INDUSTRY (3-Color)", color: "border-amber-200 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200", meaning: "Factory stacks with 3-tier severity: Red (Critical fire/flare blast ≥50MW), Amber (Elevated flaring), Yellow (Nominal routine process)." },
-                  { name: "AGRI_BURN", color: "border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200", meaning: "Curved crop stalk icon: seasonal crop residue & stubble burning (Green = nominal, Amber = elevated, Red = severe)." },
-                  { name: "WILDFIRE", color: "border-red-200 dark:border-red-900 bg-red-50/70 dark:bg-red-950/30 text-red-800 dark:text-red-200", meaning: "Pine tree + flame icon: forest canopy & unmanaged vegetation wildfires (Flame Red / Orange by intensity)." },
-                  { name: "OTHER_UNCERTAIN", color: "border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300", meaning: "Tactical diamond crosshair: unassigned low-confidence or ambiguous signature preserving epistemic integrity." }
-                ].map((c, i) => (
-                  <div key={i} className={`p-3.5 rounded-xl border ${c.color} space-y-1`}>
-                    <div className="font-mono font-bold text-xs">{c.name}</div>
-                    <p className="text-[11px] opacity-90 leading-tight">{c.meaning}</p>
+              {/* Tactical Marker Symbology System Grid */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4" /> Tactical Marker Symbology Standard
+                  </span>
+                  <span className="text-[10px] font-mono bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                    Sovereign Visual Language
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* 1. Industry Marker */}
+                  <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-xs text-amber-900 dark:text-amber-200">1. INDUSTRIAL</span>
+                      <svg viewBox="0 0 32 32" className="w-7 h-7 drop-shadow-sm">
+                        <g fill="#FACC15" stroke="#854D0E" strokeWidth="1.6" strokeLinejoin="round">
+                          <path d="M4 26V16L12 20V12L20 16V6H28V26H4Z" />
+                          <line x1="12" y1="20" x2="12" y2="26" stroke="#854D0E" strokeWidth="1.2" />
+                          <line x1="20" y1="16" x2="20" y2="26" stroke="#854D0E" strokeWidth="1.2" />
+                        </g>
+                      </svg>
+                    </div>
+                    <p className="text-[11px] text-amber-950 dark:text-amber-300/90 leading-relaxed">
+                      Twin factory stack geometry. Colors: <strong className="text-yellow-600">Yellow</strong> (Routine process), <strong className="text-orange-600">Orange</strong> (Flaring emission), <strong className="text-red-600">Red</strong> (Emergency fire/blast).
+                    </p>
                   </div>
-                ))}
+
+                  {/* 2. Wildfire Marker */}
+                  <div className="p-4 rounded-xl border border-teal-200 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/20 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-xs text-teal-900 dark:text-teal-200">2. WILDFIRE</span>
+                      <svg viewBox="0 0 32 32" className="w-7 h-7 drop-shadow-sm">
+                        <g fill="#0D9488" stroke="#042F2E" strokeWidth="1.5" strokeLinejoin="round">
+                          <path d="M16 4L9 13H12L7 20H13V27H19V20H25L20 13H23L16 4Z" />
+                          <path d="M16 11C18 14 18 16 16.5 19C19 18 20.5 15 19.5 13" stroke="#FEF08A" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+                          <circle cx="16" cy="18" r="1.8" fill="#FEF08A" stroke="none" />
+                        </g>
+                      </svg>
+                    </div>
+                    <p className="text-[11px] text-teal-950 dark:text-teal-300/90 leading-relaxed">
+                      Conifer tree silhouette with inner flame core. Forest Teal for nominal perimeter; Crimson Red for runaway high-FRP firestorms.
+                    </p>
+                  </div>
+
+                  {/* 3. Agri Burn Marker */}
+                  <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-xs text-emerald-900 dark:text-emerald-200">3. AGRI_BURN</span>
+                      <svg viewBox="0 0 32 32" className="w-7 h-7 drop-shadow-sm">
+                        <g fill="#10B981" stroke="#047857" strokeWidth="1.5" strokeLinejoin="round">
+                          <path d="M16 28C16 28 8 22 8 14C8 8 14 4 16 4C18 4 24 8 24 14C24 22 16 28 16 28Z" />
+                          <path d="M16 10V22" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
+                          <path d="M16 14L11 10" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" />
+                          <path d="M16 18L21 14" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" />
+                        </g>
+                      </svg>
+                    </div>
+                    <p className="text-[11px] text-emerald-950 dark:text-emerald-300/90 leading-relaxed">
+                      Curved agricultural crop stalk. Identifies seasonal stubble residue burning. Emerald green nominal; tinted Red under massive fire clusters.
+                    </p>
+                  </div>
+
+                  {/* 4. Other / Uncertain Marker */}
+                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-xs text-slate-800 dark:text-slate-200">4. UNCERTAIN</span>
+                      <svg viewBox="0 0 32 32" className="w-7 h-7 drop-shadow-sm">
+                        <g fill="#64748B" stroke="#334155" strokeWidth="1.6" strokeLinejoin="round">
+                          <polygon points="16,3 29,16 16,29 3,16" />
+                          <circle cx="16" cy="16" r="4" fill="#FFFFFF" />
+                          <circle cx="16" cy="16" r="1.8" fill="#64748B" />
+                        </g>
+                      </svg>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Radar diamond crosshair. Represents low-confidence signatures or ambiguous spectral signatures requiring field validation.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Freshness Symbology Contrast Card */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 text-xs">
+                  <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                    <span>Operational Marker State: Active (&lt;24h) vs. Cooled / Aged (≥24h)</span>
+                    <span className="font-mono text-[10px] text-slate-500">Symbology Contrast</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                    <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3">
+                      <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
+                        <span className="absolute -inset-1 rounded-full animate-pulse bg-red-400/40" />
+                        <svg viewBox="0 0 32 32" className="w-7 h-7 relative z-10 drop-shadow-md">
+                          <g fill="#EF4444" stroke="#FFFFFF" strokeWidth="1.6" strokeLinejoin="round">
+                            <path d="M4 26V16L12 20V12L20 16V6H28V26H4Z" />
+                          </g>
+                        </svg>
+                      </div>
+                      <div>
+                        <strong className="text-slate-900 dark:text-slate-100 block font-mono">ACTIVE STATE (&lt;24h)</strong>
+                        <span className="text-slate-500 dark:text-slate-400">100% opacity, solid white border, animated pulse glow ring. Indicates active satellite observation.</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3">
+                      <div className="w-8 h-8 flex items-center justify-center shrink-0 opacity-55">
+                        <svg viewBox="0 0 32 32" className="w-7 h-7 drop-shadow-xs">
+                          <g fill="#FECACA" stroke="#DC2626" strokeWidth="1.2" strokeDasharray="3,1.5" strokeLinejoin="round">
+                            <path d="M4 26V16L12 20V12L20 16V6H28V26H4Z" />
+                          </g>
+                        </svg>
+                      </div>
+                      <div>
+                        <strong className="text-slate-900 dark:text-slate-100 block font-mono">COOLED / AGED (≥24h)</strong>
+                        <span className="text-slate-500 dark:text-slate-400">55% faded opacity, dashed border (strokeDasharray="3,1.5"), zero animation. Severity level is preserved.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="p-4 bg-purple-50/60 dark:bg-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2 text-xs">
@@ -697,6 +906,44 @@ export default function SystemGuidePage() {
                 <div className="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-200 dark:border-slate-700">
                   Note: SHAP values explain feature contributions to the mathematical prediction. They represent associative model evidence, not legal causality.
                 </div>
+              </div>
+
+              {/* Factual Confidence & Operational Safeguards Comparison */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
+                    <Scale className="w-4 h-4" /> Calibrated ML Probability vs. Operational Safeguard Rules
+                  </span>
+                  <span className="text-[10px] font-mono bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-800">
+                    Analytical Integrity
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 space-y-1.5">
+                    <span className="font-bold text-slate-900 dark:text-slate-100 block font-mono">1. Calibrated Machine Learning Probability</span>
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Generated by the XGBoost ensemble across the 14-dimensional normalized feature vector. Calibrated using Platt/isotonic scaling so a reported 85% probability corresponds to an empirical 85% real-world accuracy across holdout testing folds.
+                    </p>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      Output: True class probabilities across all 6 target categories.
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 space-y-1.5">
+                    <span className="font-bold text-slate-900 dark:text-slate-100 block font-mono">2. Domain Safeguard Rules</span>
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Rigorous boundary checks: hotspots are only attributed to a facility if located within immediate plant boundaries (&lt;500m). Outskirts and non-plant areas retain genuine agricultural or wildfire classifications.
+                    </p>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      Output: Truthful classification with explicit confidence extraction.
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  ThermoTrace never manufactures false certainty or artificially manipulates probabilities. If an event is reclassified by an operational rule (such as an immediate plant parcel constraint), its confidence is extracted directly from the authentic probability of the assigned class, rather than inheriting an unrelated prediction probability.
+                </p>
               </div>
             </div>
           </section>

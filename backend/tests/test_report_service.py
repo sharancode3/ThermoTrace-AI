@@ -70,7 +70,7 @@ def test_evidence_quality_rates_coverage_not_model_accuracy():
 def facility(db: Session):
     """Create a test facility."""
     facility = IndustrialFacility(
-        facility_code="FAC-001",
+        facility_code="FAC-TEST-001",
         name="Test Refinery",
         sector_category="Petroleum Refining",
         sub_type="Crude Oil Refinery",

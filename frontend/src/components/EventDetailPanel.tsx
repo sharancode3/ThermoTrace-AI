@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { 
   X, Loader2, Activity, AlertTriangle, ShieldCheck, Flame, 
   MapPin, Clock, BarChart3, TrendingUp, TrendingDown, Cpu, 
-  ChevronRight, Download, FileText, Satellite,
+  ChevronRight, ChevronLeft, Download, FileText, Satellite,
   Maximize2, Minimize2, CheckCircle2, RefreshCw,
   Factory, Wheat, Trees, HelpCircle, AlertOctagon,
   Layers, Compass, Info, Copy, Check, Eye, ExternalLink,
-  Wind, Gauge, Droplets, Thermometer, Navigation as NavigationIcon
+  Wind, Gauge, Droplets, Thermometer, Navigation as NavigationIcon,
+  ArrowLeft, ChevronDown, ChevronUp
 } from "lucide-react";
 import { fetchEventHistory, fetchEventIntelligence, WindData } from "@/lib/apiClient";
 import { DetectionFootprintCard } from "./DetectionFootprintCard";
@@ -336,20 +337,20 @@ function WindConditionsCard({
   const isLightVariable = Boolean(wind.is_light_variable) || (typeof wind.speed_kmh === "number" && wind.speed_kmh < 3.0);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-3.5 text-slate-800 shadow-sm">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3.5 text-slate-800 dark:text-slate-100 shadow-sm">
       {/* Header with Title, Status Badges & Toggle */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5 font-mono">
-            <Compass className="w-4 h-4 text-cyan-600" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5 font-mono">
+            <Compass className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
             <span>DOWNWIND AWARENESS CORRIDOR</span>
           </h2>
           {isStale && (
-            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+            <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
               STALE
             </span>
           )}
-          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 font-semibold">
+          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 font-semibold">
             {wind.data_kind === "FORECAST_MODEL" ? "OPEN-METEO FORECAST" : "ERA5 REANALYSIS"}
           </span>
         </div>
@@ -359,8 +360,8 @@ function WindConditionsCard({
           onClick={() => onVisibleChange(!visible)}
           className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded-lg border transition flex items-center gap-1 cursor-pointer ${
             visible
-              ? "bg-cyan-600 text-white border-cyan-600 hover:bg-cyan-700 shadow-sm"
-              : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
+              ? "bg-cyan-600 dark:bg-cyan-600 text-white border-cyan-600 hover:bg-cyan-700 shadow-sm"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
           title={visible ? "Hide downwind awareness corridor on map" : "Show downwind awareness corridor on map"}
         >
@@ -370,77 +371,77 @@ function WindConditionsCard({
       </div>
 
       {/* Main Direction & Speed Visual Row with Full Expanded Names */}
-      <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50/60 rounded-xl border border-cyan-200/80">
+      <div className="flex items-center gap-3.5 p-3.5 bg-cyan-50 dark:bg-cyan-950/70 rounded-xl border border-cyan-200/80 dark:border-cyan-800/80">
         <div
-          className="grid h-13 w-13 shrink-0 place-items-center rounded-full bg-white border-2 border-cyan-500 text-base font-black text-cyan-700 shadow-sm"
+          className="grid h-13 w-13 shrink-0 place-items-center rounded-full bg-white dark:bg-slate-900 border-2 border-cyan-500 text-base font-black text-cyan-700 dark:text-cyan-300 shadow-sm"
           style={{ transform: `rotate(${Number.isFinite(towardDeg) ? towardDeg : 0}deg)` }}
           title={isLightVariable ? "Light and variable surface wind (< 3 km/h)" : `Wind directed toward ${toFullName} (${toCard} · ${towardDeg}°)`}
         >
-          <NavigationIcon className="w-6 h-6 text-cyan-600 fill-cyan-500" />
+          <NavigationIcon className="w-6 h-6 text-cyan-600 dark:text-cyan-400 fill-cyan-500 dark:fill-cyan-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+          <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-cyan-300 tracking-wider">
             Downwind Awareness Corridor
           </div>
-          <div className="font-mono font-black text-slate-900 text-base leading-snug">
+          <div className="font-mono font-black text-slate-900 dark:text-white text-base leading-snug">
             {isLightVariable ? "Light / Variable Wind" : `Directed toward ${toFullName}`}
           </div>
-          <div className="text-xs font-mono font-semibold text-slate-600 mt-0.5 flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-cyan-700">{speed}</span>
-            <span className="text-slate-300">•</span>
+          <div className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-cyan-700 dark:text-cyan-300">{speed}</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
             <span>Bearing: {Number.isFinite(towardDeg) ? `${towardDeg}° (${toCard})` : "N/A"}</span>
-            <span className="text-slate-300">•</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
             <span>Origin: {fromFullName} ({fromCard})</span>
           </div>
         </div>
       </div>
 
       {/* Honest Scientific Operational Corridor Description */}
-      <div className="p-3 bg-cyan-50/50 rounded-xl border border-cyan-200/60 space-y-1 text-xs">
-        <div className="font-bold text-cyan-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
-          <Wind className="w-3.5 h-3.5 text-cyan-600" />
+      <div className="p-3 bg-cyan-50/70 dark:bg-cyan-950/60 rounded-xl border border-cyan-200/80 dark:border-cyan-800/60 space-y-1 text-xs">
+        <div className="font-bold text-cyan-950 dark:text-cyan-200 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+          <Wind className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
           <span>Downwind Awareness Corridor</span>
         </div>
         {isLightVariable ? (
-          <p className="text-[11.5px] text-slate-700 leading-relaxed">
+          <p className="text-[11.5px] text-slate-700 dark:text-slate-200 leading-relaxed">
             Surface wind is light and variable (&lt; 3 km/h). Directional transport is uncertain; the map displays a radial awareness buffer around the event for localized ground verification.
           </p>
         ) : (
-          <p className="text-[11.5px] text-slate-700 leading-relaxed">
-            Surface wind at the selected time is directed from the <strong className="font-semibold text-slate-900">{fromFullName} ({fromCard})</strong> toward the <strong className="font-semibold text-cyan-950">{toFullName} ({toCard} at {towardDeg}°)</strong> at <strong className="font-semibold text-slate-900">{speed}</strong>. The map shows a wind-directed awareness corridor for prioritizing ground verification. Actual smoke or pollutant transport may differ because this operational view does not model plume rise, complex terrain, atmospheric stability, precipitation, or specific source characteristics.
+          <p className="text-[11.5px] text-slate-700 dark:text-slate-200 leading-relaxed">
+            Surface wind at the selected time is directed from the <strong className="font-semibold text-slate-900 dark:text-white">{fromFullName} ({fromCard})</strong> toward the <strong className="font-semibold text-cyan-950 dark:text-cyan-100">{toFullName} ({toCard} at {towardDeg}°)</strong> at <strong className="font-semibold text-slate-900 dark:text-white">{speed}</strong>. The map shows a wind-directed awareness corridor for prioritizing ground verification. Actual smoke or pollutant transport may differ because this operational view does not model plume rise, complex terrain, atmospheric stability, precipitation, or specific source characteristics.
           </p>
         )}
       </div>
 
       {/* Full Meteorological 4-Metric Grid with Clarifying Subtitles */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Wind Gusts</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Wind Gusts</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.gusts_kmh !== undefined ? `${wind.gusts_kmh.toFixed(1)} km/h` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Peak surface gusts</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Peak surface gusts</p>
         </div>
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Surface Temp</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Surface Temp</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.temperature_c !== undefined ? `${wind.temperature_c.toFixed(1)} °C` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Ground air temp</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Ground air temp</p>
         </div>
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Humidity</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Humidity</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.relative_humidity_pct !== undefined ? `${wind.relative_humidity_pct}%` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Relative moisture</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Relative moisture</p>
         </div>
-        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-          <p className="text-[9.5px] font-semibold text-slate-500 uppercase tracking-wide">Pressure</p>
-          <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+        <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+          <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Pressure</p>
+          <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
             {wind.surface_pressure_hpa !== undefined ? `${wind.surface_pressure_hpa.toFixed(0)} hPa` : "N/A"}
           </p>
-          <p className="text-[9px] text-slate-400 mt-0.5">Surface pressure</p>
+          <p className="text-[9px] text-slate-400 dark:text-slate-400 mt-0.5">Surface pressure</p>
         </div>
       </div>
 
@@ -467,7 +468,10 @@ export function EventDetailPanel({
   onWindVisibilityChange: (visible: boolean) => void;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const hasOverlay = Boolean(searchParams?.get("overlay"));
+  const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -476,6 +480,36 @@ export function EventDetailPanel({
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobileSnap, setMobileSnap] = useState<"peek" | "expanded">("expanded");
+  const [isMobileReadMoreOpen, setIsMobileReadMoreOpen] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkTabScroll = () => {
+    const el = tabsRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 6);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6);
+  };
+
+  useEffect(() => {
+    checkTabScroll();
+    const el = tabsRef.current;
+    if (el) {
+      el.addEventListener("scroll", checkTabScroll);
+    }
+    window.addEventListener("resize", checkTabScroll);
+    return () => {
+      if (el) el.removeEventListener("scroll", checkTabScroll);
+      window.removeEventListener("resize", checkTabScroll);
+    };
+  }, [loading, isExpanded]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!eventId) return;
@@ -510,15 +544,12 @@ export function EventDetailPanel({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
-
   const handleAskAboutEvent = () => {
     if (!eventId) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("overlay", "chat");
-    url.searchParams.set("eventId", eventId);
-    window.history.pushState({}, "", url.toString());
-    window.dispatchEvent(new CustomEvent("thermo-open-chat", { detail: { eventId } }));
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    params.set("overlay", "chat");
+    params.set("eventId", eventId);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const handleDownloadReport = async () => {
@@ -608,6 +639,30 @@ export function EventDetailPanel({
     sourceSubtitle = "Vegetation Wildfire in Forested Terrain";
   }
 
+  // Freshness & Lifecycle Derivation
+  const isAgedOrCooled = data?.is_active === false || 
+    data?.freshness_status === "AGING" || 
+    data?.freshness_status === "HISTORICAL" || 
+    data?.lifecycle_status === "COOLING" || 
+    data?.lifecycle_status === "EXTINGUISHED" || 
+    data?.lifecycle_status === "RESOLVED";
+
+  const isHistorical = data?.freshness_status === "HISTORICAL" || 
+    data?.lifecycle_status === "EXTINGUISHED" || 
+    data?.lifecycle_status === "RESOLVED";
+
+  const freshnessStatus = data?.freshness_status || (isHistorical ? "HISTORICAL" : isAgedOrCooled ? "AGING" : "ACTIVE");
+  
+  let freshnessBadgeText = "Active Satellite Observation (<24h)";
+  let freshnessBadgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-700";
+  if (freshnessStatus === "HISTORICAL") {
+    freshnessBadgeText = "Historical Record — No Detection in >72h";
+    freshnessBadgeStyle = "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+  } else if (freshnessStatus === "AGING") {
+    freshnessBadgeText = "Aging Hotspot — No Detection in 24–72h";
+    freshnessBadgeStyle = "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700";
+  }
+
   // Humanized Anomaly Text
   const isCritical = data?.anomaly_tier === "CRITICAL";
   const isAbnormal = data?.anomaly_tier === "ABNORMAL";
@@ -616,7 +671,7 @@ export function EventDetailPanel({
 
   let anomalyHeadline = "NORMAL BEHAVIOR";
   let anomalyDesc = "Thermal radiance matches expected baseline operations.";
-  let anomalyStyle = "bg-yellow-50/70 border-yellow-300 text-yellow-900";
+  let anomalyStyle = "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100";
   let AnomalyIcon = CheckCircle2;
 
   if (isInsufficient) {
@@ -624,39 +679,22 @@ export function EventDetailPanel({
     const sampleSize = data?.baseline_sample_size || 0;
     const threshold = data?.baseline_sufficiency_threshold || 10;
     anomalyDesc = `Not enough historical data at this facility yet (${sampleSize} of ${threshold} minimum observations) — anomaly status unavailable.`;
-    anomalyStyle = "bg-slate-100 border-slate-300 text-slate-700";
+    anomalyStyle = "bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200";
     AnomalyIcon = Info;
   } else if (isCritical) {
     anomalyHeadline = "CRITICAL ANOMALY DETECTED";
     anomalyDesc = `Current intensity (${data?.peak_frp_mw?.toFixed(1)} MW) is significantly above verified historical baseline (+${data?.anomaly_z_score?.toFixed(1)}σ). Potential emergency flare or blaze.`;
-    anomalyStyle = "bg-red-50 border-red-200 text-red-800";
+    anomalyStyle = "bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100";
     AnomalyIcon = AlertOctagon;
   } else if (isAbnormal) {
     anomalyHeadline = "ABNORMAL THERMAL ACTIVITY";
     anomalyDesc = `Elevated heat signature (+${data?.anomaly_z_score?.toFixed(1)}σ above verified baseline). Activity exceeds typical operational variance.`;
-    anomalyStyle = "bg-orange-50 border-orange-200 text-orange-800";
+    anomalyStyle = "bg-orange-50 dark:bg-orange-950/80 border-orange-200 dark:border-orange-800 text-orange-900 dark:text-orange-100";
     AnomalyIcon = AlertTriangle;
   } else if (isElevated) {
     anomalyHeadline = "ELEVATED EMISSION";
     anomalyDesc = `Moderate thermal deviation (+${data?.anomaly_z_score?.toFixed(1)}σ). Continues under monitoring.`;
-    anomalyStyle = "bg-amber-50 border-amber-200 text-amber-800";
-    AnomalyIcon = AlertTriangle;
-  }
-
-  if (isCritical) {
-    anomalyHeadline = "CRITICAL ANOMALY DETECTED";
-    anomalyDesc = `Current intensity (${data?.peak_frp_mw?.toFixed(1)} MW) is significantly above historical 90-day baseline (+${data?.anomaly_z_score?.toFixed(1)}σ). Potential emergency flare or incident.`;
-    anomalyStyle = "bg-red-50 border-red-200 text-red-800";
-    AnomalyIcon = AlertOctagon;
-  } else if (isAbnormal) {
-    anomalyHeadline = "ABNORMAL THERMAL ACTIVITY";
-    anomalyDesc = `Elevated heat signature (+${data?.anomaly_z_score?.toFixed(1)}σ above baseline). Activity exceeds typical operational variance.`;
-    anomalyStyle = "bg-orange-50 border-orange-200 text-orange-800";
-    AnomalyIcon = AlertTriangle;
-  } else if (isElevated) {
-    anomalyHeadline = "ELEVATED EMISSION";
-    anomalyDesc = `Moderate thermal deviation (+${data?.anomaly_z_score?.toFixed(1)}σ). Continues under monitoring.`;
-    anomalyStyle = "bg-amber-50 border-amber-200 text-amber-800";
+    anomalyStyle = "bg-amber-50 dark:bg-amber-950/80 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
     AnomalyIcon = Activity;
   }
 
@@ -675,100 +713,245 @@ export function EventDetailPanel({
   const worldviewUrl = data?.satellite_context?.live_inspection_links?.nasa_worldview_url ?? 
     `https://worldview.earthdata.nasa.gov/?v=${((data?.longitude || 85)-0.2).toFixed(3)},${((data?.latitude || 22)-0.2).toFixed(3)},${((data?.longitude || 85)+0.2).toFixed(3)},${((data?.latitude || 22)+0.2).toFixed(3)}`;
 
-  return (
-    <div 
-      style={{
-        right: hasOverlay ? '450px' : '0px',
-        maxWidth: hasOverlay ? 'calc(100vw - 450px - 80px)' : 'calc(100vw - 80px)'
-      }}
-      className={`fixed ${
-        mobileSnap === "peek"
-          ? "bottom-0 top-auto h-auto max-h-[148px] sm:top-0 sm:bottom-auto sm:h-full sm:max-h-none"
-          : "bottom-0 top-14 sm:top-0 sm:bottom-auto h-[calc(100vh-3.5rem)] sm:h-full"
-      } ${
-        isExpanded 
-          ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
-          : 'w-full sm:w-[480px] md:w-[500px] max-w-[100vw] sm:max-w-[95vw]'
-      } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-t sm:border-t-0 border-slate-200 shadow-2xl flex flex-col transition-all duration-300 ease-in-out text-slate-800`}
-    >
-      {/* Sleek Light Header matching Site UI */}
-      <div className="py-2.5 sm:py-3 px-3.5 sm:px-5 border-b border-slate-200 shrink-0 bg-white text-slate-900 flex flex-col gap-1.5 sm:gap-2">
-        {/* Mobile drag handle & snap status */}
-        <div className="flex sm:hidden items-center justify-between pb-0.5">
-          <button
-            type="button"
-            onClick={() => setMobileSnap(mobileSnap === "peek" ? "expanded" : "peek")}
-            className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full"
-          >
-            <Compass className="w-3 h-3 text-cyan-600" />
-            <span>{mobileSnap === "peek" ? "Peek Mode (Tap to Expand)" : "Dossier Expanded (Tap to View Map)"}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileSnap(mobileSnap === "peek" ? "expanded" : "peek")}
-            className="w-10 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition"
-            aria-label="Toggle mobile drawer height"
-          />
-        </div>
-        <div className="flex items-start justify-between gap-3 min-w-0">
-          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            {/* Thermal Severity Threat Score Badge with Clear '/100 Threat Score' Label */}
-            {(() => {
-              const threatScore = Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)));
-              return (
-                <div 
-                  className={`flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl border shrink-0 min-w-[62px] shadow-sm ${
-                    isCritical 
-                      ? "bg-red-50 border-red-200 text-red-700" 
-                      : isAbnormal 
-                      ? "bg-amber-50 border-amber-200 text-amber-700" 
-                      : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  }`}
-                  title={`Thermal Severity Score: ${threatScore} / 100 (Calculated from satellite Fire Radiative Power of ${data?.peak_frp_mw?.toFixed(1) || "18.0"} MW)`}
-                >
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="font-mono text-2xl font-black leading-none">{threatScore}</span>
-                    <span className="text-[10px] font-bold opacity-60">/100</span>
-                  </div>
-                  <span className="text-[8px] font-extrabold uppercase tracking-wider mt-0.5 leading-none opacity-80 whitespace-nowrap">
-                    Threat Score
-                  </span>
-                </div>
-              );
-            })()}
+  if (!mounted) {
+    return null;
+  }
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-1.5">
-                  <Flame className={`w-4 h-4 ${isWildfire ? "text-teal-600" : isAgricultural ? "text-amber-600" : "text-orange-600"}`} />
-                  <span>{isIndustrial ? "Industrial Facility" : isAgricultural ? "Agricultural Burn" : isWildfire ? "Wildfire" : "Thermal Anomaly"}</span>
-                </span>
-                <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${
-                  isCritical ? "bg-red-50 text-red-700 border-red-200" :
-                  isAbnormal ? "bg-amber-50 text-amber-700 border-amber-200" :
-                  "bg-emerald-50 text-emerald-700 border-emerald-200"
-                }`}>
-                  {isCritical ? "CRITICAL" : isAbnormal ? "ELEVATED" : isWildfire ? "MEDIUM" : "ROUTINE"}
-                </span>
+  return (
+    <>
+      {/* DEDICATED FULL-SCREEN MOBILE EVENT VIEW (< sm) */}
+      <div suppressHydrationWarning className="fixed inset-x-0 bottom-0 top-14 z-50 bg-slate-950 text-white flex flex-col sm:hidden overflow-y-auto animate-in fade-in">
+        {/* Top Sticky Header with Prominent Back Button */}
+        <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md px-4 py-3 border-b border-slate-800 flex items-center justify-between shadow-lg">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl border border-orange-500 transition cursor-pointer active:scale-95 shadow-md flex items-center justify-center shrink-0"
+            title="Back to Monitor Map"
+            aria-label="Back to Monitor Map"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-slate-300 font-bold bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
+              {data?.event_id || eventId}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Main Scrollable Content */}
+        <div className="p-4 space-y-4 pb-20">
+          {/* ESSENTIAL INFO FIRST (Top Priority) */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className={`p-2 rounded-xl border ${sourceBadgeStyle} shrink-0`}>
+                  <SourceIcon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-bold text-white leading-snug truncate">
+                    {data?.district ? `${data.district}, ` : ""}{data?.state || "Sovereign Territory"}
+                  </h2>
+                  <p className="text-xs text-slate-400 font-medium">{sourceCategory}</p>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold border ${freshnessBadgeStyle}`}>
+                      {!isAgedOrCooled ? (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      ) : (
+                        <Clock className="w-2.5 h-2.5" />
+                      )}
+                      {freshnessBadgeText}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Coordinate + Time Subtitle */}
-              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5 mt-0.5 truncate">
-                <span className="text-slate-700 font-semibold truncate">{data?.event_id || eventId}</span>
-                <span>·</span>
-                <span>{data?.latitude ? `${data.latitude.toFixed(4)}°N` : ""}{data?.longitude ? ` ${data.longitude.toFixed(4)}°E` : ""}</span>
-                <span>·</span>
-                <span>{data?.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Active"}</span>
-                <span>·</span>
-                <span className="text-emerald-600 font-semibold">active</span>
+              {/* Threat Score */}
+              {(() => {
+                const threatScore = Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)));
+                return (
+                  <div className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-xl border shrink-0 min-w-[60px] ${
+                    isCritical ? "bg-red-950/80 border-red-700 text-red-300" : isAbnormal ? "bg-orange-950/80 border-orange-700 text-orange-300" : "bg-emerald-950/80 border-emerald-700 text-emerald-300"
+                  }`}>
+                    <span className="font-mono text-xl font-black">{threatScore}</span>
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Threat</span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Grid Essentials */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800">
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Radiative Power</p>
+                <p className="font-mono text-sm font-bold text-orange-400 mt-0.5">
+                  {data?.peak_frp_mw?.toFixed(1) || "18.0"} MW
+                </p>
+              </div>
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Satellite Sensor</p>
+                <p className="font-mono text-xs font-semibold text-slate-200 mt-0.5 truncate">
+                  {data?.satellite_sensor || "SNPP VIIRS"}
+                </p>
+              </div>
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Coordinates</p>
+                <p className="font-mono text-xs text-slate-200 font-bold mt-0.5">
+                  {data?.latitude?.toFixed(4)}°, {data?.longitude?.toFixed(4)}°
+                </p>
+              </div>
+              <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Detection</p>
+                <p className="font-mono text-xs text-emerald-400 font-bold mt-0.5">
+                  {formatRelativeTime(data?.acquired_at)}
+                </p>
               </div>
             </div>
           </div>
 
+          {/* ALWAYS VISIBLE ACTION BUTTONS (DOWNLOAD PDF & ASK CHAT) */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadReport}
+              disabled={isExportingPDF}
+              className="flex items-center justify-center gap-2 py-3 px-3 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-orange-900/40 transition active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <span>{isExportingPDF ? "Exporting..." : "Download Report"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleAskAboutEvent}
+              className="flex items-center justify-center gap-2 py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+            >
+              <Flame className="w-4 h-4 text-orange-400" />
+              <span>Ask AI Chat</span>
+            </button>
+          </div>
+
+          {/* LIVE SATELLITE INSPECTION LINKS */}
+          <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live 10m Optical Satellite Imagery</p>
+            <div className="flex gap-2 text-xs">
+              <a href={googleSatUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 px-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 font-semibold flex items-center justify-center gap-1 text-[11px] border border-slate-700">
+                Google Satellite <ExternalLink className="w-3 h-3 text-orange-400" />
+              </a>
+              <a href={copernicusUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 px-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 font-semibold flex items-center justify-center gap-1 text-[11px] border border-slate-700">
+                Copernicus <ExternalLink className="w-3 h-3 text-orange-400" />
+              </a>
+            </div>
+          </div>
+
+          {/* EXPANDABLE "READ MORE / DEEP INTELLIGENCE" ACCORDION */}
+          <div className="border border-slate-800 rounded-2xl bg-slate-900/80 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileReadMoreOpen((prev) => !prev)}
+              className="w-full py-3 px-4 flex items-center justify-between bg-slate-800/80 text-xs font-bold text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-orange-400" />
+                <span>Read More: 14-D Feature Vector & Baseline Curve</span>
+              </span>
+              {isMobileReadMoreOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-orange-400" />}
+            </button>
+
+            {isMobileReadMoreOpen && (
+              <div className="p-4 space-y-4 border-t border-slate-800 text-xs text-slate-300 animate-in fade-in">
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1 font-mono text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Gaussian Z-Score:</span>
+                    <span className="font-bold text-orange-400">+{data?.anomaly_z_score?.toFixed(1) || "0.0"}σ</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Robust MAD Z-Score:</span>
+                    <span className="font-bold text-amber-400">+{data?.contributing_factors?.robust_mad_z_score?.toFixed(1) || "0.0"}σ</span>
+                  </div>
+                </div>
+
+                {/* Thermal Trend Chart */}
+                <ThermalTrendCard history={history} fallbackTrend={data?.thermal_trend} />
+
+                {/* 14-D Multimodal Feature Vector */}
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">14-D Multimodal Features</h4>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Brightness Temp</span>
+                      <span className="font-bold text-slate-200">{data?.max_brightness_k?.toFixed(1) || "312.5"} K</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Cropland Cover</span>
+                      <span className="font-bold text-slate-200">{((data?.pct_cropland || 0) * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Forest Canopy</span>
+                      <span className="font-bold text-slate-200">{((data?.pct_forest || 0) * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Facility Distance</span>
+                      <span className="font-bold text-slate-200">{data?.dist_to_facility ? `${(data.dist_to_facility / 1000).toFixed(1)} km` : "N/A"}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm group"
+                    >
+                      <ArrowLeft className="w-4 h-4 text-orange-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span>Back to Interactive Monitor Map</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* DESKTOP EVENT SIDEBAR PANEL (>= sm) */}
+      <div 
+        suppressHydrationWarning
+        data-tour="event-detail-drawer"
+        style={{
+          right: hasOverlay ? 'clamp(0px, 450px, calc(100vw - 480px))' : '0px',
+          maxWidth: hasOverlay ? 'calc(100vw - 450px - 276px)' : 'calc(100vw - 276px)'
+        }}
+        className={`hidden sm:flex fixed top-0 right-0 bottom-0 h-full ${
+          isExpanded 
+            ? (hasOverlay ? 'w-full md:w-[920px] xl:w-[1040px]' : 'w-full md:w-[1080px]') 
+            : 'w-full sm:w-[480px] md:w-[500px] max-w-[100vw] sm:max-w-[95vw]'
+        } ${hasOverlay ? 'z-40' : 'z-50'} bg-white border-l border-slate-200 shadow-2xl flex-col transition-all duration-300 ease-in-out text-slate-800`}
+      >
+      {/* Sleek Light/Dark Header matching Site UI */}
+      <div className="py-2.5 sm:py-3 px-3.5 sm:px-5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col gap-2">
+        {/* Top Navigation Control Bar */}
+        <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-orange-950/60 text-slate-700 dark:text-slate-200 hover:text-orange-600 dark:hover:text-orange-400 rounded-lg font-bold text-xs border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+            title="Close hotspot dossier and return to Monitor map"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+            <span>Back to Monitor</span>
+          </button>
+
           <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={handleCopyId}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition"
               title="Copy Event ID"
               type="button"
             >
@@ -776,13 +959,13 @@ export function EventDetailPanel({
             </button>
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition shadow-2xs"
               title={isExpanded ? "Collapse to side panel" : "Expand to multi-column tactical command dossier"}
               type="button"
             >
               {isExpanded ? (
                 <>
-                  <Minimize2 className="w-3.5 h-3.5 text-slate-500" />
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                   <span className="hidden sm:inline">Collapse</span>
                 </>
               ) : (
@@ -794,12 +977,77 @@ export function EventDetailPanel({
             </button>
             <button 
               onClick={onClose}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition"
               title="Close Dossier"
               type="button"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             </button>
+          </div>
+        </div>
+
+        {/* Second Row: Threat Score & Incident Title */}
+        <div className="flex items-center gap-3 pt-0.5">
+          {/* Thermal Severity Threat Score Badge */}
+          {(() => {
+            const threatScore = Math.min(99, Math.max(12, Math.round(Number(data?.peak_frp_mw || 18) * 1.6 + 10)));
+            return (
+              <div 
+                className={`flex flex-col items-center justify-center px-2.5 py-1 rounded-xl border shrink-0 min-w-[60px] shadow-2xs ${
+                  isCritical 
+                    ? "bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300" 
+                    : isAbnormal 
+                    ? "bg-amber-50 dark:bg-amber-950/80 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300" 
+                    : "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
+                }`}
+                title={`Thermal Severity Score: ${threatScore} / 100`}
+              >
+                <div className="flex items-baseline gap-0.5">
+                  <span className="font-mono text-xl font-black leading-none">{threatScore}</span>
+                  <span className="text-[9px] font-bold opacity-60">/100</span>
+                </div>
+                <span className="text-[7.5px] font-extrabold uppercase tracking-wider mt-0.5 leading-none opacity-80 whitespace-nowrap">
+                  Threat Score
+                </span>
+              </div>
+            );
+          })()}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg flex items-center gap-1.5 truncate">
+                <Flame className={`w-4 h-4 ${isWildfire ? "text-teal-600" : isAgricultural ? "text-amber-600" : "text-orange-600"}`} />
+                <span className="truncate">{isIndustrial ? "Industrial Facility" : isAgricultural ? "Agricultural Burn" : isWildfire ? "Wildfire" : "Thermal Anomaly"}</span>
+              </span>
+              <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border shrink-0 ${
+                isCritical ? "bg-red-50 dark:bg-red-950/80 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800" :
+                isAbnormal ? "bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800" :
+                "bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+              }`}>
+                {isCritical ? "CRITICAL" : isAbnormal ? "ELEVATED" : isWildfire ? "MEDIUM" : "ROUTINE"}
+              </span>
+            </div>
+
+            {/* Coordinate + Time Subtitle */}
+            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
+              <span className="text-slate-700 dark:text-slate-300 font-semibold truncate">{data?.event_id || eventId}</span>
+              <span>·</span>
+              <span>{data?.latitude ? `${data.latitude.toFixed(4)}°N` : ""}{data?.longitude ? ` ${data.longitude.toFixed(4)}°E` : ""}</span>
+              <span>·</span>
+              <span>{data?.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Active"}</span>
+            </div>
+
+            {/* Operational Freshness Status */}
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${freshnessBadgeStyle}`}>
+                {!isAgedOrCooled ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                ) : (
+                  <Clock className="w-3 h-3" />
+                )}
+                {freshnessBadgeText}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -811,44 +1059,74 @@ export function EventDetailPanel({
         )}
       </div>
 
-      {/* Navigation Tabs (Clean Light Styling) */}
+      {/* Navigation Tabs (Clean Light & Dark Styling with Hidden Scrollbar & Auto-Hiding Arrow Indicators) */}
       {!isExpanded && (
-        <div className={`border-b border-slate-200 px-3 py-1.5 bg-slate-50 text-xs font-semibold shrink-0 gap-1 overflow-x-auto [scrollbar-width:thin] ${mobileSnap === "peek" ? "hidden sm:flex" : "flex"}`}>
-          <button 
-            onClick={() => setActiveTab("overview")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
+        <div className="relative border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
+          {canScrollLeft && (
+            <button
+              type="button"
+              onClick={() => tabsRef.current?.scrollBy({ left: -140, behavior: "smooth" })}
+              className="absolute left-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-r from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200 transition"
+              title="Scroll left"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200" />
+            </button>
+          )}
+
+          <div
+            ref={tabsRef}
+            onScroll={checkTabScroll}
+            className={`px-3 py-1.5 text-xs font-semibold gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth ${mobileSnap === "peek" ? "hidden sm:flex" : "flex"}`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab("telemetry")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            ML & 14-D Vector
-          </button>
-          <button 
-            onClick={() => setActiveTab("baseline")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Baseline Anomaly
-          </button>
-          <button 
-            onClick={() => setActiveTab("geography")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            Facility & Terrain
-          </button>
-          <button 
-            onClick={() => setActiveTab("ai_brief")}
-            className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white text-orange-600 border border-slate-300 font-bold shadow-sm" : "text-slate-600 hover:bg-slate-200/60"}`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            Grounded Brief
-          </button>
+            <button 
+              onClick={() => setActiveTab("overview")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "overview" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Overview
+            </button>
+            <button 
+              onClick={() => setActiveTab("telemetry")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "telemetry" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              ML & 14-D Vector
+            </button>
+            <button 
+              onClick={() => setActiveTab("baseline")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "baseline" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Baseline Anomaly
+            </button>
+            <button 
+              onClick={() => setActiveTab("geography")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "geography" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              Facility & Terrain
+            </button>
+            <button 
+              onClick={() => setActiveTab("ai_brief")}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition shrink-0 text-[11.5px] ${activeTab === "ai_brief" ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-slate-300 dark:border-slate-700 font-bold shadow-sm" : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"}`}
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              Grounded Brief
+            </button>
+          </div>
+
+          {canScrollRight && (
+            <button
+              type="button"
+              onClick={() => tabsRef.current?.scrollBy({ left: 140, behavior: "smooth" })}
+              className="absolute right-0 top-0 bottom-0 z-10 px-1.5 bg-gradient-to-l from-slate-100 via-slate-100/90 to-transparent dark:from-slate-900 dark:via-slate-900/90 flex items-center justify-center text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200 transition"
+              title="Scroll right"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="w-4 h-4 drop-shadow-xs text-slate-600 dark:text-white hover:text-orange-600 dark:hover:text-slate-200" />
+            </button>
+          )}
         </div>
       )}
 
@@ -946,7 +1224,7 @@ export function EventDetailPanel({
 
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between py-1 border-b border-slate-50">
-                          <span className="text-slate-500">Peak Radiance (FRP):</span>
+                          <span className="text-slate-500">Peak Radiance (at detection):</span>
                           <span className="font-mono font-bold text-slate-900 text-sm">{data.peak_frp_mw?.toFixed(1)} MW</span>
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-50">
@@ -965,6 +1243,10 @@ export function EventDetailPanel({
                           <span className="text-slate-500">Event Duration:</span>
                           <span className="font-mono font-semibold text-slate-800">{data.duration_hours?.toFixed(1)} hours</span>
                         </div>
+                        <div className="flex justify-between py-1 border-b border-slate-50">
+                          <span className="text-slate-500">Operational Freshness:</span>
+                          <span className="font-mono font-bold text-xs text-slate-800">{freshnessBadgeText}</span>
+                        </div>
                         <div className="flex justify-between py-1">
                           <span className="text-slate-500">Temperature Trend:</span>
                           <span className="font-mono font-bold flex items-center gap-1">
@@ -977,6 +1259,14 @@ export function EventDetailPanel({
                           </span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Scientific Orbital Cadence Disclaimer */}
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-[11px] leading-relaxed flex items-start gap-2">
+                      <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-slate-900 font-semibold">Orbital Cadence Note:</strong> Absence of recent satellite detection does not confirm physical cooling or extinction; cloud cover, orbital pass intervals (~10–12h), or sensor sensitivity thresholds may limit satellite visibility.
+                      </span>
                     </div>
 
                     <div className={`p-4 rounded-xl border ${anomalyStyle} space-y-2`}>
@@ -1337,7 +1627,11 @@ export function EventDetailPanel({
                         <div className="space-y-0.5">
                           <div className="text-[10px] text-slate-500 font-medium">Latest Pass</div>
                           <div className="font-mono font-bold text-orange-600 text-xs flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
+                            {!isAgedOrCooled ? (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
+                            ) : (
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
+                            )}
                             {data.latest_detected_utc ? formatRelativeTime(data.latest_detected_utc) : "Just now"}
                           </div>
                           <div className="text-[10px] text-slate-500">
@@ -1364,9 +1658,17 @@ export function EventDetailPanel({
                       </div>
                     </div>
 
+                    {/* Scientific Orbital Cadence Disclaimer */}
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-[11px] leading-relaxed flex items-start gap-2">
+                      <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-slate-900 font-semibold">Orbital Cadence Note:</strong> Absence of recent satellite detection does not confirm physical cooling or extinction; cloud cover, orbital pass intervals (~10–12h), or sensor sensitivity thresholds may limit satellite visibility.
+                      </span>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                        <div className="text-[11px] text-slate-500 font-medium">Peak Radiance (FRP)</div>
+                        <div className="text-[11px] text-slate-500 font-medium">Peak Radiance (at detection)</div>
                         <div className="text-lg font-bold text-slate-900 mt-0.5">{data.peak_frp_mw?.toFixed(1)} <span className="text-xs font-normal text-slate-500">MW</span></div>
                       </div>
                       <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
@@ -1785,11 +2087,12 @@ export function EventDetailPanel({
       </div>
 
       {/* Footer Actions matching site UI */}
-      <div className="p-4 border-t border-slate-200 shrink-0 bg-white flex flex-col gap-2">
+      <div data-tour="take-action-cluster" className="p-4 border-t border-slate-200 shrink-0 bg-white flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <button 
             onClick={handleAskAboutEvent}
             disabled={!data}
+            data-tour="ask-ai-button"
             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
             title="Ask AI Tactical Intelligence about this event"
           >
@@ -1799,6 +2102,7 @@ export function EventDetailPanel({
           <button 
             onClick={handleDownloadReport}
             disabled={!data || isExportingPDF}
+            data-tour="download-report-button"
             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-xs transition shadow-sm"
             title="Download authoritative immutable PDF Dossier"
           >
@@ -1821,5 +2125,6 @@ export function EventDetailPanel({
         </button>
       </div>
     </div>
-  );
+  </>
+);
 }

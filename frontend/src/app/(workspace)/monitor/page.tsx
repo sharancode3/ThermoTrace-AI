@@ -2,9 +2,14 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import MapComponent from "@/components/MapComponent";
-import { EventDetailPanel } from "@/components/EventDetailPanel";
 import { useTargetWind } from "@/hooks/useTargetWind";
+
+const EventDetailPanel = dynamic(
+  () => import("@/components/EventDetailPanel").then((mod) => mod.EventDetailPanel),
+  { ssr: false }
+);
 
 function MonitorContent() {
   const searchParams = useSearchParams();

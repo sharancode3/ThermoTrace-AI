@@ -202,8 +202,8 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
     Calibrates Cropland Agrarian Belts, Western/Eastern Ghats Reserves, Industrial Corridors,
     and Satellite Day/Night Overpass Telemetry.
     """
-    # 1. Direct Industrial Proximity (within 5000m of a facility)
-    if dist_to_fac <= 5000.0 or is_associated_fac:
+    # 1. Direct Industrial Proximity (within 1000m of a facility)
+    if (0.0 <= dist_to_fac <= 1000.0) or is_associated_fac:
         return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 1}
 
     # 2. Key National Industrial Corridors, Mining Basins & Heavy Industrial Hubs
@@ -350,7 +350,7 @@ def build_feature_vector(session: Session, event_uuid: str) -> Dict[str, Any]:
         fac_cat = abs(hash(event.primary_land_use)) % 100
 
     state = geo.get("state", "")
-    is_fac = bool(event.associated_facility_id) and (dist_to_fac <= 3500.0)
+    is_fac = bool(event.associated_facility_id) and (0.0 <= dist_to_fac <= 1000.0)
     lc = resolve_refined_landcover(lat, lon, dist_to_fac, is_fac, state=state, dn_ratio=dn_ratio)
     pct_urban = lc["pct_urban"]
     pct_cropland = lc["pct_cropland"]
@@ -390,13 +390,13 @@ def build_physical_verification_payload(event: ThermalEvent, facility: Optional[
     """
     dist_m = float(event.distance_to_facility_m) if event.distance_to_facility_m is not None else 99999.0
     peak_frp = float(event.peak_frp_mw or 0.0)
-    inside_polygon = bool(event.associated_facility_id) and (dist_m <= 3500.0)
+    inside_polygon = bool(event.associated_facility_id) and (0.0 <= dist_m <= 1000.0)
     
     if inside_polygon and peak_frp >= 150.0:
         note = f"High radiant intensity ({peak_frp:.1f} MW) within registered {facility.sector_category if facility else 'industrial'} facility boundary"
     elif inside_polygon:
-        note = f"Thermal activity within 3.5km buffer of {facility.name if facility else 'registered industrial complex'}"
-    elif float(event.latitude or 0.0) > 28.0 and peak_frp >= 20.0:
+        note = f"Thermal activity within 1.0km buffer of {facility.name if facility else 'registered industrial complex'}"
+    elif float(event.latitude or 0.0) > 24.0 and peak_frp >= 20.0:
         note = "Intense thermal signature in Northern agrarian belt"
     else:
         note = "Unassociated regional thermal observation"

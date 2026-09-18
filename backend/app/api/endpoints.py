@@ -25,6 +25,7 @@ from app.schemas.events import (
     EventResponse, GeoJSONFeatureCollection, GeoJSONFeature,
     NewsItemResponse, FirmsStatusResponse
 )
+from app.domain.lifecycle import evaluate_lifecycle, normalize_legacy_status
 from app.domain.features import get_thermal_trend, batch_get_thermal_trends, get_evidence_completeness, get_evidence_strength
 from app.domain.llm_humanizer import humanize_intelligence
 from app.domain.geocoding import resolve_indian_location
@@ -189,6 +190,7 @@ def get_gis_events(
     features = []
 
     for evt in events:
+        life_info = evaluate_lifecycle(evt.latest_detected_utc, current_persisted_status=evt.lifecycle_status)
         feature = GeoJSONFeature(
             geometry={
                 "type": "Point",
@@ -257,15 +259,12 @@ def get_gis_events(
                     else None
                 ),
 
-                "lifecycle_status": (
-                    evt.lifecycle_status
-                    if evt.lifecycle_status
-                    else (
-                        "ACTIVE"
-                        if evt.latest_detected_utc and evt.latest_detected_utc >= now_utc - timedelta(hours=24)
-                        else "EXTINGUISHED"
-                    )
-                )
+                "lifecycle_status": life_info["lifecycle_status"],
+                "freshness_status": life_info["freshness_status"],
+                "is_active": life_info["is_active"],
+                "freshness_label": life_info["freshness_label"],
+                "elapsed_hours": life_info["elapsed_hours"],
+                "model_version": "thermo_xgb_v1.1.0"
             }
         )
 
@@ -879,6 +878,7 @@ def get_event_intelligence(event_id: str, db: Session = Depends(get_db)):
     }
     
     llm_output = humanize_intelligence(intel_dict)
+    life_info = evaluate_lifecycle(evt.latest_detected_utc, current_persisted_status=evt.lifecycle_status)
     
     return EventResponse(
         event_id=evt.event_id,
@@ -904,7 +904,11 @@ def get_event_intelligence(event_id: str, db: Session = Depends(get_db)):
         persistence_tier=evt.persistence_tier,
         anomaly_tier=anomaly_tier_final,
         anomaly_z_score=anomaly_z_score_final,
-        lifecycle_status=evt.lifecycle_status,
+        lifecycle_status=life_info["lifecycle_status"],
+        freshness_status=life_info["freshness_status"],
+        is_active=life_info["is_active"],
+        freshness_label=life_info["freshness_label"],
+        model_version="thermo_xgb_v1.1.0",
         thermal_trend=trend,
         evidence_completeness=evidence_comp,
         evidence_strength=evidence_tag,
@@ -965,7 +969,7 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
         .all()
     )
     
-    if len(filtered_items) >= 4:
+    if len(filtered_items) >= 4 or (hours and hours != 24):
         news_items = filtered_items
     else:
         # Fallback to the latest pass window if current UTC window has not yet accumulated 4 passes
@@ -994,6 +998,7 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
         geo = resolve_indian_location(float(evt.latitude), float(evt.longitude), fac.name if fac else None)
         
         is_ind = bool(evt.classification and evt.classification.startswith("IND_")) or bool(evt.associated_facility_id)
+        is_archived = bool(item.published_at and item.published_at < time_cutoff)
         results.append(NewsItemResponse(
             id=str(item.id),
             event_id=evt.event_id,
@@ -1011,7 +1016,8 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
             is_industrial=is_ind,
             location_name=geo["location_formatted"],
             coordinates=[centroid_shape.x, centroid_shape.y],
-            published_at=item.published_at
+            published_at=item.published_at,
+            is_archived=is_archived
         ))
     return results
 
@@ -1040,37 +1046,10 @@ def get_notifications(db: Session = Depends(get_db)):
     """
     Authoritative Operational Alerts:
     - Displays top 250 highest-priority actionable incidents (CRITICAL and ABNORMAL).
+    - Strictly idempotent read-only endpoint (zero DB mutations on GET).
     - Query-level LIMIT 250 with zero destructive database deletion.
-    - Synchronizes any newly formed CRITICAL or ABNORMAL anomalies into notifications.
-    - Ordered strictly by severity priority (CRITICAL > ABNORMAL), peak FRP descending, and timestamp descending.
+    - Ordered strictly by severity priority (CRITICAL > ABNORMAL), peak FRP descending, created_at descending, and id.
     """
-    # 1. Sync un-notified CRITICAL or ABNORMAL events into notifications table
-    unsynced_events = (
-        db.query(ThermalEvent)
-        .filter(
-            ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"]),
-            ~ThermalEvent.id.in_(db.query(Notification.event_id))
-        )
-        .all()
-    )
-    if unsynced_events:
-        for evt in unsynced_events:
-            fac = db.query(IndustrialFacility).filter(IndustrialFacility.id == evt.associated_facility_id).first()
-            fac_name = fac.name if fac else "Regional Monitored Sector"
-            title = f"{'Critical Thermal Emergency' if evt.anomaly_tier == 'CRITICAL' else 'Abnormal Thermal Flaring'}: [{evt.event_id}]"
-            msg = f"Radiance {evt.peak_frp_mw:.1f} MW near {fac_name}. Classification: {evt.classification}."
-            notif = Notification(
-                event_id=evt.id,
-                title=title,
-                message=msg,
-                severity=evt.anomaly_tier,
-                is_read=False,
-                created_at=evt.latest_detected_utc or datetime.now(timezone.utc)
-            )
-            db.add(notif)
-        db.commit()
-
-    # 2. Query top 100 notifications ordered by severity and peak FRP
     severity_order = case(
         (Notification.severity == "CRITICAL", 1),
         (Notification.severity == "ABNORMAL", 2),
@@ -1078,7 +1057,7 @@ def get_notifications(db: Session = Depends(get_db)):
     )
 
     notifications = (
-        db.query(Notification)
+        db.query(Notification, ThermalEvent)
         .join(ThermalEvent, Notification.event_id == ThermalEvent.id)
         .filter(
             or_(
@@ -1086,14 +1065,13 @@ def get_notifications(db: Session = Depends(get_db)):
                 ThermalEvent.anomaly_tier.in_(["CRITICAL", "ABNORMAL"])
             )
         )
-        .order_by(severity_order, ThermalEvent.peak_frp_mw.desc(), Notification.created_at.desc())
-        .limit(100)
+        .order_by(severity_order, ThermalEvent.peak_frp_mw.desc(), Notification.created_at.desc(), Notification.id.desc())
+        .limit(250)
         .all()
     )
     
     results = []
-    for n in notifications:
-        evt = db.query(ThermalEvent).filter(ThermalEvent.id == n.event_id).first()
+    for n, evt in notifications:
         results.append({
             "id": str(n.id),
             "event_id": evt.event_id if evt else "UNKNOWN",

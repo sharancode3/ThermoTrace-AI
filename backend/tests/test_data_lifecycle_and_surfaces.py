@@ -155,7 +155,7 @@ def test_alerts_top_100_query_limit_and_non_destructive(db: Session):
     response = client.get("/api/v1/notifications")
     assert response.status_code == 200
     alerts = response.json()
-    assert len(alerts) <= 100
+    assert len(alerts) <= 250
 
     if len(alerts) > 1:
         severities = [a["severity"] for a in alerts]

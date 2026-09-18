@@ -50,13 +50,13 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
   let strokeColor = "#059669";
 
   if (isIndustry) {
-    // 1. INDUSTRY: Normal = Yellow, Abnormal = Orange, Critical = Red, Cooled = Faded with respective color
-    if (isCritical) {
+    // 1. INDUSTRY: Normal = Yellow, Flare = Orange, Fire/Critical = Red
+    if (normClass === "IND_FIRE" || normTier === "CRITICAL") {
       fillColor = isCooled ? "#FECACA" : "#EF4444"; // Red (Emergency Fire / Critical Anomaly)
       glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
       strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else if (isAbnormal) {
-      fillColor = isCooled ? "#FED7AA" : "#F97316"; // Orange (Elevated Flare / Abnormal Radiance)
+    } else if (normClass === "IND_FLARE" || normTier === "ABNORMAL") {
+      fillColor = isCooled ? "#FED7AA" : "#F97316"; // Orange (Elevated Flare / Gas Flaring)
       glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.60)";
       strokeColor = isCooled ? "#EA580C" : "#C2410C";
     } else {
@@ -65,15 +65,11 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
       strokeColor = isCooled ? "#CA8A04" : "#854D0E";
     }
   } else if (isWildfire) {
-    // 2. WILDFIRE: Colors according to severity / heat
-    if (isCritical) {
+    // 2. WILDFIRE: Forest Teal
+    if (normTier === "CRITICAL") {
       fillColor = isCooled ? "#FECACA" : "#EF4444";
       glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
       strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else if (isAbnormal) {
-      fillColor = isCooled ? "#FED7AA" : "#F97316";
-      glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.55)";
-      strokeColor = isCooled ? "#EA580C" : "#C2410C";
     } else {
       fillColor = isCooled ? "#99F6E4" : "#0D9488"; // Forest Teal
       glowColor = isCooled ? "rgba(13, 148, 136, 0.15)" : "rgba(13, 148, 136, 0.45)";
@@ -81,14 +77,10 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
     }
   } else if (isAgri) {
     // 3. AGRICULTURE: Emerald Green
-    if (isCritical) {
+    if (normTier === "CRITICAL") {
       fillColor = isCooled ? "#FECACA" : "#EF4444";
       glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.60)";
       strokeColor = isCooled ? "#DC2626" : "#B91C1C";
-    } else if (isAbnormal) {
-      fillColor = isCooled ? "#FED7AA" : "#F97316";
-      glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.50)";
-      strokeColor = isCooled ? "#EA580C" : "#C2410C";
     } else {
       fillColor = isCooled ? "#A7F3D0" : "#10B981"; // Emerald Green
       glowColor = isCooled ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.45)";
@@ -108,19 +100,26 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
     <div
       onClick={onClick}
       className={`group relative flex items-center justify-center transition-all duration-300 cursor-pointer select-none ${
-        isCooled ? "opacity-60 hover:opacity-100 grayscale-[20%]" : ""
+        isCooled ? "opacity-55 hover:opacity-90 grayscale-[25%]" : ""
       } ${
         isSelected ? "scale-125 z-40" : "hover:scale-115 z-10"
       }`}
       style={{ width: size, height: size }}
-      title={`${normClass} — ${normTier}${isCooled ? " (Cooled)" : ""} (${peakFrp.toFixed(1)} MW)`}
+      title={`${normClass} — ${normTier} · ${isCooled ? "Aged / Historical" : "Active"} (${peakFrp.toFixed(1)} MW)`}
     >
       {/* Outer Selection / Pulse Glow Ring */}
       {isSelected ? (
-        <span 
-          className="absolute -inset-2.5 rounded-full animate-ping opacity-75 pointer-events-none"
-          style={{ backgroundColor: glowColor }}
-        />
+        isCooled ? (
+          <span 
+            className="absolute -inset-1.5 rounded-full ring-2 ring-slate-400 opacity-80 pointer-events-none"
+            style={{ borderColor: strokeColor }}
+          />
+        ) : (
+          <span 
+            className="absolute -inset-2.5 rounded-full animate-ping opacity-75 pointer-events-none"
+            style={{ backgroundColor: glowColor }}
+          />
+        )
       ) : (!isCooled && (isCritical || isAbnormal || isHighThermal)) ? (
         <span 
           className="absolute -inset-1 rounded-full animate-pulse opacity-45 pointer-events-none"

@@ -11,7 +11,7 @@ from app.services.nearby_notification_service import _build_web_push_payload, cr
 def projected_point(db, distance_m: float):
     row = db.execute(text("""
         SELECT ST_Y(point::geometry), ST_X(point::geometry)
-        FROM (SELECT ST_Project(ST_SetSRID(ST_Point(0, 0), 4326)::geography, :distance, radians(90)) point) q
+        FROM (SELECT ST_Project(ST_SetSRID(ST_Point(175.0, 85.0), 4326)::geography, :distance, radians(90)) point) q
     """), {"distance": distance_m}).one()
     return float(row[0]), float(row[1])
 
@@ -19,8 +19,8 @@ def projected_point(db, distance_m: float):
 def make_user(db):
     user = User(id=uuid.uuid4(), email=f"nearby-{uuid.uuid4()}@test.local", hashed_password="test",
                 full_name="Nearby Test", nearby_alerts_enabled=True,
-                alert_latitude=0, alert_longitude=0,
-                alert_location="SRID=4326;POINT(0 0)",
+                alert_latitude=85.0, alert_longitude=175.0,
+                alert_location="SRID=4326;POINT(175.0 85.0)",
                 notification_preferences={"notify_critical": True, "notify_abnormal": True})
     db.add(user); db.commit()
     return user

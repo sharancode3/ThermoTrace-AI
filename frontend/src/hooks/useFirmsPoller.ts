@@ -5,17 +5,17 @@ import { useEffect, useRef } from "react";
 /**
  * Foreground-Triggered Polling Hook for NASA FIRMS Telemetry.
  * Active ONLY when the browser tab/window is active and visible.
- * Triggers poll strictly every 30 minutes (1,800,000ms) to conserve cloud quota.
+ * Triggers poll strictly every 60 minutes (3,600,000ms / 1 hour) to conserve cloud quota.
  */
 export function useFirmsPoller(onNewData?: () => void) {
-  const intervalMinutes = Math.max(1, Number(process.env.NEXT_PUBLIC_FIRMS_POLL_INTERVAL_MINUTES || "30") || 30);
+  const intervalMinutes = Math.max(1, Number(process.env.NEXT_PUBLIC_FIRMS_POLL_INTERVAL_MINUTES || "60") || 60);
   const intervalMs = intervalMinutes * 60 * 1000;
   const isPollingRef = useRef<boolean>(false);
   const lastPollTimeRef = useRef<number>(0);
 
   const executePoll = async (force: boolean = false) => {
     const now = Date.now();
-    // Guard: Prevent polling more than once per 30 minutes (1,800,000 ms) across all tabs unless explicitly forced
+    // Guard: Prevent polling more than once per 60 minutes (3,600,000 ms) across all tabs unless explicitly forced
     if (typeof window !== "undefined") {
       const storedLast = window.localStorage.getItem("thermo_last_firms_poll_time");
       if (!force && storedLast && (now - parseInt(storedLast, 10)) < intervalMs) {

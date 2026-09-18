@@ -4,7 +4,11 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Thermo Intelligence | NTRO",
@@ -24,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={cn(inter.className, "bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200")}>
+      <body className={cn(inter.variable, "font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200")}>
         <Script
           id="theme-init"
           strategy="beforeInteractive"
@@ -32,10 +36,13 @@ export default function RootLayout({
             __html: `
               try {
                 const theme = localStorage.getItem('thermo_theme') || 'light';
+                const root = document.documentElement;
                 if (theme === 'dark') {
-                  document.documentElement.classList.add('dark');
+                  root.classList.add('dark');
+                  root.setAttribute('data-theme', 'dark');
                 } else {
-                  document.documentElement.classList.remove('dark');
+                  root.classList.remove('dark');
+                  root.setAttribute('data-theme', 'light');
                 }
               } catch (e) {}
             `,

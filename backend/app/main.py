@@ -42,11 +42,11 @@ def _run_sync_poller_cycle():
     except Exception as e:
         print(f"[FIRMS DAEMON ERROR] {e}")
 
-POLL_INTERVAL_MINUTES = int(os.getenv("FIRMS_POLL_INTERVAL_MINUTES", "30"))
+POLL_INTERVAL_MINUTES = int(os.getenv("FIRMS_POLL_INTERVAL_MINUTES", "60"))
 POLL_INTERVAL_SECONDS = POLL_INTERVAL_MINUTES * 60
 
 async def firms_periodic_poller_daemon():
-    """Autonomous 30-Minute NASA FIRMS Telemetry Polling & ML Intelligence Worker."""
+    """Autonomous 1-Hour NASA FIRMS Telemetry Polling & ML Intelligence Worker."""
     # Delay initial check slightly to let server bind
     await asyncio.sleep(15)
     while True:

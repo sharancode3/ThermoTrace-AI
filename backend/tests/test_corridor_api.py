@@ -6,7 +6,7 @@ client = TestClient(app)
 
 
 def test_event_wind_recent_event_returns_valid_contract():
-    res = client.get("/api/v1/events/EVT-2026-098D64/wind")
+    res = client.get("/api/v1/events/EVT-2026-098D64/wind?latitude=21.5&longitude=83.5")
     assert res.status_code == 200
     data = res.json()
     assert data["available"] is True
@@ -22,7 +22,7 @@ def test_event_wind_recent_event_returns_valid_contract():
 
 
 def test_event_wind_historical_event_id_format():
-    res = client.get("/api/v1/events/EVT-IN-20260904-23838457-0459/wind")
+    res = client.get("/api/v1/events/EVT-IN-20260904-23838457-0459/wind?latitude=22.1&longitude=85.2")
     assert res.status_code == 200
     data = res.json()
     assert data["target_type"] == "EVENT"

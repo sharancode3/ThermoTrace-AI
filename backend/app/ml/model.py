@@ -18,7 +18,7 @@ def classify_event(session: Session, event_id: str, features: Optional[Dict[str,
     Authoritative event classification entrypoint.
     Executes full calibrated XGBoost pipeline with 14-D contextual features and TreeSHAP explainability.
     """
-    process_event_intelligence(session, event_id)
+    process_event_intelligence(session, event_id, override_features=features)
 
 def get_event_ml_intelligence(session: Session, event_id: str) -> Dict[str, Any]:
     """

@@ -7,13 +7,15 @@ import {
   Trees,
   CheckCircle2, MapPin, ArrowUpRight, Search, Filter, RefreshCw, Sun, Moon,
   Send, LoaderCircle, CheckCheck, Clock, Radio, AlertTriangle, AlertOctagon,
-  BarChart2
+  BarChart2, Maximize2, Minimize2, ArrowLeft
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { 
   askThermalChat, fetchNews, fetchNotifications, markNotificationRead, 
   markAllNotificationsRead, fetchFirmsStatus, fetchNationalAnalytics 
 } from "@/lib/apiClient";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/ThemeContext";
 
 
 function formatTemp(kelvin?: number | null) {
@@ -54,16 +56,22 @@ export function OverlayManager() {
   const pathname = usePathname();
   const overlay = searchParams.get("overlay");
 
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [isEnlarged, setIsEnlarged] = useState(false);
+  const [isChatMobileExpanded, setIsChatMobileExpanded] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [news, setNews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [mobileNewsLimit, setMobileNewsLimit] = useState<number>(5);
+  const [mobileAlertsLimit, setMobileAlertsLimit] = useState<number>(5);
   const [firmsStatus, setFirmsStatus] = useState<any>(null);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [selectedState, setSelectedState] = useState<string>("ALL");
   const [loading, setLoading] = useState(false);
   const [filterType, setFilterType] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [theme, setTheme] = useState<string>("light");
+  const { theme, setTheme } = useTheme();
   const [chatDraft, setChatDraft] = useState<string>("");
   const [chatLoading, setChatLoading] = useState<boolean>(false);
   const [sessionId] = useState<string>(`sess_${Date.now()}`);
@@ -80,6 +88,13 @@ export function OverlayManager() {
         "Ask about abnormal thermal events, flaring clusters, or industrial facilities across India. I evaluate verified real-time satellite telemetry from PostGIS and answer with zero hallucinations.",
     },
   ]);
+
+  // Auto-scroll messages container on new message
+  useEffect(() => {
+    if (overlay === "chat") {
+      chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, chatLoading, overlay]);
 
     useEffect(() => {
     const handleOpenChatEvent = (e: Event) => {
@@ -98,14 +113,10 @@ export function OverlayManager() {
 
   useEffect(() => {
     setMounted(true);
-    setTheme(localStorage.getItem("thermo_theme") || "light");
   }, []);
 
   const handleThemeChange = (t: string) => {
-    setTheme(t);
-    localStorage.setItem("thermo_theme", t);
-    if (t === "dark") document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
+    setTheme(t as "light" | "dark");
   };
 
   const loadData = () => {
@@ -284,7 +295,608 @@ export function OverlayManager() {
   };
 
   return (
-    <div className="fixed top-0 right-0 h-full w-full sm:w-[450px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right">
+    <>
+      {/* Backdrop blur overlay: Rendered ONLY for genuine modal dialogs (settings, info) so monitor map remains sharp and interactive for news/alerts */}
+      {(overlay === "settings" || overlay === "info") && (
+        <div 
+          onClick={closeOverlay}
+          className="fixed inset-0 left-0 sidebar-blur-backdrop z-30 bg-slate-900/40 backdrop-blur-md transition-all duration-300 ease-in-out animate-in fade-in cursor-pointer"
+          aria-label="Close overlay backdrop"
+        />
+      )}
+      {/* DEDICATED FULL-SCREEN MOBILE VIEW FOR THERMO NEWS & ALERTS (< md) */}
+      {(overlay === "news" || overlay === "alerts") && (
+        <div className="fixed inset-0 z-50 bg-white text-slate-900 flex flex-col md:hidden overflow-y-auto animate-in fade-in">
+          {/* Top Sticky Header with Clear Back Button (Phase 3 Pattern) */}
+          <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-xs">
+            <button
+              type="button"
+              onClick={closeOverlay}
+              className="flex items-center gap-2 text-xs font-bold text-orange-600 hover:text-orange-700 transition cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Monitor Map</span>
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900 font-mono">
+                {overlay === "news" ? "Thermo News Bulletins" : `Operational Alerts (${notifications.length})`}
+              </span>
+              <button
+                type="button"
+                onClick={closeOverlay}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                title="Close View"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Full Screen Scrollable Content Body */}
+          <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30 pb-16">
+            {overlay === "news" && (
+              <>
+                {/* News Filter Toolbar */}
+                <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
+                  <div className="flex flex-col gap-1.5 px-2.5 py-2 bg-orange-50/90 border border-orange-200 rounded-lg text-[10px] text-orange-900 font-medium shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+                        <span className="font-semibold text-slate-900">NASA FIRMS Telemetry:</span>
+                        <span className="text-orange-700 font-mono">
+                          {firmsStatus?.last_successful_firms_fetch_utc
+                            ? `Polled ${formatRelativeTime(firmsStatus.last_successful_firms_fetch_utc)} (${firmsStatus.records_inserted ?? 0} new)`
+                            : "Polled Just now (Active)"}
+                        </span>
+                      </div>
+                      <span className="font-mono font-bold bg-orange-200/80 text-orange-900 px-1.5 py-0.5 rounded text-[9px] shrink-0">
+                        30M CADENCE
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search news by district, state, or plant..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
+                    {[["ALL", `All (${news.length})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Elevated"], ["INDUSTRIAL", "Industrial"], ["AGRI", "Crop Burns"]].map(([val, label]) => (
+                      <button
+                        key={`mob-fs-n-${val}`}
+                        onClick={() => setFilterType(val)}
+                        className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
+                          filterType === val
+                            ? val === "CRITICAL" ? "bg-red-600 text-white"
+                            : val === "ABNORMAL" ? "bg-amber-600 text-white"
+                            : val === "INDUSTRIAL" ? "bg-blue-600 text-white"
+                            : val === "AGRI" ? "bg-yellow-600 text-white"
+                            : "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* News Bulletins List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+                  {loading ? (
+                    <div className="space-y-3 animate-pulse">
+                      {[1, 2, 3].map((i) => <div key={i} className="h-28 bg-white border border-slate-200 rounded-xl" />)}
+                    </div>
+                  ) : filteredNews.length === 0 ? (
+                    <div className="text-center text-slate-500 py-16 text-xs">
+                      <div className="p-3 bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                        <Filter className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <p className="font-semibold text-slate-700 mb-1">No matching bulletins</p>
+                      <p className="text-slate-400">Try adjusting filters or search.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {filteredNews.slice(0, mobileNewsLimit).map((item) => {
+                        const isInd = item.is_industrial || (item.classification && item.classification.startsWith("IND_"));
+                        return (
+                          <div
+                            key={`mob-fs-news-${item.id}`}
+                            onClick={() => handleSelectEvent(item)}
+                            className="p-3.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-orange-400/60 rounded-xl cursor-pointer transition shadow-sm space-y-2 group relative"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs truncate">
+                                <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                                <span className="truncate">{cleanLocationName(item.location_name, item.latitude, item.longitude)}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                {formatRelativeTime(item.published_at)}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[11px]">
+                              <div className="flex items-center gap-1.5">
+                                {isInd ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-semibold text-[10px]">
+                                    <Factory className="w-3 h-3" /> Industrial
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-[10px]">
+                                    <Sprout className="w-3 h-3" /> Non-Industrial
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-slate-500 font-mono">{item.classification}</span>
+                              </div>
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${tierBadge(item.anomaly_tier)}`}>
+                                {item.anomaly_tier}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-600 leading-snug line-clamp-2">
+                              {item.headline || item.summary}
+                            </p>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-mono">
+                              <div className="flex items-center gap-1.5 text-slate-700 flex-wrap">
+                                <span className="text-orange-600 font-bold">{item.peak_frp_mw ? `${Number(item.peak_frp_mw).toFixed(1)} MW` : "N/A"}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectEvent(item);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[10px] font-bold transition shadow-sm"
+                              >
+                                <MapPin className="w-3.5 h-3.5 text-orange-600" />
+                                Show on Map
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {filteredNews.length > mobileNewsLimit && (
+                        <div className="pt-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setMobileNewsLimit((prev) => prev + 5)}
+                            className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition"
+                          >
+                            Show More News Bulletins (+{filteredNews.length - mobileNewsLimit} remaining)
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {overlay === "alerts" && (
+              <>
+                {/* Alerts Filter Toolbar */}
+                <div className="px-4 py-3 border-b border-slate-100 bg-white shrink-0 space-y-2">
+                  <div className="flex items-center justify-between px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[10px] text-slate-700">
+                    <span className="font-semibold flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-amber-600" />
+                      Critical, Abnormal & Industrial Alarms Only
+                    </span>
+                    <span className="font-mono text-slate-500">Max 250 Recent</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search alerts..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
+                      />
+                    </div>
+                    {unreadAlertCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold transition shrink-0"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        Mark All Read
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
+                    {[["ALL", `All (${notifications.length})`], ["UNREAD", `Unread (${unreadAlertCount})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Abnormal"]].map(([val, label]) => (
+                      <button
+                        key={`mob-fs-a-${val}`}
+                        onClick={() => setFilterType(val)}
+                        className={`px-2.5 py-1 rounded-full font-medium transition shrink-0 ${
+                          filterType === val
+                            ? val === "CRITICAL" ? "bg-red-600 text-white font-semibold"
+                            : val === "UNREAD" ? "bg-orange-600 text-white font-semibold"
+                            : val === "ABNORMAL" ? "bg-amber-600 text-white font-semibold"
+                            : "bg-slate-900 text-white font-semibold"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Alerts List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+                  {loading ? (
+                    <div className="space-y-3 animate-pulse">
+                      {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white border border-slate-200 rounded-xl" />)}
+                    </div>
+                  ) : filteredAlerts.length === 0 ? (
+                    <div className="text-center text-slate-500 py-16 text-xs">
+                      <div className="p-3 bg-slate-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <p className="font-semibold text-slate-700 mb-1">All alerts acknowledged</p>
+                      <p className="text-slate-400">No active unacknowledged operational alarms matching filters.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {filteredAlerts.slice(0, mobileAlertsLimit).map((item) => (
+                        <div
+                          key={`mob-fs-alt-${item.id}`}
+                          onClick={() => handleSelectEvent(item)}
+                          className={`p-4 rounded-xl border transition shadow-sm cursor-pointer relative space-y-2 ${
+                            item.is_read 
+                              ? "bg-white hover:bg-slate-50 border-slate-200" 
+                              : "bg-orange-50/40 hover:bg-orange-50/80 border-orange-200 ring-1 ring-orange-500/20"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {!item.is_read && (
+                                <span className="w-2 h-2 rounded-full bg-orange-600 animate-pulse" title="Unread Alarm" />
+                              )}
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${tierBadge(item.severity)}`}>
+                                {item.severity}
+                              </span>
+                              <span className="text-[11px] font-mono font-bold text-slate-800">{item.event_id}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {formatRelativeTime(item.created_at)}
+                            </span>
+                          </div>
+
+                          <div className="text-xs font-bold text-slate-900 leading-snug flex items-center justify-between gap-2">
+                            <span>{cleanLocationName(item.title, item.latitude, item.longitude)}</span>
+                          </div>
+
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            {item.message?.replace(/\[OUTSIDE_SOVEREIGN_BOUNDS\]/g, "")}
+                          </p>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                            <div className="flex items-center gap-2 font-mono text-slate-600 flex-wrap">
+                              <span className="text-orange-600 font-bold">{Number(item.peak_frp_mw || 0).toFixed(1)} MW</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectEvent(item);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[10px] font-bold transition shadow-sm"
+                              >
+                                <MapPin className="w-3 h-3 text-orange-600" />
+                                Show on Map
+                              </button>
+                              {!item.is_read ? (
+                                <button
+                                  onClick={(e) => handleMarkRead(item.id, e)}
+                                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-semibold text-slate-700 transition"
+                                >
+                                  Acknowledge
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Read
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {filteredAlerts.length > mobileAlertsLimit && (
+                        <div className="pt-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setMobileAlertsLimit((prev) => prev + 5)}
+                            className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition"
+                          >
+                            Show More Operational Alarms (+{filteredAlerts.length - mobileAlertsLimit} remaining)
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DEDICATED MOBILE CHAT OVERLAY (< md) */}
+      {overlay === "chat" && (
+        <>
+          {searchParams.get("eventId") ? (
+            /* 3B — CONTEXTUAL MOBILE CHAT: Bottom Sheet WITH Drag/Swipe */
+            <div className={cn(
+              "fixed inset-x-0 bottom-0 z-[70] bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-2xl rounded-t-2xl flex flex-col md:hidden transition-all duration-300 ease-in-out pb-[env(safe-area-inset-bottom)] max-h-[90dvh]",
+              isChatMobileExpanded ? "h-[90vh]" : "h-[65vh]"
+            )}>
+              {/* Mobile Top Grab Handle Bar */}
+              <div 
+                onClick={() => setIsChatMobileExpanded((prev) => !prev)}
+                onTouchStart={(e) => setTouchStartY(e.touches[0].clientY)}
+                onTouchEnd={(e) => {
+                  if (touchStartY === null) return;
+                  const diffY = e.changedTouches[0].clientY - touchStartY;
+                  if (diffY > 50) {
+                    if (isChatMobileExpanded) setIsChatMobileExpanded(false);
+                    else closeOverlay();
+                  } else if (diffY < -50) {
+                    if (!isChatMobileExpanded) setIsChatMobileExpanded(true);
+                  }
+                  setTouchStartY(null);
+                }}
+                className="flex md:hidden items-center justify-between px-4 py-2.5 bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-800 rounded-t-2xl cursor-pointer select-none shrink-0 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Flame className="w-4 h-4 text-orange-600 animate-pulse shrink-0" />
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 shrink-0">Ask AI</span>
+                  <span className="text-[10px] font-mono text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-950 px-2 py-0.5 rounded font-bold truncate max-w-[140px] border border-orange-200 dark:border-orange-800">
+                    Discussing: {searchParams.get("eventId")}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setIsChatMobileExpanded((prev) => !prev); }}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition cursor-pointer"
+                    title={isChatMobileExpanded ? "Collapse height" : "Expand full height"}
+                  >
+                    {isChatMobileExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); closeOverlay(); }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition cursor-pointer"
+                    title="Close Chat"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Chat Body for Mobile Contextual Chat */}
+              <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900">
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shrink-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <Flame className="w-3.5 h-3.5 text-orange-600" />
+                      <span>Grounded Event Context</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold uppercase bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">Bound RAG</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      `What is abnormal about ${searchParams.get("eventId")}?`,
+                      "Explain classification drivers"
+                    ].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setChatDraft(p)}
+                        className="px-2 py-0.5 text-[10px] font-medium rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-orange-400 transition truncate max-w-[220px]"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Messages Container */}
+                <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 min-h-0 bg-slate-50/40 dark:bg-slate-950/40">
+                  {chatMessages.map((msg) => (
+                    <div key={`mob-ctx-${msg.id}`} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[90%] rounded-2xl border px-3 py-2.5 shadow-xs text-xs ${
+                        msg.role === "user" ? "bg-slate-900 dark:bg-orange-600 text-white border-slate-800 dark:border-orange-500" : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700"
+                      }`}>
+                        {msg.role === "assistant" && (
+                          <div className="flex items-center gap-1 mb-1 text-[9.5px] uppercase tracking-wider text-orange-600 dark:text-orange-400 font-bold font-mono">
+                            <Flame className="w-3 h-3" />
+                            <span>+</span> Thermo AI
+                          </div>
+                        )}
+                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-2xl px-3 py-2 text-xs flex items-center gap-2">
+                        <LoaderCircle className="w-3.5 h-3.5 text-orange-600 animate-spin" />
+                        <span>Evaluating telemetry for {searchParams.get("eventId")}...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatMessagesEndRef} />
+                </div>
+
+                {/* Input Footer */}
+                <div className="p-2.5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 sticky bottom-0">
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 focus-within:border-orange-500 focus-within:bg-white dark:focus-within:bg-slate-800 transition">
+                    <textarea
+                      value={chatDraft}
+                      onChange={(e) => setChatDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          void handleChatSubmit();
+                        }
+                      }}
+                      rows={1}
+                      placeholder={`Ask about ${searchParams.get("eventId")}...`}
+                      className="flex-1 resize-none bg-transparent text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none min-h-[32px] max-h-[80px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleChatSubmit()}
+                      disabled={chatLoading || !chatDraft.trim()}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-orange-600 text-white disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 transition hover:bg-orange-500 shrink-0"
+                      aria-label="Send query"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* 3A — STANDALONE MOBILE CHAT: Full Screen, NO drag/bottom-sheet */
+            <div className="fixed inset-0 z-[70] bg-white dark:bg-slate-900 flex flex-col md:hidden w-full h-full pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
+              {/* Standalone Full Screen Header with Back Button */}
+              <div className="h-14 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={closeOverlay}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer border border-slate-200 dark:border-slate-700"
+                    title="Back to previous screen"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-slate-700 dark:text-slate-200" />
+                    <span>Back</span>
+                  </button>
+                  <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-3">
+                    <Flame className="w-5 h-5 text-orange-600 animate-pulse shrink-0" />
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">Tactical AI Chat</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeOverlay}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+                  title="Close Chat"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Chat Body for Standalone Full Screen */}
+              <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900">
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shrink-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <Flame className="w-3.5 h-3.5 text-orange-600" />
+                      <span>Sovereign Thermal Intelligence</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold uppercase bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">Live PostGIS</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {quickPrompts.slice(0, 2).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setChatDraft(p)}
+                        className="px-2 py-0.5 text-[10px] font-medium rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-orange-400 transition truncate max-w-[200px]"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Messages Container */}
+                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0 bg-slate-50/40 dark:bg-slate-950/40">
+                  {chatMessages.map((msg) => (
+                    <div key={`mob-full-${msg.id}`} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] rounded-2xl border px-3.5 py-2.5 shadow-xs text-xs ${
+                        msg.role === "user" ? "bg-slate-900 dark:bg-orange-600 text-white border-slate-800 dark:border-orange-500" : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700"
+                      }`}>
+                        {msg.role === "assistant" && (
+                          <div className="flex items-center gap-1 mb-1 text-[9.5px] uppercase tracking-wider text-orange-600 dark:text-orange-400 font-bold font-mono">
+                            <Flame className="w-3 h-3" />
+                            <span>+</span> Thermo AI
+                          </div>
+                        )}
+                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-2xl px-3.5 py-2.5 text-xs flex items-center gap-2">
+                        <LoaderCircle className="w-3.5 h-3.5 text-orange-600 animate-spin" />
+                        <span>Evaluating satellite telemetry...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatMessagesEndRef} />
+                </div>
+
+                {/* Fixed Bottom Input Footer */}
+                <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 sticky bottom-0">
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 focus-within:border-orange-500 focus-within:bg-white dark:focus-within:bg-slate-800 transition">
+                    <textarea
+                      value={chatDraft}
+                      onChange={(e) => setChatDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          void handleChatSubmit();
+                        }
+                      }}
+                      rows={1}
+                      placeholder="Ask Thermo AI..."
+                      className="flex-1 resize-none bg-transparent text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none min-h-[32px] max-h-[80px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleChatSubmit()}
+                      disabled={chatLoading || !chatDraft.trim()}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-orange-600 text-white disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 transition hover:bg-orange-500 shrink-0 cursor-pointer"
+                      aria-label="Send query"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Desktop & Standard Side Panel Container */}
+      <div className={cn(
+        "fixed top-0 right-0 bottom-0 h-full bg-white border-l border-slate-200 shadow-2xl z-40 flex-col text-slate-700 transition-all duration-300 ease-in-out animate-in slide-in-from-right",
+        isEnlarged 
+          ? "w-full md:w-[calc(100vw-100px)] lg:w-[calc(100vw-276px)] max-w-[calc(100vw-276px)]" 
+          : "w-full sm:w-[450px]",
+        (overlay === "news" || overlay === "alerts" || overlay === "chat") ? "hidden md:flex" : "flex"
+      )}>
 
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-slate-50 shrink-0">
@@ -324,7 +936,7 @@ export function OverlayManager() {
           )}
           <div>
             <div className="text-sm font-bold text-slate-900 leading-tight">
-              {overlay === "news" && "Thermo News (Past 24h)"}
+              {overlay === "news" && (news.some((n: any) => n.is_archived) ? "Thermo News (Latest Acquisition)" : "Thermo News (Past 24h)")}
               {overlay === "alerts" && `Operational Alerts (${notifications.length})`}
               {overlay === "chat" && "Tactical AI Query"}
               {overlay === "analytics" && "National & State Thermal Analytics"}
@@ -342,6 +954,13 @@ export function OverlayManager() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button 
+            onClick={() => setIsEnlarged(!isEnlarged)} 
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" 
+            title={isEnlarged ? "Collapse panel width" : "Enlarge panel width"}
+          >
+            {isEnlarged ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <button onClick={loadData} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="Refresh Live Data">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-orange-600" : ""}`} />
           </button>
@@ -668,7 +1287,7 @@ export function OverlayManager() {
               className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white transition"
             />
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
             {[["ALL", `All (${news.length})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Elevated"], ["INDUSTRIAL", "Industrial"], ["AGRI", "Crop Burns"]].map(([val, label]) => (
               <button
                 key={val}
@@ -723,7 +1342,7 @@ export function OverlayManager() {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 text-[11px]">
             {[["ALL", `All (${notifications.length})`], ["UNREAD", `Unread (${unreadAlertCount})`], ["CRITICAL", "Critical"], ["ABNORMAL", "Abnormal"]].map(([val, label]) => (
               <button
                 key={val}
@@ -744,33 +1363,33 @@ export function OverlayManager() {
         </div>
       )}
 
-      {/* CHAT OVERLAY */}
+      {/* CHAT OVERLAY (Desktop View >= md) */}
       {overlay === "chat" && (
-        <div className="flex-1 flex flex-col min-h-0 bg-white">
-          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 shrink-0">
+        <div className="hidden md:flex flex-1 flex-col min-h-0 bg-white dark:bg-slate-900">
+          <div className="px-4 py-3 border-b border-blue-200/60 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/40 shrink-0">
             {/* Scoped Event Context Banner */}
             {searchParams.get("eventId") && (
-              <div className="flex items-center justify-between px-3 py-2 bg-orange-50 border border-orange-200 rounded-xl text-xs mb-2.5 shadow-sm">
-                <div className="flex items-center gap-2 text-orange-950 font-semibold truncate">
-                  <Flame className="w-4 h-4 text-orange-600 shrink-0 animate-pulse" />
+              <div className="flex items-center justify-between px-3 py-2 bg-blue-100/70 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700 rounded-xl text-xs mb-2.5 shadow-sm">
+                <div className="flex items-center gap-2 text-blue-950 dark:text-blue-100 font-semibold truncate">
+                  <Flame className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
                   <div className="flex flex-col truncate">
-                    <span className="text-[10px] text-orange-600 font-mono font-bold uppercase tracking-wider">Scoped Event Context</span>
-                    <span className="font-mono font-bold text-slate-900 truncate">{searchParams.get("eventId")}</span>
+                    <span className="text-[10px] text-blue-600 dark:text-blue-300 font-mono font-bold uppercase tracking-wider">Scoped Event Context</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white truncate">{searchParams.get("eventId")}</span>
                   </div>
                 </div>
-                <span className="text-[10px] font-semibold text-orange-700 bg-white px-2 py-0.5 rounded-md border border-orange-200 font-mono shadow-xs shrink-0">Bound RAG</span>
+                <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800 font-mono shadow-xs shrink-0">Bound RAG</span>
               </div>
             )}
 
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                <div className="p-1 rounded bg-orange-50 border border-orange-200 relative flex items-center justify-center">
-                  <Flame className="w-3.5 h-3.5 text-orange-600" />
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-orange-600 text-white flex items-center justify-center text-[7px] font-black ring-1 ring-white">+</span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                <div className="p-1 rounded bg-blue-100/70 dark:bg-blue-900/60 border border-blue-300 dark:border-blue-700 relative flex items-center justify-center">
+                  <Flame className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-blue-600 text-white flex items-center justify-center text-[7px] font-black ring-1 ring-white">+</span>
                 </div>
                 Grounded Event Analysis
               </div>
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider bg-orange-50 border border-orange-200 text-orange-700 px-2 py-0.5 rounded">Live PostGIS</span>
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider bg-blue-100/70 dark:bg-blue-900/60 border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded">Live PostGIS</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {(searchParams.get("eventId") ? [
@@ -783,7 +1402,7 @@ export function OverlayManager() {
                   key={p}
                   type="button"
                   onClick={() => setChatDraft(p)}
-                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-slate-200 bg-white text-slate-700 hover:border-orange-400 hover:text-orange-700 hover:bg-orange-50 transition"
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-blue-200 hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-700 dark:hover:text-blue-100 hover:bg-blue-50 dark:hover:bg-blue-950/60 transition"
                 >
                   {p}
                 </button>
@@ -791,16 +1410,16 @@ export function OverlayManager() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0 bg-slate-50/40">
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0 bg-blue-50/20 dark:bg-slate-950/60">
             {chatMessages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[88%] rounded-2xl border px-4 py-3 shadow-sm ${
                   msg.role === "user"
-                    ? "bg-slate-900 text-white border-slate-800"
-                    : "bg-white text-slate-800 border-slate-200"
+                    ? "bg-blue-600 text-white border-blue-700 dark:bg-blue-600 dark:text-white dark:border-blue-500"
+                    : "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-blue-200 dark:border-blue-900/80"
                 }`}>
                   {msg.role === "assistant" && (
-                    <div className="flex items-center gap-1 mb-2 text-[10px] uppercase tracking-wider text-orange-600 font-bold font-mono">
+                    <div className="flex items-center gap-1 mb-2 text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-bold font-mono">
                       <Flame className="w-3 h-3" />
                       <span>+</span> Thermo AI
                     </div>
@@ -813,15 +1432,15 @@ export function OverlayManager() {
                           key={`${msg.id}-${ev.event_id}`}
                           type="button"
                           onClick={() => handleSelectEvent(ev.event_id)}
-                          className="w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-orange-50 hover:border-orange-300 transition space-y-1.5"
+                          className="w-full text-left p-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-slate-800/80 hover:bg-blue-100/70 dark:hover:bg-blue-900/60 hover:border-blue-300 dark:hover:border-blue-700 transition space-y-1.5"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-bold font-mono text-slate-800 uppercase">{ev.event_id}</span>
+                            <span className="text-[10px] font-bold font-mono text-slate-800 dark:text-slate-200 uppercase">{ev.event_id}</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tierBadge(ev.anomaly_tier || "NORMAL")}`}>{ev.anomaly_tier || "NORMAL"}</span>
                           </div>
-                          <div className="text-xs text-slate-800 font-semibold truncate">{ev.facility_name || "Regional Facility"}</div>
-                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1 border-t border-slate-200/60">
-                            <span className="text-orange-600 font-bold">{Number(ev.peak_frp_mw || 0).toFixed(1)} MW</span>
+                          <div className="text-xs text-slate-800 dark:text-slate-100 font-semibold truncate">{ev.facility_name || "Regional Facility"}</div>
+                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-300 pt-1 border-t border-blue-200/60 dark:border-slate-700">
+                            <span className="text-blue-600 dark:text-blue-400 font-bold">{Number(ev.peak_frp_mw || 0).toFixed(1)} MW</span>
                             <span>{Number(ev.latitude || 0).toFixed(4)}°N, {Number(ev.longitude || 0).toFixed(4)}°E</span>
                           </div>
                         </button>
@@ -833,12 +1452,12 @@ export function OverlayManager() {
             ))}
             {chatLoading && (
               <div className="flex justify-start">
-                <div className="max-w-[88%] rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                  <div className="flex items-center gap-1 mb-2 text-[10px] uppercase tracking-wider text-orange-600 font-bold font-mono">
+                <div className="max-w-[88%] rounded-2xl border border-blue-200 dark:border-blue-900/80 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-1 mb-2 text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-bold font-mono">
                     <LoaderCircle className="w-3 h-3 animate-spin" /> Thermo AI
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <span className="h-2 w-2 rounded-full bg-orange-500 animate-ping" />
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
                     Querying PostGIS thermal dataset...
                   </div>
                 </div>
@@ -846,8 +1465,8 @@ export function OverlayManager() {
             )}
           </div>
 
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 space-y-3">
-            <div className="flex items-end gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 focus-within:border-orange-500 focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:ring-2 focus-within:ring-orange-500/20 transition">
+          <div className="p-3 border-t border-blue-200/60 dark:border-blue-900/60 bg-white dark:bg-slate-900 shrink-0 space-y-3">
+            <div className="flex items-end gap-2 rounded-xl border border-blue-200 dark:border-blue-800/80 bg-blue-50/30 dark:bg-slate-800/80 px-3 py-2 focus-within:border-blue-500 dark:focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:ring-2 focus-within:ring-blue-500/20 transition">
               <textarea
                 value={chatDraft}
                 onChange={(e) => setChatDraft(e.target.value)}
@@ -865,7 +1484,7 @@ export function OverlayManager() {
                 type="button"
                 onClick={() => void handleChatSubmit()}
                 disabled={chatLoading || !chatDraft.trim()}
-                className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-orange-600 text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition hover:bg-orange-500 mb-0.5"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-blue-600 text-white disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed transition hover:bg-blue-500 mb-0.5"
                 aria-label="Send query"
               >
                 <Send className="w-4 h-4" />
@@ -916,6 +1535,9 @@ export function OverlayManager() {
                     <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-400" />
                       {formatRelativeTime(item.published_at)}
+                      {item.is_archived && (
+                        <span className="ml-1 text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-semibold border border-slate-200">Archived</span>
+                      )}
                     </span>
                   </div>
 
@@ -1079,7 +1701,7 @@ export function OverlayManager() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">ThermoTrace AI (Thermo Intelligence)</h3>
-                <span className="text-[10px] font-mono text-slate-500">National Sovereign Early Warning System</span>
+                <span className="text-[10px] text-slate-500">National Sovereign Early Warning System</span>
               </div>
             </div>
             <p className="text-slate-600 leading-relaxed text-[11px] pt-1 border-t border-slate-100">
@@ -1282,7 +1904,7 @@ export function OverlayManager() {
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Polling Interval:</span>
                   <div className="text-right">
-                    <span className="text-slate-900 font-semibold font-mono">Autonomous (Every 15 min)</span>
+                    <span className="text-slate-900 font-semibold">Autonomous (Every 15 min)</span>
                   </div>
                 </div>
                 <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-lg text-[10px] text-blue-900 space-y-1">
@@ -1324,5 +1946,6 @@ export function OverlayManager() {
         </div>
       )}
     </div>
+    </>
   );
 }

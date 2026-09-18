@@ -1,7 +1,7 @@
 """Report service for generating ReportViewModel from pipeline-computed data."""
 import logging
 from typing import Optional, Dict, Any
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, cast, func
 from geoalchemy2 import Geography
@@ -112,6 +112,7 @@ class ReportService:
             baseline=baseline,
             facility=facility,
             model=model,
+            session=session,
         )
 
         observations = ReportService._get_event_observations(session, event)
@@ -671,6 +672,7 @@ class ReportService:
         baseline: Optional[FacilityBaseline],
         facility: Optional[IndustrialFacility],
         model: Optional[MlModel],
+        session: Optional[Session] = None,
     ) -> Dict[str, Any]:
         """
         Map ORM objects into a flat dictionary structure for template rendering.
@@ -806,6 +808,50 @@ class ReportService:
                 "associated_facility_uuid": str(event.associated_facility_id),
                 "distance_to_facility_m": event.distance_to_facility_m,
             }
+
+        # Wind Telemetry Fields
+        wind_data = {}
+        try:
+            from app.services.weather_service import lookup_wind
+            if event.latitude is not None and event.longitude is not None:
+                req_time = event.latest_detected_utc or datetime.now(timezone.utc)
+                if not req_time.tzinfo:
+                    req_time = req_time.replace(tzinfo=timezone.utc)
+                w_res = lookup_wind(
+                    latitude=float(event.latitude),
+                    longitude=float(event.longitude),
+                    requested_at=req_time,
+                    target_type="EVENT",
+                    target_id=event.event_id,
+                )
+                if w_res and w_res.get("available"):
+                    wind_data = {
+                        "wind_available": True,
+                        "wind_speed_kmh": w_res.get("speed_kmh"),
+                        "wind_direction_from_cardinal": w_res.get("direction_from_cardinal"),
+                        "wind_direction_toward_cardinal": w_res.get("direction_toward_cardinal"),
+                        "wind_direction_toward_degrees": w_res.get("direction_toward_degrees"),
+                        "wind_gusts_kmh": w_res.get("gusts_kmh"),
+                        "wind_temperature_c": w_res.get("temperature_c"),
+                        "wind_relative_humidity_pct": w_res.get("relative_humidity_pct"),
+                    }
+        except Exception as w_err:
+            logger.warning("Could not fetch wind telemetry for report: %s", w_err)
+
+        # Operational Nearby Notification Metrics
+        notification_data = {}
+        if session is not None:
+            try:
+                from app.db.models import Notification
+                notif_count = session.query(Notification).filter(Notification.event_id == event.id).count()
+                unread_notif_count = session.query(Notification).filter(Notification.event_id == event.id, Notification.is_read == False).count()
+                notification_data = {
+                    "nearby_notifications_dispatched": notif_count,
+                    "nearby_notifications_unread": unread_notif_count,
+                    "nearby_perimeter_radius_km": 25 if event.anomaly_tier == "CRITICAL" else 10,
+                }
+            except Exception as n_err:
+                logger.warning("Could not fetch notification counts for report: %s", n_err)
         
         # Merge all data dictionaries
         report_view_model = {
@@ -816,6 +862,8 @@ class ReportService:
             **facility_data,
             **model_data,
             **association_data,
+            **wind_data,
+            **notification_data,
         }
         
         return report_view_model

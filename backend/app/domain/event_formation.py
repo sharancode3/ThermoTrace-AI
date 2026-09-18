@@ -77,24 +77,27 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
 
         if fac_res and fac_res[5] is not None:
             dist_to_fac = float(fac_res[5])
-            if dist_to_fac <= 5000.0:  # Within 5.0km industrial boundary
+            if dist_to_fac <= 1000.0:  # Within 1.0km immediate plant parcel boundary
                 associated_fac_id = fac_res[0]
                 primary_land_use = fac_res[2] or "Industrial"
             else:
+                associated_fac_id = None
                 primary_land_use = "Cropland" if c_lat > 24.0 else "Regional Hotspot"
 
         # Check if an existing event covers this cluster:
-        # 1. By facility association (strict priority: update existing event for this plant)
+        # 1. By facility association (within 1.0km AND within 24h window)
         # 2. By centroid spatial proximity (within 1500m)
         existing_event = None
         if associated_fac_id:
             existing_event = session.query(ThermalEvent).filter(
-                ThermalEvent.associated_facility_id == associated_fac_id
+                ThermalEvent.associated_facility_id == associated_fac_id,
+                ThermalEvent.latest_detected_utc >= first_utc - timedelta(hours=24)
             ).order_by(ThermalEvent.latest_detected_utc.desc()).first()
 
         if not existing_event:
             existing_event = session.query(ThermalEvent).filter(
-                text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 1500)")
+                text("ST_DWithin(centroid::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 1500)"),
+                ThermalEvent.latest_detected_utc >= first_utc - timedelta(hours=24)
             ).params(lon=c_lon, lat=c_lat).order_by(ThermalEvent.latest_detected_utc.desc()).first()
 
         if existing_event:
@@ -162,25 +165,30 @@ def form_events_from_observations(session: Session, lookback_days: int = 7) -> i
 
     return events_formed_or_updated
 
-def reconcile_event_lifecycles(session: Session) -> Dict[str, int]:
+def reconcile_event_lifecycles(session: Session, reference_time: Optional[datetime] = None) -> Dict[str, int]:
     """
     Normalizes and reconciles event lifecycles:
     - Recent detections (< 24h) remain ACTIVE.
     - Detections between 24h and 72h transition to COOLING.
-    - Detections with no new passes for >= 3 days (>= 72h) are EXTINGUISHED / NORMAL:
-      Hotspot anomaly tier normalizes back to NORMAL as the thermal fire has ended.
+    - Detections with no new passes for >= 3 days (>= 72h) transition to EXTINGUISHED.
+    
+    IMPORTANT: Historical anomaly_tier (CRITICAL, ABNORMAL, ELEVATED, NORMAL) is
+    preserved immutably as a factual record of the observed event severity.
+    Elapsed time affects operational freshness/lifecycle ONLY, never historical severity.
     """
-    now_utc = datetime.now(timezone.utc)
-    t24 = now_utc - timedelta(hours=24)
-    t72 = now_utc - timedelta(days=3)
+    ref_utc = reference_time or datetime.now(timezone.utc)
+    if ref_utc.tzinfo is None:
+        ref_utc = ref_utc.replace(tzinfo=timezone.utc)
 
-    # 1. Extinguished (> 72h / 3 days): fire is gone, anomaly normalized to NORMAL
+    t24 = ref_utc - timedelta(hours=24)
+    t72 = ref_utc - timedelta(days=3)
+
+    # 1. Extinguished (> 72h / 3 days): Aging detection, anomaly_tier preserved
     ext_res = session.execute(text("""
         UPDATE thermal_events
-        SET lifecycle_status = 'EXTINGUISHED',
-            anomaly_tier = 'NORMAL'
+        SET lifecycle_status = 'EXTINGUISHED'
         WHERE latest_detected_utc < :t72
-          AND (lifecycle_status != 'EXTINGUISHED' OR anomaly_tier != 'NORMAL');
+          AND lifecycle_status != 'EXTINGUISHED';
     """), {"t72": t72})
 
     # 2. Cooling (24h - 72h)

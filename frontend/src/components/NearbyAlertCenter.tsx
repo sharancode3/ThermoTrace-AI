@@ -213,6 +213,16 @@ export function NearbyAlertCenter() {
   };
 
   const saveLocation = async () => {
+    // 1. Immediately request notification permission if default, directly on user click gesture
+    let notifPromise: Promise<NotificationPermission> | null = null;
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      try {
+        notifPromise = Notification.requestPermission();
+      } catch (err) {
+        console.warn("Notification request permission error:", err);
+      }
+    }
+
     setLoading(true); setStatus("Requesting your location…");
     try {
       const position = await requestCurrentPosition();
@@ -228,14 +238,12 @@ export function NearbyAlertCenter() {
       setStatus("Alert location updated & 25 km safety perimeter active.");
 
       if ("Notification" in window) {
-        if (Notification.permission === "default") {
-          const perm = await Notification.requestPermission();
-          if (perm === "granted" && next.vapid_public_key) {
-            try { await enableWebPush(next.vapid_public_key); setStatus("Nearby alerts, 25km geofence, and desktop notifications active."); }
-            catch (error) { setStatus(error instanceof Error ? error.message : "Browser notifications could not be enabled."); }
-          }
-        } else if (Notification.permission === "granted" && next.vapid_public_key) {
-          try { await enableWebPush(next.vapid_public_key); setStatus("Nearby alerts and browser notifications enabled."); }
+        let perm = Notification.permission;
+        if (notifPromise) {
+          try { perm = await notifPromise; } catch {}
+        }
+        if (perm === "granted" && next.vapid_public_key) {
+          try { await enableWebPush(next.vapid_public_key); setStatus("Nearby alerts, 25km geofence, and desktop notifications active."); }
           catch (error) { setStatus(error instanceof Error ? error.message : "Browser notifications could not be enabled."); }
         }
       }
@@ -338,77 +346,77 @@ export function NearbyAlertCenter() {
     </div>, document.body)}
 
     {typeof document !== "undefined" && open && createPortal(<div className="fixed inset-0 z-[75] bg-black/30" onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
-      <section role="dialog" aria-modal="true" aria-label="Nearby Alerts" className="absolute inset-x-0 bottom-0 flex h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-slate-50 text-slate-800 shadow-2xl md:inset-y-0 md:left-auto md:h-auto md:w-[460px] md:rounded-none md:border-y-0 md:border-r-0">
-        <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-50 text-orange-600"><Bell className="h-4 w-4" /></span><div className="min-w-0"><h2 className="font-bold text-slate-950">Nearby Alerts</h2><p className="truncate text-[11px] text-slate-500">Last 24 hours · {unread} unread · {streaming ? "Live" : "Polling"}</p></div></div>
-          <div className="flex items-center gap-1"><button type="button" title="Refresh nearby alerts" aria-label="Refresh nearby alerts" disabled={refreshing} onClick={() => void refresh()} className="rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin motion-reduce:animate-none" : ""}`} /></button><button type="button" title="Close nearby alerts" aria-label="Close nearby alerts" onClick={() => setOpen(false)} className="rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><X className="h-5 w-5" /></button></div>
+      <section role="dialog" aria-modal="true" aria-label="Nearby Alerts" className="absolute inset-x-0 bottom-0 flex h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 shadow-2xl md:inset-y-0 md:left-auto md:h-auto md:w-[460px] md:rounded-none md:border-y-0 md:border-r-0">
+        <header className="flex shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-50 dark:bg-orange-950/80 text-orange-600 dark:text-orange-400"><Bell className="h-4 w-4" /></span><div className="min-w-0"><h2 className="font-bold text-slate-950 dark:text-white">Nearby Alerts</h2><p className="truncate text-[11px] text-slate-500 dark:text-slate-300">Last 24 hours · {unread} unread · {streaming ? "Live" : "Polling"}</p></div></div>
+          <div className="flex items-center gap-1"><button type="button" title="Refresh nearby alerts" aria-label="Refresh nearby alerts" disabled={refreshing} onClick={() => void refresh()} className="rounded-md p-2 text-slate-500 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin motion-reduce:animate-none" : ""}`} /></button><button type="button" title="Close nearby alerts" aria-label="Close nearby alerts" onClick={() => setOpen(false)} className="rounded-md p-2 text-slate-500 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><X className="h-5 w-5" /></button></div>
         </header>
-        {showSettings && preferences && <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 text-sm">
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Alert Preferences</h3>
-          <div className="flex items-center gap-2.5 pb-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-orange-50 text-orange-600"><Bell className="h-3.5 w-3.5" /></span><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-900">Nearby Thermal Alerts</p><p className="text-[11px] text-slate-500">Alerts near your registered location</p></div><PreferenceSwitch label="Nearby Thermal Alerts" checked={preferences.enabled} onChange={(checked) => void savePreferences({ enabled: checked })} /></div>
-          <div className="ml-3 space-y-2 border-l border-slate-200 py-1 pl-4">
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/><div className="min-w-0 flex-1"><p className="text-xs font-bold text-red-700">CRITICAL</p><p className="text-[11px] text-slate-500">25 km contextual perimeter</p></div><PreferenceSwitch label="Critical nearby notifications" checked={preferences.notify_critical} onChange={(checked) => void savePreferences({ notify_critical: checked })} /></div>
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-orange-500"/><div className="min-w-0 flex-1"><p className="text-xs font-bold text-orange-700">ABNORMAL</p><p className="text-[11px] text-slate-500">10 km contextual perimeter</p></div><PreferenceSwitch label="Abnormal nearby notifications" checked={preferences.notify_abnormal} onChange={(checked) => void savePreferences({ notify_abnormal: checked })} /></div>
-            <div className="flex items-center gap-2 pt-1"><div className="grid h-5 w-5 place-items-center text-slate-600">{chimeEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5 text-slate-400" />}</div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-slate-800">Tactical Audio Chime</p><p className="text-[11px] text-slate-500">Dual-tone radar sound on alert</p></div><PreferenceSwitch label="Tactical audio chime" checked={chimeEnabled} onChange={toggleChime} /></div>
+        {showSettings && preferences && <div className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 text-sm">
+          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">Alert Preferences</h3>
+          <div className="flex items-center gap-2.5 pb-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-orange-50 dark:bg-orange-950/80 text-orange-600 dark:text-orange-400"><Bell className="h-3.5 w-3.5" /></span><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-900 dark:text-white">Nearby Thermal Alerts</p><p className="text-[11px] text-slate-500 dark:text-slate-300">Alerts near your registered location</p></div><PreferenceSwitch label="Nearby Thermal Alerts" checked={preferences.enabled} onChange={(checked) => void savePreferences({ enabled: checked })} /></div>
+          <div className="ml-3 space-y-2 border-l border-slate-200 dark:border-slate-800 py-1 pl-4">
+            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/><div className="min-w-0 flex-1"><p className="text-xs font-bold text-red-700 dark:text-red-400">CRITICAL</p><p className="text-[11px] text-slate-500 dark:text-slate-300">25 km contextual perimeter</p></div><PreferenceSwitch label="Critical nearby notifications" checked={preferences.notify_critical} onChange={(checked) => void savePreferences({ notify_critical: checked })} /></div>
+            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-orange-500"/><div className="min-w-0 flex-1"><p className="text-xs font-bold text-orange-700 dark:text-orange-400">ABNORMAL</p><p className="text-[11px] text-slate-500 dark:text-slate-300">10 km contextual perimeter</p></div><PreferenceSwitch label="Abnormal nearby notifications" checked={preferences.notify_abnormal} onChange={(checked) => void savePreferences({ notify_abnormal: checked })} /></div>
+            <div className="flex items-center gap-2 pt-1"><div className="grid h-5 w-5 place-items-center text-slate-600 dark:text-slate-300">{chimeEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />}</div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-slate-800 dark:text-slate-100">Tactical Audio Chime</p><p className="text-[11px] text-slate-500 dark:text-slate-300">Dual-tone radar sound on alert</p></div><PreferenceSwitch label="Tactical audio chime" checked={chimeEnabled} onChange={toggleChime} /></div>
           </div>
-          <div className="mt-2 grid gap-2 border-t border-slate-100 pt-2 sm:grid-cols-2">
-            <div className="flex items-center gap-2"><LocateFixed className="h-4 w-4 shrink-0 text-slate-500"/><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-slate-800">Alert Location</p><p className="text-[11px] text-slate-500">{preferences.has_alert_location ? "Registered & perimeter active" : "Not registered"}</p></div><button className="min-h-8 shrink-0 rounded-md border border-slate-300 px-2 text-[11px] font-semibold text-slate-700 hover:border-orange-300 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void saveLocation()}>Update</button></div>
+          <div className="mt-2 grid gap-2 border-t border-slate-100 dark:border-slate-800 pt-2 sm:grid-cols-2">
+            <div className="flex items-center gap-2"><LocateFixed className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-300"/><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-slate-800 dark:text-slate-100">Alert Location</p><p className="text-[11px] text-slate-500 dark:text-slate-300">{preferences.has_alert_location ? "Registered & perimeter active" : "Not registered"}</p></div><button className="min-h-8 shrink-0 rounded-md border border-slate-300 dark:border-slate-700 px-2 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:border-orange-300 dark:hover:border-orange-500 hover:text-orange-700 dark:hover:text-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void saveLocation()}>Update</button></div>
             {(() => {
               const permission = typeof Notification === "undefined" ? "unsupported" : Notification.permission;
               const enabled = permission === "granted";
-              return <div className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-2">
+              return <div className="flex items-center justify-between rounded-md bg-slate-50 dark:bg-slate-800 px-2.5 py-2">
                 <div className="flex items-center gap-2">
                   <span className={`h-2 w-2 shrink-0 rounded-full ${enabled ? "bg-emerald-500" : permission === "denied" ? "bg-red-500" : "bg-amber-500"}`}/>
                   <div>
-                    <p className="text-xs font-semibold text-slate-800">Desktop Push</p>
-                    <p className={`text-[10px] ${enabled ? "text-emerald-700" : "text-slate-500"}`}>{enabled ? "Windows / Browser Active" : permission === "denied" ? "Disabled in browser" : "Permission required"}</p>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">Desktop Push</p>
+                    <p className={`text-[10px] ${enabled ? "text-emerald-700 dark:text-emerald-300" : "text-slate-500 dark:text-slate-300"}`}>{enabled ? "Windows / Browser Active" : permission === "denied" ? "Disabled in browser" : "Permission required"}</p>
                   </div>
                 </div>
                 {!enabled && permission !== "denied" && (
-                  <button onClick={() => void requestDesktopPermissionDirectly()} className="rounded border border-orange-300 bg-orange-50 px-2 py-1 text-[10px] font-bold text-orange-700 hover:bg-orange-100">
+                  <button onClick={() => void requestDesktopPermissionDirectly()} className="rounded border border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-950/80 px-2 py-1 text-[10px] font-bold text-orange-700 dark:text-orange-300 hover:bg-orange-100">
                     Enable
                   </button>
                 )}
               </div>;
             })()}
           </div>
-          {status && <p role="status" className="mt-2 text-xs text-amber-700">{status}</p>}
+          {status && <p role="status" className="mt-2 text-xs text-amber-700 dark:text-amber-400">{status}</p>}
         </div>}
-        <div className="shrink-0 border-b border-slate-200 bg-white">
-          <div className="flex items-start gap-2 border-b border-slate-100 px-4 py-2 text-[11px] leading-4 text-slate-500"><span className="flex-1">Notification radius is contextual relevance, not a danger or evacuation radius.</span><button type="button" aria-label="Nearby alert settings" title="Nearby alert settings" className="shrink-0 rounded-md p-1.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => setShowSettings((value) => !value)}><Settings2 className="h-4 w-4" /></button></div>
+        <div className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="flex items-start gap-2 border-b border-slate-100 dark:border-slate-800 px-4 py-2 text-[11px] leading-4 text-slate-500 dark:text-slate-300"><span className="flex-1">Notification radius is contextual relevance, not a danger or evacuation radius.</span><button type="button" aria-label="Nearby alert settings" title="Nearby alert settings" className="shrink-0 rounded-md p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => setShowSettings((value) => !value)}><Settings2 className="h-4 w-4" /></button></div>
           <div className="flex gap-2 px-4 pt-3">
-            <label className="relative min-w-0 flex-1"><span className="sr-only">Search nearby alerts</span><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search nearby alerts..." className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100" /></label>
-            <button type="button" disabled={!unread} onClick={() => void acknowledgeAll()} className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-orange-300 px-3 text-xs font-semibold text-orange-700 transition-colors hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><CheckCheck className="h-4 w-4"/> Mark All Read</button>
+            <label className="relative min-w-0 flex-1"><span className="sr-only">Search nearby alerts</span><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search nearby alerts..." className="h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 pl-9 pr-3 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900/50" /></label>
+            <button type="button" disabled={!unread} onClick={() => void acknowledgeAll()} className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-orange-300 dark:border-orange-600 px-3 text-xs font-semibold text-orange-700 dark:text-orange-300 transition-colors hover:bg-orange-50 dark:hover:bg-orange-950/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:cursor-not-allowed disabled:border-slate-200 dark:disabled:border-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600"><CheckCheck className="h-4 w-4"/> Mark All Read</button>
           </div>
           <div className="flex flex-wrap gap-1.5 px-4 py-3" role="group" aria-label="Filter nearby alerts">
-            {([['ALL', `All (${alerts.length})`], ['UNREAD', `Unread (${unread})`], ['READ', `Read (${read})`], ['CRITICAL', 'Critical'], ['ABNORMAL', 'Abnormal']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${filter === value ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-orange-300 hover:text-orange-700"}`}>{label}</button>)}
+            {([['ALL', `All (${alerts.length})`], ['UNREAD', `Unread (${unread})`], ['READ', `Read (${read})`], ['CRITICAL', 'Critical'], ['ABNORMAL', 'Abnormal']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${filter === value ? "border-slate-800 bg-slate-800 dark:bg-orange-600 dark:border-orange-600 text-white" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-orange-300 hover:text-orange-700"}`}>{label}</button>)}
           </div>
         </div>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
-          {alerts.length === 0 ? <div className="py-12 text-center"><BellOff className="mx-auto h-7 w-7 text-slate-400"/><p className="mt-3 font-semibold">No nearby alerts.</p><p className="mt-1 text-xs text-slate-500">Your area has no qualifying ThermoTrace thermal notifications during this period.</p></div> : visibleAlerts.length === 0 ? <div className="py-12 text-center"><Search className="mx-auto h-7 w-7 text-slate-400"/><p className="mt-3 font-semibold">No alerts match your search.</p><p className="mt-1 text-xs text-slate-500">Try another search term or filter.</p></div> : visibleAlerts.map((alert) => {
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin] bg-slate-50 dark:bg-slate-950">
+          {alerts.length === 0 ? <div className="py-12 text-center"><BellOff className="mx-auto h-7 w-7 text-slate-400 dark:text-slate-500"/><p className="mt-3 font-semibold text-slate-800 dark:text-slate-100">No nearby alerts.</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Your area has no qualifying ThermoTrace thermal notifications during this period.</p></div> : visibleAlerts.length === 0 ? <div className="py-12 text-center"><Search className="mx-auto h-7 w-7 text-slate-400 dark:text-slate-500"/><p className="mt-3 font-semibold text-slate-800 dark:text-slate-100">No alerts match your search.</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Try another search term or filter.</p></div> : visibleAlerts.map((alert) => {
             const critical = alert.severity === "CRITICAL";
-            return <article key={alert.id} className={`rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md ${alert.is_read ? "border-slate-200" : critical ? "border-red-200" : "border-orange-200"}`}>
+            return <article key={alert.id} className={`rounded-lg border bg-white dark:bg-slate-900 p-3.5 shadow-sm transition-shadow hover:shadow-md ${alert.is_read ? "border-slate-200 dark:border-slate-800" : critical ? "border-red-200 dark:border-red-800/70" : "border-orange-200 dark:border-orange-800/70"}`}>
               <div className="flex items-center gap-2">
-                <span className={`rounded px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${critical ? "bg-red-50 text-red-700" : "bg-orange-50 text-orange-700"}`}>{alert.severity}</span>
+                <span className={`rounded px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${critical ? "bg-red-50 dark:bg-red-950/90 text-red-700 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-800" : "bg-orange-50 dark:bg-orange-950/90 text-orange-700 dark:text-orange-300 ring-1 ring-orange-200 dark:ring-orange-800"}`}>{alert.severity}</span>
                 {alert.is_downwind_hazard && (
-                  <span className="flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-800 ring-1 ring-amber-300">
-                    <Wind className="h-3 w-3 text-amber-600" /> Downwind Hazard
+                  <span className="flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-950/90 px-1.5 py-0.5 text-[9px] font-bold text-amber-800 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-800">
+                    <Wind className="h-3 w-3 text-amber-600 dark:text-amber-400" /> Downwind Hazard
                   </span>
                 )}
-                <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-semibold text-slate-500" title={alert.event_id}>{alert.event_id}</span>
-                <span className="shrink-0 text-[11px] text-slate-400">{relativeTime(alert.created_at)}</span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-bold text-slate-500 dark:text-slate-300" title={alert.event_id}>{alert.event_id}</span>
+                <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-400">{relativeTime(alert.created_at)}</span>
               </div>
-              <h3 className="mt-1.5 text-[13px] font-bold leading-5 text-slate-950">{alert.title}</h3>
-              {alert.message && <p className="mt-0.5 text-[11px] leading-[1.45] text-slate-600">{alert.message}</p>}
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <h3 className="mt-1.5 text-[13px] font-bold leading-5 text-slate-950 dark:text-white">{alert.title}</h3>
+              {alert.message && <p className="mt-0.5 text-[11px] leading-[1.45] text-slate-600 dark:text-slate-300">{alert.message}</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 dark:border-slate-800/80 pt-2 text-[10px] text-slate-500 dark:text-slate-300">
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                  {alert.peak_frp_mw != null && <span className={`font-mono font-bold ${critical ? "text-red-700" : "text-orange-700"}`}>{alert.peak_frp_mw.toFixed(1)} MW</span>}
-                  {alert.classification && <span className="font-mono font-semibold text-slate-600">{alert.classification}</span>}
-                  {alert.distance_km != null && <span className="font-medium text-slate-700"><MapPin className="mr-0.5 inline h-3 w-3"/> {alert.distance_km.toFixed(1)} km {alert.bearing_cardinal ? `(${alert.bearing_cardinal})` : ""}</span>}
+                  {alert.peak_frp_mw != null && <span className={`font-mono font-bold ${critical ? "text-red-700 dark:text-red-400" : "text-orange-700 dark:text-orange-400"}`}>{alert.peak_frp_mw.toFixed(1)} MW</span>}
+                  {alert.classification && <span className="font-mono font-semibold text-slate-600 dark:text-slate-300">{alert.classification}</span>}
+                  {alert.distance_km != null && <span className="font-semibold text-slate-700 dark:text-slate-200"><MapPin className="mr-0.5 inline h-3 w-3 text-slate-400 dark:text-slate-400"/> {alert.distance_km.toFixed(1)} km {alert.bearing_cardinal ? `(${alert.bearing_cardinal})` : ""}</span>}
                 </div>
                 <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                  <button aria-label={`View event ${alert.event_id} on map`} className="flex min-h-7 items-center justify-center gap-1 rounded-md border border-orange-300 px-2 text-[10px] font-semibold text-orange-700 transition-colors hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void viewOnMap(alert)}><MapPin className="h-3 w-3"/> Show on Map</button>
-                  {alert.is_read ? <span className="flex min-h-7 items-center gap-1 px-1 text-[10px] font-semibold text-emerald-700"><CircleCheck className="h-3.5 w-3.5"/> Read</span> : <button type="button" className="min-h-7 rounded-md border border-slate-300 px-2 text-[10px] font-semibold text-slate-700 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void acknowledge(alert)}>Acknowledge</button>}
+                  <button aria-label={`View event ${alert.event_id} on map`} className="flex min-h-7 items-center justify-center gap-1 rounded-md border border-orange-300 dark:border-orange-700/80 bg-orange-50 dark:bg-orange-950/60 px-2.5 text-[10px] font-bold text-orange-700 dark:text-orange-300 transition-colors hover:bg-orange-100 dark:hover:bg-orange-900/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void viewOnMap(alert)}><MapPin className="h-3 w-3"/> Show on Map</button>
+                  {alert.is_read ? <span className="flex min-h-7 items-center gap-1 px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"><CircleCheck className="h-3.5 w-3.5"/> Read</span> : <button type="button" className="min-h-7 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 transition-colors hover:border-orange-300 dark:hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/60 hover:text-orange-700 dark:hover:text-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500" onClick={() => void acknowledge(alert)}>Acknowledge</button>}
                 </div>
               </div>
             </article>;
