@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 const ACTIVE_BACKEND = "https://thermotrace-ai-5tao.onrender.com/api/v1";
 let rawBackend = process.env.INTERNAL_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || ACTIVE_BACKEND;
 
-// Automatically override old suspended URLs while allowing local dev, Docker, and Render
-if (!rawBackend || (!rawBackend.includes("5tao") && !rawBackend.includes("localhost") && !rawBackend.includes("127.0.0.1") && !rawBackend.includes("backend"))) {
+// Allow custom Render service URLs, local dev, Docker, and backend hosts
+if (!rawBackend || (!rawBackend.includes("render") && !rawBackend.includes("localhost") && !rawBackend.includes("127.0.0.1") && !rawBackend.includes("backend"))) {
   rawBackend = ACTIVE_BACKEND;
 }
 
