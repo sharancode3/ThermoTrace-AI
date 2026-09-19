@@ -137,3 +137,4 @@ class FirmsStatusResponse(BaseModel):
     records_duplicated: int = 0
     data_freshness_status: str = "FRESH"
     active_sensors: List[str] = Field(default_factory=list)
+    sensor_telemetry: Optional[Dict[str, Any]] = None

@@ -15,7 +15,7 @@ services:
       - key: FIRMS_MAP_KEY
         value: "5ee48ea9900661577c1dc26dfcc70550"
       - key: DATABASE_URL
-        sync: false
+        value: "postgresql://postgres.mlkgaoxnvptewcxblmes:Sharan1%40bmsce@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres"
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY

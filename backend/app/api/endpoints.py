@@ -35,12 +35,25 @@ from app.services.weather_service import WindLookupError, lookup_wind
 router = APIRouter()
 
 @router.get("/health", tags=["Health"])
-def health_check():
+def health_check(db: Session = Depends(get_db)):
+    db_target = "UNKNOWN"
+    total_events = 0
+    try:
+        url_str = str(db.bind.url)
+        if "@" in url_str:
+            db_target = url_str.split("@")[-1]
+        else:
+            db_target = url_str
+        total_events = db.query(ThermalEvent).count()
+    except Exception as e:
+        db_target = f"ERR: {e}"
     return {
         "status": "HEALTHY",
         "service": "ThermoTrace Backend",
         "contract_version": "3.3.0",
-        "ml_model_version": "thermo_xgb_v1.1.0"
+        "ml_model_version": "thermo_xgb_v1.1.0",
+        "database_target": db_target,
+        "total_events_in_db": total_events
     }
 
 def get_zoom_limit(zoom: float) -> int:
@@ -1101,7 +1114,8 @@ def get_firms_status(db: Session = Depends(get_db)):
         records_inserted=latest_job.records_inserted if latest_job else 0,
         records_duplicated=latest_job.records_duplicated if latest_job else 0,
         data_freshness_status=freshness_status,
-        active_sensors=["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "MODIS_NRT"]
+        active_sensors=["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "MODIS_NRT"],
+        sensor_telemetry=info.get("sensor_telemetry")
     )
 
 from app.db.models import Notification

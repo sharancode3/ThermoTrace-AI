@@ -103,16 +103,24 @@ def fetch_sensor_telemetry(sensor: str, day_range: int) -> Tuple[pd.DataFrame, D
     })
     meta["last_attempt_utc"] = now_utc.isoformat()
 
-    active_key = (os.getenv("FIRMS_MAP_KEY") or FIRMS_API_KEY or DEFAULT_FIRMS_MAP_KEY).strip().strip('"')
-    if not active_key:
-        meta["status"] = "CONFIG_MISSING"
-        meta["error_message"] = "FIRMS_MAP_KEY environment variable is not configured on server."
-        print(f"[FIRMS CONFIG] {meta['error_message']}")
-        return pd.DataFrame(), meta
+    raw_key = os.getenv("FIRMS_MAP_KEY") or FIRMS_API_KEY or DEFAULT_FIRMS_MAP_KEY
+    # Sanitize key to pure hex characters to avoid quotes or whitespace from environment injection
+    import re
+    cleaned_key = re.sub(r'[^a-fA-F0-9]', '', str(raw_key).strip())
+    active_key = cleaned_key if len(cleaned_key) == 32 else DEFAULT_FIRMS_MAP_KEY
 
     url = f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/{active_key}/{sensor}/{INDIA_BBOX}/{day_range}"
     try:
         resp = requests.get(url, timeout=25)
+        # If response failed or returned 400 (Invalid MAP_KEY), retry immediately with verified default key
+        if (resp.status_code != 200 or "Invalid" in resp.text) and active_key != DEFAULT_FIRMS_MAP_KEY:
+            print(f"[FIRMS API FALLBACK] Sensor {sensor} returned HTTP {resp.status_code}, falling back to verified default key...")
+            fallback_url = f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/{DEFAULT_FIRMS_MAP_KEY}/{sensor}/{INDIA_BBOX}/{day_range}"
+            try:
+                resp = requests.get(fallback_url, timeout=25)
+            except Exception as fallback_err:
+                print(f"[FIRMS API FALLBACK ERROR] {fallback_err}")
+
         if resp.status_code == 200:
             text_content = resp.text.strip()
             if text_content.startswith("Invalid"):
@@ -141,8 +149,8 @@ def fetch_sensor_telemetry(sensor: str, day_range: int) -> Tuple[pd.DataFrame, D
             return df, meta
         else:
             meta["status"] = f"HTTP_{resp.status_code}"
-            meta["error_message"] = f"NASA FIRMS API returned HTTP {resp.status_code}"
-            print(f"[FIRMS HTTP ERROR] {sensor}: HTTP {resp.status_code}")
+            meta["error_message"] = f"NASA FIRMS API returned HTTP {resp.status_code}: {resp.text[:100]}"
+            print(f"[FIRMS HTTP ERROR] {sensor}: HTTP {resp.status_code} - {resp.text[:100]}")
             return pd.DataFrame(), meta
     except requests.exceptions.Timeout:
         meta["status"] = "TIMEOUT"

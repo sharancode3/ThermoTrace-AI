@@ -44,14 +44,16 @@ def _resolve_postgres_host() -> str:
 
     return "127.0.0.1"
 
+DEFAULT_SUPABASE_DATABASE_URL = "postgresql://postgres.mlkgaoxnvptewcxblmes:Sharan1%40bmsce@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres"
+
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    SQLALCHEMY_DATABASE_URL = DATABASE_URL
+if DATABASE_URL and DATABASE_URL.strip():
+    SQLALCHEMY_DATABASE_URL = DATABASE_URL.strip().strip('"').strip("'")
     if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 else:
-    POSTGRES_SERVER = _resolve_postgres_host()
-    SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    # Default to production Supabase PostGIS database instance
+    SQLALCHEMY_DATABASE_URL = DEFAULT_SUPABASE_DATABASE_URL
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, pool_size=15, max_overflow=25)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
