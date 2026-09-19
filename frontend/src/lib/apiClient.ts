@@ -52,6 +52,7 @@ export type EventFilters = {
   show_all?: boolean;
   focus_event_id?: string;
   hours?: number;
+  include_historical?: boolean;
 };
 
 function query(

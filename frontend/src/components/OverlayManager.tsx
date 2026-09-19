@@ -36,6 +36,12 @@ function cleanLocationName(loc?: string | null, lat?: number, lon?: number) {
     }
     return "Sovereign Indian Territory";
   }
+  // Strip raw facility UUIDs if present in location string
+  const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  if (uuidRegex.test(loc)) {
+    const cleaned = loc.replace(uuidRegex, "").replace(/^,\s*/, "").replace(/,\s*,/g, ",").trim();
+    return cleaned || "Industrial Zone, India";
+  }
   return loc;
 }
 

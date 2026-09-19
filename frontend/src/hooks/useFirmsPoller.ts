@@ -57,10 +57,10 @@ export function useFirmsPoller(onNewData?: () => void) {
   };
 
   useEffect(() => {
-    // 1. Initial check on mount respects 30-min cooldown
+    // 1. Initial check on mount respects 60-min cooldown
     executePoll();
 
-    // 2. Strict 30-minute foreground interval
+    // 2. Strict 60-minute foreground interval
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         executePoll();

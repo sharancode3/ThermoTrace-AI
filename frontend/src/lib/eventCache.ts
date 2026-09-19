@@ -246,29 +246,23 @@ export function filterCachedFeatures(
     filtered = filtered.filter((f) => f.properties?.anomaly_tier === filters.anomaly_tier);
   }
 
+  if (!filters.include_historical) {
+    const now = Date.now();
+    const freshCutoff = now - 24 * 3600 * 1000;
+    filtered = filtered.filter((f) => {
+      if (filters.focus_event_id && f.properties?.event_id === filters.focus_event_id) return true;
+      const ts = f.properties?.latest_detected_utc;
+      return ts ? new Date(ts).getTime() >= freshCutoff : false;
+    });
+  }
+
   if (filters.hours) {
     const now = Date.now();
     const windowMs = filters.hours * 3600 * 1000;
-    
-    // Satellite Orbit Cadence Awareness:
-    // Polar-orbiting satellites (VIIRS/MODIS) pass over India in periodic orbital cycles.
-    // If the latest detected pass is outside the immediate rolling window (e.g. inter-orbit gap or deployment sync latency),
-    // anchor to the latest satellite overpass timestamp so the map displays the active pass instead of an empty screen.
-    let latestMs = 0;
-    for (const f of filtered) {
-      const ts = f.properties?.latest_detected_utc;
-      if (ts) {
-        const t = new Date(ts).getTime();
-        if (t > latestMs) latestMs = t;
-      }
-    }
-
-    let cutoff = now - windowMs;
-    if (latestMs > 0 && (now - latestMs) > windowMs) {
-      cutoff = latestMs - windowMs;
-    }
+    const cutoff = now - windowMs;
 
     filtered = filtered.filter((f) => {
+      if (filters.focus_event_id && f.properties?.event_id === filters.focus_event_id) return true;
       const ts = f.properties?.latest_detected_utc;
       return ts ? new Date(ts).getTime() >= cutoff : true;
     });

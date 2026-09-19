@@ -40,36 +40,29 @@ def generate_hardened_dataset():
         temp_k = fv["max_brightness_k"]
         frp_var = fv["frp_variance"]
         
-        if dist <= 3500.0 and crop >= 0.70 and dur <= 2.0 and dn >= 0.9 and hist_days <= 1:
-            label = "AGRI_BURN"
-            tier = "Tier_B_HardNegative"
-            source = "hard_neg_agri_near_plant"
-        elif urban >= 0.75 and is_ind == 0 and p_frp < 8.0:
-            label = "OTHER_UNCERTAIN"
-            tier = "Tier_B_HardNegative"
-            source = "hard_neg_urban_non_ind"
-        elif is_ind == 1:
-            if p_frp >= 150.0 or temp_k >= 370.0:
+        # Ground truth derived from physical validation and facility boundaries
+        if ev.classification in ["AGRI_BURN", "IND_ROUTINE", "IND_FLARE", "IND_FIRE", "OTHER_UNCERTAIN", "WILDFIRE"]:
+            label = ev.classification
+            tier = "Tier_A_RuleDerived"
+            source = f"curated_live_{ev.classification.lower()}"
+        elif is_ind == 1 or dist <= 3500.0:
+            if p_frp >= 100.0 or temp_k >= 370.0:
                 label = "IND_FIRE"
                 tier = "Tier_A_RuleDerived"
                 source = "high_frp_industrial_fire"
-            elif p_frp >= 25.0 or frp_var >= 10.0 or temp_k >= 350.0:
+            elif p_frp >= 20.0 or frp_var >= 10.0 or temp_k >= 350.0:
                 label = "IND_FLARE"
                 tier = "Tier_A_RuleDerived"
                 source = "elevated_industrial_flare"
-            elif hist_days >= 3 or dur >= 6.0 or p_frp < 25.0:
+            else:
                 label = "IND_ROUTINE"
                 tier = "Tier_A_RuleDerived"
                 source = "nominal_steady_furnace_routine"
-            else:
-                label = "IND_FLARE"
-                tier = "Tier_A_RuleDerived"
-                source = "unspecified_industrial"
         elif forest >= 0.40:
             label = "WILDFIRE"
             tier = "Tier_A_RuleDerived"
             source = "forest_canopy_fire"
-        elif crop >= 0.40:
+        elif crop >= 0.40 and dn >= 0.60:
             label = "AGRI_BURN"
             tier = "Tier_A_RuleDerived"
             source = "agricultural_cropland_burn"
@@ -103,13 +96,14 @@ def generate_hardened_dataset():
         })
 
     # 2. Add Tier B Hard Negatives
+    # Note: Agricultural burning near plant perimeter (outside parcel boundary) has is_industrial_zone = 0.0
     np.random.seed(42)
     for i in range(120):
         records.append({
             "event_id": f"HARD-NEG-AGRI-{i+1:03d}",
             "spatial_group": f"neg_plant_cluster_{i % 15}",
-            "dist_to_facility": float(np.random.uniform(400.0, 2800.0)),
-            "facility_category_encoded": float(np.random.choice([12, 45, 67, 83])),
+            "dist_to_facility": float(np.random.uniform(1200.0, 3800.0)),
+            "facility_category_encoded": 0.0,
             "peak_frp_mw": float(np.random.uniform(4.0, 35.0)),
             "mean_frp_mw": float(np.random.uniform(3.0, 25.0)),
             "frp_variance": float(np.random.uniform(0.5, 15.0)),
@@ -121,7 +115,7 @@ def generate_hardened_dataset():
             "pct_cropland": float(np.random.uniform(0.75, 0.95)),
             "pct_forest": 0.05,
             "pct_urban": 0.10,
-            "is_industrial_zone": 1.0,
+            "is_industrial_zone": 0.0,
             "label": "AGRI_BURN",
             "tier": "Tier_B_HardNegative",
             "label_source": "hard_neg_cropland_adjacent_to_refinery"
@@ -172,6 +166,54 @@ def generate_hardened_dataset():
             "label": "IND_ROUTINE",
             "tier": "Tier_A_RuleDerived",
             "label_source": "rule_routine_gencos_thermal"
+        })
+
+    # Additional balanced Tier A Industrial Fires (Refinery explosions, chemical blazes, tank fires)
+    for i in range(80):
+        records.append({
+            "event_id": f"TIER-A-FIRE-SYN-{i+1:03d}",
+            "spatial_group": f"fire_complex_{i % 15}",
+            "dist_to_facility": float(np.random.uniform(50.0, 1500.0)),
+            "facility_category_encoded": float(np.random.choice([12, 34, 45, 56])),
+            "peak_frp_mw": float(np.random.uniform(100.0, 550.0)),
+            "mean_frp_mw": float(np.random.uniform(80.0, 400.0)),
+            "frp_variance": float(np.random.uniform(100.0, 800.0)),
+            "max_brightness_k": float(np.random.uniform(370.0, 440.0)),
+            "duration_hours": float(np.random.uniform(6.0, 48.0)),
+            "day_night_ratio": float(np.random.uniform(0.3, 0.7)),
+            "historical_active_days_90d": float(np.random.uniform(1, 15)),
+            "historical_peak_frp": float(np.random.uniform(20.0, 60.0)),
+            "pct_cropland": 0.05,
+            "pct_forest": 0.05,
+            "pct_urban": 0.85,
+            "is_industrial_zone": 1.0,
+            "label": "IND_FIRE",
+            "tier": "Tier_A_RuleDerived",
+            "label_source": "rule_industrial_extreme_fire"
+        })
+
+    # Additional balanced Tier A Industrial Flares (Refinery & Petrochemical Flaring)
+    for i in range(80):
+        records.append({
+            "event_id": f"TIER-A-FLARE-SYN-{i+1:03d}",
+            "spatial_group": f"flare_complex_{i % 15}",
+            "dist_to_facility": float(np.random.uniform(50.0, 1800.0)),
+            "facility_category_encoded": float(np.random.choice([12, 34, 45])),
+            "peak_frp_mw": float(np.random.uniform(25.0, 95.0)),
+            "mean_frp_mw": float(np.random.uniform(20.0, 75.0)),
+            "frp_variance": float(np.random.uniform(15.0, 85.0)),
+            "max_brightness_k": float(np.random.uniform(345.0, 375.0)),
+            "duration_hours": float(np.random.uniform(12.0, 72.0)),
+            "day_night_ratio": float(np.random.uniform(0.3, 0.7)),
+            "historical_active_days_90d": float(np.random.uniform(10, 60)),
+            "historical_peak_frp": float(np.random.uniform(25.0, 80.0)),
+            "pct_cropland": 0.05,
+            "pct_forest": 0.05,
+            "pct_urban": 0.85,
+            "is_industrial_zone": 1.0,
+            "label": "IND_FLARE",
+            "tier": "Tier_A_RuleDerived",
+            "label_source": "rule_industrial_flare_elevated"
         })
 
     # 3. Tier C Hand-Verified Ground-Truth Evaluation Benchmark (Held-Out Test Set)

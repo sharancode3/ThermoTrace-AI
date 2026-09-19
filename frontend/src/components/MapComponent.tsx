@@ -10,6 +10,7 @@ import {
   fetchGisObservations,
   fetchEventDetail,
   fetchFacilityWind,
+  fetchFirmsStatus,
   clearEventCache,
   GeoCollection,
   GeoFeature,
@@ -33,6 +34,7 @@ import {
   RotateCcw,
   Compass,
   X,
+  Clock,
 } from "lucide-react";
 import { ThermalMapMarker } from "./ThermalMapMarker";
 import FacilityDetailDrawer from "./FacilityDetailDrawer";
@@ -195,6 +197,9 @@ export default function MapComponent({
   const [showObservations, setShowObservations] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [includeHistorical, setIncludeHistorical] = useState(false);
+  const [cooldownFilter, setCooldownFilter] = useState<"ALL" | "ACTIVE" | "COOLED">("ALL");
+  const fetchSequenceRef = useRef(0);
 
   // Data States
   const [geoData, setGeoData] = useState<GeoCollection | null>(null);
@@ -215,6 +220,15 @@ export default function MapComponent({
     y: number;
   } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [firmsStatus, setFirmsStatus] = useState<any>(null);
+
+  useEffect(() => {
+    fetchFirmsStatus().then((data) => setFirmsStatus(data)).catch(() => {});
+    const interval = setInterval(() => {
+      fetchFirmsStatus().then((data) => setFirmsStatus(data)).catch(() => {});
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Facility ambient wind state when facility drawer is open without an active event
   const [facilityWind, setFacilityWind] = useState<WindData | null>(null);
@@ -275,6 +289,8 @@ export default function MapComponent({
     setClassFilter("");
     setShowFacilities(true);
     setShowObservations(false);
+    setIncludeHistorical(false);
+    setCooldownFilter("ALL");
     setFocusedFacility(null);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -409,6 +425,8 @@ export default function MapComponent({
       setError(null);
       setLoadingEvents(true);
 
+      const currentSeq = ++fetchSequenceRef.current;
+
       const eventFilters = {
         hours: windowHours ?? undefined,
         start_time: startTime,
@@ -416,6 +434,7 @@ export default function MapComponent({
         anomaly_tier: severityFilter || undefined,
         show_all: showAllDetections,
         focus_event_id: selectedEventId || undefined,
+        include_historical: includeHistorical,
       };
 
       Promise.all([
@@ -424,26 +443,34 @@ export default function MapComponent({
         showObservations ? fetchGisObservations(viewport, { start_time: startTime }) : Promise.resolve<GeoCollection | null>(null),
       ])
         .then(([events, facilities, observations]) => {
+          if (currentSeq !== fetchSequenceRef.current) return;
           setGeoData(events);
           setFacilityData(facilities);
           setObservationData(observations);
         })
         .catch((err) => {
+          if (currentSeq !== fetchSequenceRef.current) return;
           console.error("Failed to fetch GIS data:", err);
           setError(err instanceof Error ? err.message : "Unknown map error");
         })
-        .finally(() => setLoadingEvents(false));
+        .finally(() => {
+          if (currentSeq === fetchSequenceRef.current) {
+            setLoadingEvents(false);
+          }
+        });
     }, 300);
 
     return () => window.clearTimeout(timer);
   }, [
     viewport,
     startTime,
+    windowHours,
     classFilter,
     severityFilter,
     showFacilities,
     showObservations,
     showAllDetections,
+    includeHistorical,
     selectedEventId,
     refreshTrigger,
   ]);
@@ -523,7 +550,7 @@ export default function MapComponent({
   }, [selectedEventId]);
 
   const eventCount = geoData?.features.length || 0;
-  const isFilterActive = windowHours !== 6 || !showAllDetections || severityFilter !== "" || classFilter !== "";
+  const isFilterActive = windowHours !== 6 || !showAllDetections || severityFilter !== "" || classFilter !== "" || includeHistorical || cooldownFilter !== "ALL";
 
   // Selected marker feature
   const selectedFeature = useMemo(() => {
@@ -566,6 +593,47 @@ export default function MapComponent({
 
     return list;
   }, [geoData, selectedEventData, selectedEventId]);
+
+  // Partition features into fresh (unclustered rich interactive markers) and historical
+  const { freshFeatures, historicalFeatures } = useMemo(() => {
+    const fresh: GeoFeature[] = [];
+    const historical: GeoFeature[] = [];
+    const now = Date.now();
+
+    for (const f of displayFeatures) {
+      const isSelected = selectedEventId === f.properties?.event_id;
+      const latest = f.properties?.latest_detected_utc;
+      const isFreshByTimestamp = latest ? (now - new Date(latest).getTime()) < 24 * 3600 * 1000 : false;
+      const normLife = String(f.properties?.lifecycle_status || "").toUpperCase();
+      const isCooled = f.properties?.is_active === false ||
+        normLife === "EXTINGUISHED" ||
+        normLife === "RESOLVED" ||
+        normLife === "COOLING" ||
+        normLife === "HISTORICAL" ||
+        !isFreshByTimestamp;
+
+      // Cooldown / Thermal Activity State Filtering:
+      if (!isSelected) {
+        if (cooldownFilter === "ACTIVE" && isCooled) continue;
+        if (cooldownFilter === "COOLED" && !isCooled) continue;
+      }
+
+      if (isSelected || isFreshByTimestamp) {
+        fresh.push(f);
+      } else {
+        historical.push(f);
+      }
+    }
+
+    return { freshFeatures: fresh, historicalFeatures: historical };
+  }, [displayFeatures, selectedEventId, cooldownFilter]);
+
+  const historicalGeoJson = useMemo(() => {
+    return {
+      type: "FeatureCollection" as const,
+      features: historicalFeatures,
+    };
+  }, [historicalFeatures]);
 
   // Selected target coordinates (event or facility) for authoritative overlays
   const selectedCoords = useMemo<[number, number] | null>(() => {
@@ -701,9 +769,28 @@ export default function MapComponent({
             visible: Boolean(activeWindVisible && windGeometry),
           });
         }}
-        interactiveLayerIds={showFacilities ? ["facilities-circles"] : []}
+        interactiveLayerIds={[
+          ...(showFacilities ? ["facilities-circles"] : []),
+          ...(includeHistorical && historicalFeatures.length > 500 ? ["historical-clusters-circle"] : []),
+        ]}
         onClick={(e) => {
           const feature = e.features?.[0];
+          if (feature && feature.layer?.id === "historical-clusters-circle") {
+            const clusterId = feature.properties?.cluster_id;
+            const mapboxSource = mapRef.current?.getMap().getSource("historical-clusters") as any;
+            if (mapboxSource && clusterId != null) {
+              mapboxSource.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+                if (err) return;
+                const coords = (feature.geometry as any).coordinates;
+                mapRef.current?.easeTo({
+                  center: coords,
+                  zoom: zoom + 0.5,
+                  duration: 500,
+                });
+              });
+            }
+            return;
+          }
           if (feature && feature.layer?.id === "facilities-circles") {
             const p = feature.properties as any;
             if (p) {
@@ -785,7 +872,7 @@ export default function MapComponent({
                   "interpolate",
                   ["linear"],
                   ["heatmap-density"],
-                  0, "rgba(0, 0, 255, 0)",
+                  0, "rgba(0, 255, 0, 0)",
                   0.2, "rgb(0, 255, 255)",
                   0.4, "rgb(0, 255, 0)",
                   0.6, "rgb(255, 255, 0)",
@@ -799,8 +886,61 @@ export default function MapComponent({
           </Source>
         )}
 
-        {/* Thermal Event Markers (Guaranteed Selected Event Inclusion) */}
-        {displayFeatures.map((feature) => {
+        {/* Clustered Historical Events Layer (when >500 historical events to protect DOM & 60fps) */}
+        {includeHistorical && historicalFeatures.length > 500 && (
+          <Source
+            id="historical-clusters"
+            type="geojson"
+            data={historicalGeoJson as any}
+            cluster={true}
+            clusterMaxZoom={12}
+            clusterRadius={40}
+          >
+            <Layer
+              id="historical-clusters-circle"
+              type="circle"
+              filter={["has", "point_count"]}
+              paint={{
+                "circle-color": [
+                  "step",
+                  ["get", "point_count"],
+                  "#64748b",
+                  25,
+                  "#475569",
+                  100,
+                  "#334155",
+                ],
+                "circle-radius": [
+                  "step",
+                  ["get", "point_count"],
+                  15,
+                  25,
+                  20,
+                  100,
+                  26,
+                ],
+                "circle-stroke-width": 1.5,
+                "circle-stroke-color": "#94a3b8",
+                "circle-opacity": 0.85,
+              }}
+            />
+            <Layer
+              id="historical-clusters-count"
+              type="symbol"
+              filter={["has", "point_count"]}
+              layout={{
+                "text-field": "{point_count_abbreviated}",
+                "text-size": 11,
+              }}
+              paint={{
+                "text-color": "#f8fafc",
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Thermal Event Markers: Fresh features are ALWAYS rendered as unclustered rich interactive markers */}
+        {freshFeatures.map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status, is_active, latest_detected_utc } = feature.properties;
           const isSelected = selectedEventId === event_id;
@@ -821,7 +961,7 @@ export default function MapComponent({
               longitude={lon}
               latitude={lat}
               anchor="center"
-              style={{ zIndex: isSelected ? 40 : 10 }}
+              style={{ zIndex: isSelected ? 40 : 12 }}
               onClick={(e) => {
                 e.originalEvent?.stopPropagation();
                 handleHotspotClick(event_id, lon, lat);
@@ -871,6 +1011,55 @@ export default function MapComponent({
                   <span className="text-slate-500">·</span>
                   <span className={`text-[10px] font-semibold uppercase ${isCooled ? "text-sky-300" : "text-emerald-400"}`}>
                     {isCooled ? (normLife === "COOLING" ? "Aging (24-72h)" : "Historical (>72h)") : "Active (<24h)"}
+                  </span>
+                </div>
+              </div>
+            </Marker>
+          );
+        })}
+
+        {/* Historical Event Markers: Rendered up to 500 budget to prevent DOM degradation (when unclustered) */}
+        {includeHistorical && (viewport.zoom > 12 || historicalFeatures.length <= 500) && historicalFeatures.slice(0, 500).map((feature) => {
+          const [lon, lat] = feature.geometry.coordinates;
+          const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
+          const isSelected = selectedEventId === event_id;
+          const normLife = String(lifecycle_status || "").toUpperCase();
+
+          return (
+            <Marker
+              key={`historical-marker-${event_id}`}
+              longitude={lon}
+              latitude={lat}
+              anchor="center"
+              style={{ zIndex: isSelected ? 40 : 8 }}
+              onClick={(e) => {
+                e.originalEvent?.stopPropagation();
+                handleHotspotClick(event_id, lon, lat);
+              }}
+            >
+              <div 
+                className="relative group cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleHotspotClick(event_id, lon, lat);
+                }}
+              >
+                <ThermalMapMarker
+                  classification={classification}
+                  anomalyTier={anomaly_tier}
+                  isSelected={isSelected}
+                  peakFrp={Number(peak_frp_mw || 0)}
+                  maxBrightnessK={Number(max_brightness_k || 0)}
+                  isCooled={true}
+                  onClick={() => handleHotspotClick(event_id, lon, lat)}
+                />
+                <div className="absolute left-1/2 -translate-x-1/2 -top-8 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg shadow-xl border border-slate-700 z-50 flex items-center gap-1.5 backdrop-blur-md">
+                  <span className="font-bold text-slate-300">{classification}</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-emerald-400 font-semibold">{Number(peak_frp_mw || 0).toFixed(1)} MW</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-[10px] font-semibold uppercase text-sky-300">
+                    {normLife === "COOLING" ? "Aging (24-72h)" : "Historical (>72h)"}
                   </span>
                 </div>
               </div>
@@ -1070,7 +1259,7 @@ export default function MapComponent({
                 THERMAL RADAR
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 shrink-0">
-                {eventCount}
+                {freshFeatures.length} Active{includeHistorical ? ` · ${historicalFeatures.length} Hist` : ""}
               </span>
             </div>
 
@@ -1102,7 +1291,7 @@ export default function MapComponent({
                   THERMAL RADAR // INDIA NRT
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  {eventCount} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "Hotspots (Pan-India)"}
+                  {freshFeatures.length} Active{includeHistorical ? ` · ${historicalFeatures.length} Historical` : ""} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
                 </span>
               </div>
 
@@ -1154,6 +1343,42 @@ export default function MapComponent({
                 {showAllDetections ? <Eye className="w-3.5 h-3.5 text-slate-400" /> : <EyeOff className="w-3.5 h-3.5 text-amber-400" />}
                 <span>{showAllDetections ? "All Hotspots" : "Priority Only"}</span>
               </button>
+
+              <button
+                onClick={() => setIncludeHistorical((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition cursor-pointer ${
+                  includeHistorical
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
+                    : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200"
+                }`}
+                title="Last observed 24 hours ago or earlier; current activity unconfirmed."
+                type="button"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Historical {includeHistorical ? "(ON)" : ""}</span>
+              </button>
+
+              <select
+                aria-label="Thermal State / Cooldown Filter"
+                value={cooldownFilter}
+                onChange={(e) => {
+                  const val = e.target.value as "ALL" | "ACTIVE" | "COOLED";
+                  setCooldownFilter(val);
+                  if (val === "COOLED" && !includeHistorical) {
+                    setIncludeHistorical(true);
+                  }
+                }}
+                className={`border rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none cursor-pointer transition ${
+                  cooldownFilter !== "ALL"
+                    ? "bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-sm"
+                    : "bg-slate-800 border-slate-700 text-slate-300 hover:text-slate-200"
+                }`}
+                title="Filter by thermal activity state: Active or Cooled Down"
+              >
+                <option value="ALL" className="bg-slate-800 text-slate-300">All States</option>
+                <option value="ACTIVE" className="bg-slate-800 text-emerald-400">🔥 Active (&lt;24h)</option>
+                <option value="COOLED" className="bg-slate-800 text-sky-300">❄️ Cooled Down</option>
+              </select>
 
               <select
                 aria-label="Severity Filter"
@@ -1316,6 +1541,56 @@ export default function MapComponent({
                     <option value="AGRI_BURN">🌾 Agriculture (Crop)</option>
                     <option value="WILDFIRE">🌲 Forest Wildfire</option>
                     <option value="OTHER_UNCERTAIN">❓ Other / Uncertain</option>
+                  </select>
+                </div>
+
+                {/* Historical Events Toggle */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Historical Observations
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIncludeHistorical(!includeHistorical)}
+                    className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-between border transition cursor-pointer ${
+                      includeHistorical
+                        ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                        : "bg-slate-800 text-slate-300 border-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-400" />
+                      <span>Show Historical Events</span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700">
+                      {includeHistorical ? "ENABLED" : "OFF"}
+                    </span>
+                  </button>
+                  <p className="text-[10.5px] text-slate-400 leading-tight">
+                    Last observed 24 hours ago or earlier; current activity unconfirmed.
+                  </p>
+                </div>
+
+                {/* Thermal Activity / Cooldown State Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Thermal Activity State
+                  </label>
+                  <select
+                    aria-label="Mobile Thermal State Filter"
+                    value={cooldownFilter}
+                    onChange={(e) => {
+                      const val = e.target.value as "ALL" | "ACTIVE" | "COOLED";
+                      setCooldownFilter(val);
+                      if (val === "COOLED" && !includeHistorical) {
+                        setIncludeHistorical(true);
+                      }
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl p-2.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
+                  >
+                    <option value="ALL">All Thermal States</option>
+                    <option value="ACTIVE">🔥 Active Hotspots (&lt;24h)</option>
+                    <option value="COOLED">❄️ Cooled Down (Aging / Extinguished)</option>
                   </select>
                 </div>
               </div>
@@ -1493,18 +1768,49 @@ export default function MapComponent({
           </div>
         )}
 
-        {/* Empty State Card */}
+        {/* Empty State Card: Positioned at top-40 to prevent any overlap with toolbar horizon controls */}
         {!loadingEvents && !error && displayFeatures.length === 0 && (
-          <div className="absolute left-1/2 top-6 z-20 w-80 -translate-x-1/2 rounded-2xl border border-slate-700 bg-slate-900/95 backdrop-blur-md p-4 text-center text-xs text-slate-300 shadow-2xl">
-            <p className="font-semibold text-slate-100 text-sm">No Thermal Events Found</p>
-            <p className="mt-1 text-slate-400">No detections matched your active time window or filters.</p>
-            <button
-              onClick={handleClearFilters}
-              className="mt-3 rounded-xl bg-orange-600 px-3 py-1.5 font-semibold text-white hover:bg-orange-500 transition shadow-md shadow-orange-900/40"
-              type="button"
-            >
-              Reset All Filters
-            </button>
+          <div className="absolute left-1/2 top-40 z-20 w-96 -translate-x-1/2 rounded-2xl border border-slate-700 bg-slate-900/95 backdrop-blur-md p-5 text-center text-xs text-slate-300 shadow-2xl">
+            <p className="font-semibold text-slate-100 text-sm">
+              {windowHours === 6 ? "No Observations in 6-Hour Window" : "No Thermal Events Found"}
+            </p>
+            <div className="mt-1.5 text-slate-400 leading-relaxed space-y-1">
+              {windowHours === 6 ? (
+                <>
+                  <p>No matching satellite observations detected within the past 6 hours.</p>
+                  {firmsStatus?.latest_observation_timestamp_utc && (
+                    <p className="text-slate-300 font-mono text-[11px]">
+                      Latest telemetry: {new Date(firmsStatus.latest_observation_timestamp_utc).toUTCString()}
+                    </p>
+                  )}
+                  {firmsStatus?.last_successful_firms_fetch_utc && (
+                    <p className="text-slate-400 font-mono text-[10.5px]">
+                      Last NASA FIRMS sync: {new Date(firmsStatus.last_successful_firms_fetch_utc).toUTCString()} (60-min cadence)
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p>No detections matched your active time window or filters.</p>
+              )}
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {windowHours === 6 && (
+                <button
+                  onClick={() => setWindowHours(24)}
+                  className="rounded-xl bg-orange-600 px-3.5 py-1.5 font-semibold text-white hover:bg-orange-500 transition shadow-md shadow-orange-900/40 cursor-pointer"
+                  type="button"
+                >
+                  View 24h Window
+                </button>
+              )}
+              <button
+                onClick={handleClearFilters}
+                className="rounded-xl bg-slate-800 border border-slate-700 px-3.5 py-1.5 font-semibold text-slate-300 hover:bg-slate-700 transition cursor-pointer"
+                type="button"
+              >
+                Reset All Filters
+              </button>
+            </div>
           </div>
         )}
 

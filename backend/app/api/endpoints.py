@@ -80,8 +80,9 @@ def get_gis_events(
     classification: Optional[str] = None,
     anomaly_tier: Optional[str] = None,
     include_closed: bool = Query(False),
+    include_historical: bool = Query(False),
     show_all: bool = Query(False),
-        focus_event_id: Optional[str] = None,
+    focus_event_id: Optional[str] = None,
     hours: Optional[int] = Query(None, ge=1, le=720),
     limit: int = Query(2000, ge=1, le=5000),
     db: Session = Depends(get_db),
@@ -94,7 +95,7 @@ def get_gis_events(
     cache_key = (
         round(west, 2), round(south, 2), round(east, 2), round(north, 2), round(zoom, 1),
         str(start_time), str(end_time), str(since_utc), classification, anomaly_tier,
-        include_closed, show_all, focus_event_id, hours, limit
+        include_closed, include_historical, show_all, focus_event_id, hours, limit
     )
     now_ts = datetime.now(timezone.utc).timestamp()
     if cache_key in _GIS_CACHE:
@@ -107,6 +108,21 @@ def get_gis_events(
     if not include_closed:
         query = query.filter(ThermalEvent.lifecycle_status != "CLOSED")
 
+    now_utc = datetime.now(timezone.utc)
+
+    # Truthful historical visibility filter
+    if not include_historical:
+        fresh_cutoff = now_utc - timedelta(hours=24)
+        if focus_event_id:
+            query = query.filter(
+                or_(
+                    ThermalEvent.latest_detected_utc >= fresh_cutoff,
+                    ThermalEvent.event_id == focus_event_id
+                )
+            )
+        else:
+            query = query.filter(ThermalEvent.latest_detected_utc >= fresh_cutoff)
+
     query = query.filter(
         ThermalEvent.longitude >= west,
         ThermalEvent.longitude <= east,
@@ -117,23 +133,12 @@ def get_gis_events(
     if since_utc is not None:
         query = query.filter(ThermalEvent.latest_detected_utc > since_utc)
     elif hours is not None:
-        now_utc = datetime.now(timezone.utc)
         cutoff = now_utc - timedelta(hours=hours)
-        
-        # Satellite Orbit Cadence Awareness:
-        # Polar-orbiting satellites (VIIRS/MODIS) pass over India in ~10-12 hour orbital cycles (day pass ~08:30 UTC, night pass ~20:30 UTC).
-        # When an operator clicks 6h during an inter-orbit gap, anchor to the latest satellite overpass window so the map displays the latest active pass instead of an empty screen.
-        latest_event_time = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar()
-        if latest_event_time and (now_utc - latest_event_time).total_seconds() > (hours * 3600):
-            cutoff = latest_event_time - timedelta(hours=hours)
-            
         query = query.filter(ThermalEvent.latest_detected_utc >= cutoff)
     elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
     elif not show_all:
-        # Default rolling 30-day retention window anchored to latest satellite telemetry
-        anchor_time = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar() or datetime.now(timezone.utc)
-        thirty_days_ago = anchor_time - timedelta(days=30)
+        thirty_days_ago = now_utc - timedelta(days=30)
         query = query.filter(ThermalEvent.latest_detected_utc >= thirty_days_ago)
 
     if end_time is not None:
@@ -1054,15 +1059,43 @@ def get_firms_status(db: Session = Depends(get_db)):
     info = get_last_poll_info(db)
     
     latest_job = db.query(IngestionJob).order_by(IngestionJob.executed_at.desc()).first()
-    last_fetch = latest_job.executed_at if (latest_job and latest_job.executed_at) else datetime.now(timezone.utc)
+    successful_job = (
+        db.query(IngestionJob)
+        .filter(IngestionJob.status.in_(["SUCCESS", "PARTIAL_SUCCESS"]))
+        .order_by(IngestionJob.executed_at.desc())
+        .first()
+    )
+    latest_obs_ts = db.query(func.max(ThermalObservation.observation_timestamp_utc)).scalar()
+    
+    last_fetch = latest_job.executed_at if (latest_job and latest_job.executed_at) else None
+    last_successful_fetch = successful_job.executed_at if (successful_job and successful_job.executed_at) else last_fetch
+    
+    # Truthful Data Freshness Evaluation
+    now_utc = datetime.now(timezone.utc)
+    if latest_obs_ts:
+        if latest_obs_ts.tzinfo is None:
+            latest_obs_ts = latest_obs_ts.replace(tzinfo=timezone.utc)
+        obs_age_hours = (now_utc - latest_obs_ts).total_seconds() / 3600.0
+        if obs_age_hours < 24.0:
+            freshness_status = "LIVE_NOMINAL"
+        elif obs_age_hours < 72.0:
+            freshness_status = "AGING_OBSERVATIONS"
+        else:
+            freshness_status = "STALE"
+    else:
+        freshness_status = "NO_OBSERVATIONS"
+
+    job_status = latest_job.status if latest_job else "IDLE"
     
     return FirmsStatusResponse(
-        status="ACTIVE",
-        last_successful_firms_fetch_utc=last_fetch,
-        latest_observation_timestamp_utc=last_fetch,
+        status=job_status,
+        last_successful_firms_fetch_utc=last_successful_fetch,
+        latest_observation_timestamp_utc=latest_obs_ts,
+        last_processing_completed_utc=last_fetch,
         records_received=latest_job.records_received if latest_job else 0,
         records_inserted=latest_job.records_inserted if latest_job else 0,
-        data_freshness_status="LIVE_NOMINAL",
+        records_duplicated=latest_job.records_duplicated if latest_job else 0,
+        data_freshness_status=freshness_status,
         active_sensors=["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "MODIS_NRT"]
     )
 

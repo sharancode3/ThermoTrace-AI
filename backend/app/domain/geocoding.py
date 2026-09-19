@@ -1,8 +1,23 @@
 import math
 import os
 import sys
+import uuid
 from typing import Dict, Any, Optional
 from app.domain.sovereign_geofencing import is_within_sovereign_india
+
+def is_raw_uuid(val: Any) -> bool:
+    if not val:
+        return False
+    if isinstance(val, uuid.UUID):
+        return True
+    s = str(val).strip()
+    if len(s) == 36 and s.count('-') == 4:
+        try:
+            uuid.UUID(s)
+            return True
+        except ValueError:
+            return False
+    return False
 
 # Comprehensive Bounding Boxes for Indian States to guarantee zero cross-state mislabeling
 STATE_BOUNDING_BOXES = [
@@ -156,7 +171,7 @@ def resolve_indian_location(lat: float, lon: float, facility_name: Optional[str]
             res = session.execute(q, {"lat": lat, "lon": lon}).fetchone()
             if res and res[3] is not None and res[3] <= 35.0:
                 fac_name, district, state, dist_km = res[0], res[1], res[2], float(res[3])
-                if facility_name and facility_name != "Unknown Facility":
+                if facility_name and facility_name != "Unknown Facility" and not is_raw_uuid(facility_name):
                     formatted = f"{facility_name}, {district}, {state}"
                 elif dist_km <= 5.0:
                     formatted = f"{fac_name} Perimeter, {district}, {state}"
@@ -206,7 +221,7 @@ def resolve_indian_location(lat: float, lon: float, facility_name: Optional[str]
         district = best_item["district"]
         hub = best_item["hub"]
         
-        if facility_name and facility_name != "Unknown Facility":
+        if facility_name and facility_name != "Unknown Facility" and not is_raw_uuid(facility_name):
             formatted = f"{facility_name}, {district}, {state}"
         elif min_dist <= 15.0:
             formatted = f"{hub}, {district}, {state}"

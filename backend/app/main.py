@@ -13,12 +13,11 @@ def _run_sync_poller_cycle():
     """Worker executed in background worker thread to prevent event loop blocking."""
     try:
         session = SessionLocal()
-        print("[FIRMS DAEMON] Executing 30-minute automated NASA FIRMS multi-sensor polling & ML hardening...")
+        print("[FIRMS DAEMON] Executing 60-minute automated NASA FIRMS multi-sensor polling & ML hardening...")
         res = poll_firms_foreground_cycle(session, force=False)
         inserted = res.get("inserted_count", 0)
-        print(f"[FIRMS DAEMON] Telemetry check completed. New observations inserted: {inserted}")
-        events_count = form_events_from_observations(session)
-        print(f"[FIRMS DAEMON] ST-DBSCAN clustering & ML hardening completed. Active events refreshed: {events_count}")
+        events_count = res.get("new_events_formed", 0)
+        print(f"[FIRMS DAEMON] Telemetry check completed. New observations: {inserted}, Events formed/refreshed: {events_count}")
         
         # Keep facility active hotspot counters in sync
         from sqlalchemy import text
@@ -56,7 +55,7 @@ async def firms_periodic_poller_daemon():
             await asyncio.to_thread(_run_sync_poller_cycle)
         except Exception as e:
             print(f"[FIRMS DAEMON THREAD ERROR] {e}")
-        # Sleep for configured interval (default: 30 minutes = 1800 seconds)
+        # Sleep for configured interval (default: 60 minutes = 3600 seconds)
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "true").lower() in ("true", "1", "yes")

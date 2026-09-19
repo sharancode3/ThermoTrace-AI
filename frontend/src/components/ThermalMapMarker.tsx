@@ -174,7 +174,7 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
             <path d="M16 18L21 14" stroke={isCooled ? strokeColor : "#FFFFFF"} strokeWidth="1.4" strokeLinecap="round" />
           </g>
         ) : (
-          /* 4. OTHER / UNCERTAIN: Tactical Radar Diamond Crosshair */
+          /* 4. OTHER / UNCERTAIN: Tactical Radar Diamond with Question Badge */
           <g 
             fill={fillColor} 
             stroke={isCooled ? strokeColor : "#FFFFFF"} 
@@ -183,8 +183,19 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
             strokeLinejoin="round"
           >
             <polygon points="16,3 29,16 16,29 3,16" />
-            <circle cx="16" cy="16" r="4" fill="#FFFFFF" />
-            <circle cx="16" cy="16" r="1.8" fill={fillColor} />
+            <circle cx="16" cy="16" r="5" fill="#FFFFFF" stroke="none" />
+            <text
+              x="16"
+              y="19.5"
+              textAnchor="middle"
+              fill={fillColor}
+              fontSize="10"
+              fontWeight="900"
+              fontFamily="system-ui, -apple-system, sans-serif"
+              stroke="none"
+            >
+              ?
+            </text>
           </g>
         )}
       </svg>

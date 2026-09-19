@@ -143,45 +143,64 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
             
             # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
-            # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
             dist_fac = float(features.get("dist_to_facility", 99999.0))
             is_ind_zone = int(features.get("is_industrial_zone", 0))
-            has_facility = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 1000.0)
-            is_immediate_plant_boundary = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 500.0)
+            has_facility = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 4500.0) or (is_ind_zone == 1)
+            is_immediate_plant_boundary = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 1500.0)
             peak_frp = float(event.peak_frp_mw or 0.0)
             max_bright = float(features.get("max_brightness_k", 300.0))
             pct_crop = float(features.get("pct_cropland", 0.0))
             pct_for = float(features.get("pct_forest", 0.0))
+            pct_urb = float(features.get("pct_urban", 0.0))
+            dn_ratio = float(features.get("day_night_ratio", 0.5))
             raw_model_class = predicted_class
             raw_model_confidence = confidence
             rule_applied = None
 
             if has_facility:
-                # 1. Industrial Facility Context (Within 1.0km of registered plant)
-                if peak_frp >= 300.0 or max_bright >= 375.0:
+                # 1. Industrial Facility Context (Within plant buffer or registered corridor)
+                # Stubble burning is strictly prohibited inside industrial complexes
+                if peak_frp >= 100.0 or max_bright >= 370.0:
                     predicted_class = "IND_FIRE"
                     rule_applied = "INDUSTRIAL_EXTREME_FIRE_GATE"
-                elif ("flare" in str(features.get("primary_land_use", "")).lower() or "refin" in str(features.get("primary_land_use", "")).lower() or "petro" in str(features.get("primary_land_use", "")).lower()) and peak_frp >= 60.0:
+                elif ("flare" in str(features.get("primary_land_use", "")).lower() or 
+                      "refin" in str(features.get("primary_land_use", "")).lower() or 
+                      "petro" in str(features.get("primary_land_use", "")).lower() or
+                      "oil" in str(features.get("primary_land_use", "")).lower() or
+                      "gas" in str(features.get("primary_land_use", "")).lower()) and peak_frp >= 20.0:
                     predicted_class = "IND_FLARE"
                     rule_applied = "REFINERY_FLARE_STACK_GATE"
                 elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
                     # Trust ML prediction for industrial emitter
                     pass
-                elif is_immediate_plant_boundary and confidence < 0.60:
-                    # Inside immediate plant boundary, default ambiguous output to nominal plant heat
+                elif is_immediate_plant_boundary or is_ind_zone == 1 or dist_fac <= 4500.0:
+                    # Inside plant boundary, corridor, or 4.5km buffer:
+                    # Resolve non-industrial or uncertain output to nominal plant/corridor process heat
                     predicted_class = "IND_ROUTINE"
                     rule_applied = "PLANT_BOUNDARY_NOMINAL_HEAT"
                 else:
-                    # Outside immediate plant boundary (500m-1000m): trust ML model prediction
-                    pass
+                    if predicted_class == "AGRI_BURN":
+                        predicted_class = "OTHER_UNCERTAIN"
+                        rule_applied = "INDUSTRIAL_AGRI_BURN_GATE"
+            elif pct_urb >= 0.70:
+                # 2. Urban Metropolitan Core Context (Delhi NCR, Mumbai MMR, Bengaluru, etc.)
+                # Crop stubble burning is strictly impossible in dense urban/commercial districts
+                if predicted_class == "AGRI_BURN":
+                    predicted_class = "OTHER_UNCERTAIN"
+                    rule_applied = "URBAN_NON_AGRICULTURAL_MUNICIPAL_OR_WASTE"
             else:
-                # 2. Non-Facility Rural / Forest / Agrarian Context (> 1.0km from any plant)
+                # 3. Non-Facility Rural / Forest / Agrarian Context (> 4.5km from any plant and outside industrial/urban zones)
                 if pct_for >= 0.40 or event.primary_land_use == 'Forest':
                     predicted_class = "WILDFIRE"
                     rule_applied = "RURAL_FOREST_CANOPY_FIRE"
-                elif pct_crop >= 0.50 or event.primary_land_use == 'Cropland':
+                elif (pct_crop >= 0.45 or event.primary_land_use == 'Cropland') and dn_ratio >= 0.60:
+                    # Agricultural crop stubble burning: ONLY verified when daytime pass confirms agricultural cycle
                     predicted_class = "AGRI_BURN"
                     rule_applied = "AGRARIAN_STUBBLE_BIOMASS_BURN"
+                elif dn_ratio < 0.60 and (pct_crop >= 0.45 or predicted_class == "AGRI_BURN"):
+                    # Nocturnal rural detections outside known industry: unverified localized burn
+                    predicted_class = "OTHER_UNCERTAIN"
+                    rule_applied = "NOCTURNAL_RURAL_UNVERIFIED"
                 elif confidence < 0.40 or entropy > 1.40:
                     predicted_class = "OTHER_UNCERTAIN"
                     rule_applied = "EPISTEMIC_UNCERTAINTY_GATE"
@@ -199,8 +218,9 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
         except Exception as e:
             print(f"Inference error for {event_id}: {e}")
             predicted_class = "OTHER_UNCERTAIN"
-            confidence = 0.50
-            rule_applied = "INFERENCE_EXCEPTION_FALLBACK"
+            confidence = 0.0
+            uncertainty_tier = "UNAVAILABLE"
+            rule_applied = f"INFERENCE_EXCEPTION: {str(e)[:100]}"
 
     event.classification = predicted_class
     event.classification_confidence = round(confidence, 4)
@@ -239,6 +259,14 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
     cls_record.confidence_pct = round(confidence * 100.0, 2)
     cls_record.class_probabilities = class_probs
     cls_record.feature_importances = feature_importances
+    if isinstance(features, dict):
+        features["_classification_meta"] = {
+            "raw_model_class": raw_model_class if 'raw_model_class' in locals() else None,
+            "raw_model_confidence": round(raw_model_confidence, 4) if 'raw_model_confidence' in locals() else 0.0,
+            "assigned_class": event.classification,
+            "assigned_class_prob": round(confidence, 4),
+            "rule_applied": rule_applied if 'rule_applied' in locals() else None,
+        }
     cls_record.input_feature_vector = features
 
     # 5. Facility Baseline & Anomaly Engine
@@ -257,21 +285,35 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
     std_frp = float(facility.baseline_frp_std) if facility and facility.baseline_frp_std is not None else 0.0
     mean_frp = float(facility.baseline_frp_mean) if facility and facility.baseline_frp_mean is not None else 0.0
 
-    median_frp = float(facility.baseline_frp_median) if facility and getattr(facility, 'baseline_frp_median', None) is not None and facility.baseline_frp_median > 0 else (mean_frp * 0.90 if mean_frp > 0 else 5.0)
-    mad_frp = max(std_frp * 0.6745, 0.5)
+    # Genuine measured median and MAD (use stored database baselines if available; do not fabricate via multipliers)
+    median_frp = float(facility.baseline_frp_median) if facility and getattr(facility, 'baseline_frp_median', None) is not None and facility.baseline_frp_median > 0 else None
+    mad_frp = float(facility.baseline_frp_mad) if facility and getattr(facility, 'baseline_frp_mad', None) is not None and facility.baseline_frp_mad > 0 else None
+
+    facility_sec = (facility.sector_category or "").upper() if facility else ""
+    is_high_hazard_sector = any(k in facility_sec for k in ["REFIN", "PETRO", "OIL", "GAS", "LNG", "CHEM", "NUCLEAR"])
+    is_heavy_heat_sector = any(k in facility_sec for k in ["POWER", "STEEL", "SMELT", "ALUMIN", "CEMENT"])
+    max_bright_k = float(event.max_brightness_k or features.get("max_brightness_k", 300.0))
 
     if facility and sample_count >= BASELINE_SUFFICIENCY_THRESHOLD and std_frp > 0.0:
         z_score = (current_frp - mean_frp) / std_frp
-        z_mad = (current_frp - median_frp) / mad_frp
         tier = evaluate_anomaly_tier(z_score)
         
-        # Operational Radiance Safety Gate: True anomalous fires or severe statistical outliers
-        if event.classification == "IND_FIRE" or z_score >= 4.0 or z_mad >= 4.0:
+        # Operational Radiance Safety Gates (UPGRADE tier on extreme fire or severe anomaly; never downgrade an abnormal detection!)
+        if (event.classification == "IND_FIRE" or 
+            z_score >= 3.5 or 
+            current_frp >= 100.0 or 
+            max_bright_k >= 375.0 or 
+            (is_high_hazard_sector and current_frp >= 50.0) or
+            (is_heavy_heat_sector and current_frp >= 80.0)):
             tier = "CRITICAL"
-        elif event.classification == "IND_FLARE" and (z_score >= 2.0 or current_frp >= 200.0):
+        elif (tier == "ABNORMAL" or 
+              z_score >= 1.8 or
+              (is_high_hazard_sector and current_frp >= 20.0) or
+              (is_heavy_heat_sector and current_frp >= 35.0) or
+              (event.classification == "IND_FLARE" and current_frp >= 25.0) or
+              current_frp >= 35.0 or 
+              max_bright_k >= 350.0):
             tier = "ABNORMAL"
-        else:
-            tier = "NORMAL"
         
         event.anomaly_z_score = round(float(z_score), 2)
         event.anomaly_tier = tier
@@ -281,25 +323,44 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
         anomaly_record.z_score = round(float(z_score), 2)
         anomaly_record.percentile_rank = 0.0
         anomaly_record.anomaly_severity = tier
-        anomaly_record.contributing_factors = {
+        
+        factors = {
             "status": "STATISTICALLY_SUFFICIENT",
-            "baseline_engine": "DUAL_PARAMETRIC_AND_ROBUST_MAD",
+            "baseline_engine": "PARAMETRIC_GAUSSIAN",
             "sample_count": sample_count,
             "gaussian_z_score": round(float(z_score), 2),
-            "robust_mad_z_score": round(float(z_mad), 2),
-            "baseline_median_mw": round(median_frp, 2),
-            "baseline_mad_mw": round(mad_frp, 2),
             "deviation_mw": round(current_frp - mean_frp, 2),
             "percentage_above_mean": round(((current_frp - mean_frp) / mean_frp) * 100, 2) if mean_frp > 0 else 0.0,
             "disaster_contamination_quarantine": bool(z_score >= 4.0 or current_frp >= 50.0),
             "physical_verification": phys_verification
         }
+        if median_frp is not None and mad_frp is not None and mad_frp > 0:
+            z_mad = (current_frp - median_frp) / mad_frp
+            factors["baseline_engine"] = "DUAL_PARAMETRIC_AND_ROBUST_MAD"
+            factors["robust_mad_z_score"] = round(float(z_mad), 2)
+            factors["baseline_median_mw"] = round(median_frp, 2)
+            factors["baseline_mad_mw"] = round(mad_frp, 2)
+            if z_mad >= 4.0:
+                tier = "CRITICAL"
+                event.anomaly_tier = "CRITICAL"
+                anomaly_record.anomaly_severity = "CRITICAL"
+
+        anomaly_record.contributing_factors = factors
     else:
         # Non-facility event or facility with insufficient baseline history (< 10 samples)
-        # Assess operational anomaly tier via physical radiance thresholds without manufacturing statistical z-scores
-        if event.classification == "IND_FIRE" or current_frp >= 300.0:
+        # Assess operational anomaly tier via physical radiance thresholds, facility specs, and sector hazard
+        if (event.classification == "IND_FIRE" or 
+            current_frp >= 100.0 or 
+            max_bright_k >= 375.0 or
+            (is_high_hazard_sector and current_frp >= 50.0) or
+            (is_heavy_heat_sector and current_frp >= 80.0)):
             tier = "CRITICAL"
-        elif current_frp >= 80.0 or (event.classification == "WILDFIRE" and current_frp >= 50.0) or (event.classification == "IND_FLARE" and current_frp >= 100.0):
+        elif ((is_high_hazard_sector and current_frp >= 20.0) or
+              (is_heavy_heat_sector and current_frp >= 35.0) or
+              (event.classification == "IND_FLARE" and current_frp >= 25.0) or
+              (event.classification == "WILDFIRE" and current_frp >= 30.0) or
+              current_frp >= 35.0 or 
+              max_bright_k >= 350.0):
             tier = "ABNORMAL"
         else:
             tier = "NORMAL"
@@ -321,7 +382,7 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
 
     # 6. Publish / Update Thermo News Bulletins
     lat, lon = float(event.latitude), float(event.longitude)
-    geo = resolve_indian_location(lat, lon, facility.id if facility else None)
+    geo = resolve_indian_location(lat, lon, facility.name if facility else None)
     
     headline, summary, severity = generate_humanized_news_bulletin(event, facility, geo, z_score)
     

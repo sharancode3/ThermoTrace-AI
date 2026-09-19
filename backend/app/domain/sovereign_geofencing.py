@@ -41,6 +41,8 @@ _MAINLAND_COORDS = [
     (79.85, 10.80), # Nagapattinam
     (79.80, 11.95), # Puducherry
     (80.27, 13.08), # Chennai Harbour
+    (80.36, 13.30), # Ennore / Manali / Pulicat Coast (encompasses CPCL Manali & coastal industrial belt)
+    (80.15, 14.00), # Pulicat North / Sriharikota
     (80.05, 14.45), # Nellore
     (80.60, 15.90), # Andhra Coast
     (82.25, 16.95), # Kakinada

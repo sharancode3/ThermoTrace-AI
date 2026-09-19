@@ -43,6 +43,16 @@ function formatRelativeTime(value?: string) {
   return `${diffHr}h ago (${formatTime(value)})`;
 }
 
+function formatLocationName(name?: string | null): string {
+  if (!name) return "India";
+  const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  if (uuidRegex.test(name)) {
+    const cleaned = name.replace(uuidRegex, "").replace(/^,\s*/, "").replace(/,\s*,/g, ",").trim();
+    return cleaned || "Industrial Zone, India";
+  }
+  return name;
+}
+
 export function NewsPanel({
   open = true,
   onClose,
@@ -321,22 +331,22 @@ export function NewsPanel({
         </div>
       </div>
 
-      {/* 30-Minute NASA FIRMS Automated Polling Status Bar */}
+      {/* 1-Hour NASA FIRMS Automated Polling Status Bar */}
       <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 border-b border-orange-100 px-6 py-2 flex flex-col gap-1 text-xs shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
-            <span className="text-slate-600 font-medium">Auto-Sync (30m cadence):</span>
+            <span className="text-slate-600 font-medium">Auto-Sync (1h cadence):</span>
             <span className="font-bold text-orange-800 font-mono">
               {recordsPulled !== null ? `${recordsPulled} records pulled` : "Active"}
             </span>
           </div>
           <span className="text-[11px] text-slate-500 font-mono">
-            {lastPolledAt ? formatRelativeTime(lastPolledAt) : "30m Loop"}
+            {lastPolledAt ? formatRelativeTime(lastPolledAt) : "1h Cadence"}
           </span>
         </div>
         <p className="text-[10px] text-amber-900/90 leading-tight">
-          Notice: NASA FIRMS satellite telemetry is polled on an optimized 30-minute cadence. A curated prototype dataset is active for live deployment & cloud storage constraints; the full nationwide telemetry stream will be continuously ingested during the hackathon evaluation.
+          Notice: NASA FIRMS satellite telemetry refreshed on 1-hour cadence across 30-day rolling window.
         </p>
       </div>
 
@@ -450,7 +460,7 @@ export function NewsPanel({
               <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
                 <div className="flex items-center gap-1 text-slate-700 font-medium truncate max-w-[240px]">
                   <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                  <span className="truncate">{item.location_name || "India"}</span>
+                  <span className="truncate">{formatLocationName(item.location_name)}</span>
                 </div>
                 <div className="flex items-center gap-2 font-mono">
                   <span className="font-semibold text-slate-900">{item.peak_frp_mw?.toFixed(1) || "0.0"} MW</span>
