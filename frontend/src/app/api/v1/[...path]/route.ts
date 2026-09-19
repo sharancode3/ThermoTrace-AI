@@ -274,8 +274,8 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
     });
 
     if (isGet && backendRes.ok) {
-      // Allow browser and edge proxy to cache responses for 2 minutes to conserve egress
-      responseHeaders.set("Cache-Control", "public, max-age=120, stale-while-revalidate=300");
+      // Dynamic live thermal telemetry: short 5s TTL prevents stale empty cache while debouncing
+      responseHeaders.set("Cache-Control", "public, max-age=5, stale-while-revalidate=15");
     }
 
     return new NextResponse(body, {
