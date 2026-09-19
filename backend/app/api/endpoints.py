@@ -99,7 +99,7 @@ def get_gis_events(
     anomaly_tier: Optional[str] = None,
     include_closed: bool = Query(False),
     include_historical: bool = Query(False),
-    show_all: bool = Query(False),
+    show_all: bool = Query(True),
     focus_event_id: Optional[str] = None,
     hours: Optional[int] = Query(None, ge=1, le=720),
     limit: int = Query(2000, ge=1, le=5000),
