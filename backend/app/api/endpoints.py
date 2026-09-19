@@ -48,16 +48,16 @@ def get_zoom_limit(zoom: float) -> int:
     return 5000
 
 _GIS_CACHE = {}
-_GIS_CACHE_TTL = 900.0 # 15 min in-memory cache to eliminate redundant Supabase free-tier egress
+_GIS_CACHE_TTL = 15.0 # 15s cache to debounce viewport pans without blocking live polling reflection
 
 _FACILITIES_CACHE = {}
 _FACILITIES_CACHE_TTL = 3600.0 # 1 hour cache for static industrial facilities
 
 _OBSERVATIONS_CACHE = {}
-_OBSERVATIONS_CACHE_TTL = 300.0 # 5 min cache for raw satellite observations
+_OBSERVATIONS_CACHE_TTL = 60.0 # 1 min cache for raw satellite observations
 
 _ANALYTICS_CACHE = {}
-_ANALYTICS_CACHE_TTL = 300.0 # 5 min cache for national analytics summary
+_ANALYTICS_CACHE_TTL = 60.0 # 1 min cache for national analytics summary
 
 def clear_gis_cache():
     global _GIS_CACHE, _FACILITIES_CACHE, _OBSERVATIONS_CACHE, _ANALYTICS_CACHE
@@ -65,6 +65,11 @@ def clear_gis_cache():
     _FACILITIES_CACHE.clear()
     _OBSERVATIONS_CACHE.clear()
     _ANALYTICS_CACHE.clear()
+
+@router.post("/gis/cache/clear", tags=["GIS"])
+def trigger_clear_gis_cache():
+    clear_gis_cache()
+    return {"status": "SUCCESS", "message": "GIS cache cleared successfully"}
 
 
 @router.get("/gis/events", response_model=GeoJSONFeatureCollection)

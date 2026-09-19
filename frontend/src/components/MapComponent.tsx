@@ -188,8 +188,8 @@ export default function MapComponent({
     zoom: 4.8,
   });
 
-  // Unified Filter States (Default to 6h filter as requested)
-  const [windowHours, setWindowHours] = useState<number | null>(6);
+  // Unified Filter States (Default to 24h active window)
+  const [windowHours, setWindowHours] = useState<number | null>(24);
   const [showAllDetections, setShowAllDetections] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [classFilter, setClassFilter] = useState<string>("");
@@ -550,7 +550,7 @@ export default function MapComponent({
   }, [selectedEventId]);
 
   const eventCount = geoData?.features.length || 0;
-  const isFilterActive = windowHours !== 6 || !showAllDetections || severityFilter !== "" || classFilter !== "" || includeHistorical || cooldownFilter !== "ALL";
+  const isFilterActive = windowHours !== 24 || !showAllDetections || severityFilter !== "" || classFilter !== "" || includeHistorical || cooldownFilter !== "ALL";
 
   // Selected marker feature
   const selectedFeature = useMemo(() => {

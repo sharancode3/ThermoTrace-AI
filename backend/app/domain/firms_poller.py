@@ -375,6 +375,13 @@ def poll_firms_foreground_cycle(session: Session, force: bool = False) -> Dict[s
         session.rollback()
         print(f"Error refreshing event intelligence in poller: {e}")
 
+    # Invalidate in-memory GIS caches so new telemetry reflects immediately across all clients
+    try:
+        from app.api.endpoints import clear_gis_cache
+        clear_gis_cache()
+    except Exception as cache_err:
+        print(f"[FIRMS CACHE NOTICE] {cache_err}")
+
     # Clean up stale unlinked observations older than 30 days
     try:
         session.execute(text("""
