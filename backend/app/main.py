@@ -121,6 +121,23 @@ def root_check():
         "docs": "/docs"
     }
 
+@app.api_route("/api/v1", methods=["GET", "HEAD"])
+@app.api_route("/api/v1/", methods=["GET", "HEAD"])
+def api_v1_index():
+    return {
+        "status": "online",
+        "service": "ThermoTrace AI Sovereign Thermal Intelligence REST Engine",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/api/v1/health",
+            "firms_status": "/api/v1/firms/status",
+            "gis_events": "/api/v1/gis/events",
+            "facilities": "/api/v1/facilities",
+            "notifications": "/api/v1/notifications",
+            "docs": "/docs"
+        }
+    }
+
 @app.api_route("/api/v1/health", methods=["GET", "HEAD"])
 def health_check():
     return {
