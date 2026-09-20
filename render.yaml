@@ -11,7 +11,7 @@ services:
       - key: ENABLE_FIRMS_POLLING
         value: "true"
       - key: FIRMS_POLL_INTERVAL_MINUTES
-        value: "30"
+        value: "60"
       - key: FIRMS_MAP_KEY
         value: "5ee48ea9900661577c1dc26dfcc70550"
       - key: DATABASE_URL

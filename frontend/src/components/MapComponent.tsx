@@ -283,7 +283,7 @@ export default function MapComponent({
   }, [windowHours]);
 
   const handleClearFilters = () => {
-    setWindowHours(6);
+    setWindowHours(24);
     setShowAllDetections(true);
     setSeverityFilter("");
     setClassFilter("");
@@ -427,14 +427,20 @@ export default function MapComponent({
 
       const currentSeq = ++fetchSequenceRef.current;
 
+      const effectiveHours = cooldownFilter === "COOLED"
+        ? (windowHours && windowHours >= 72 ? windowHours : 72)
+        : (windowHours ?? undefined);
+
+      const effectiveIncludeHistorical = includeHistorical || cooldownFilter === "COOLED";
+
       const eventFilters = {
-        hours: windowHours ?? undefined,
+        hours: effectiveHours,
         start_time: startTime,
         classification: classFilter || undefined,
         anomaly_tier: severityFilter || undefined,
         show_all: showAllDetections,
         focus_event_id: selectedEventId || undefined,
-        include_historical: includeHistorical,
+        include_historical: effectiveIncludeHistorical,
       };
 
       Promise.all([
@@ -471,6 +477,7 @@ export default function MapComponent({
     showObservations,
     showAllDetections,
     includeHistorical,
+    cooldownFilter,
     selectedEventId,
     refreshTrigger,
   ]);
@@ -605,11 +612,12 @@ export default function MapComponent({
       const latest = f.properties?.latest_detected_utc;
       const isFreshByTimestamp = latest ? (now - new Date(latest).getTime()) < 24 * 3600 * 1000 : false;
       const normLife = String(f.properties?.lifecycle_status || "").toUpperCase();
+      const isCoolingEvent = normLife === "COOLING";
+      const isExtinguished = normLife === "EXTINGUISHED" || normLife === "RESOLVED" || normLife === "HISTORICAL";
+
       const isCooled = f.properties?.is_active === false ||
-        normLife === "EXTINGUISHED" ||
-        normLife === "RESOLVED" ||
-        normLife === "COOLING" ||
-        normLife === "HISTORICAL" ||
+        isCoolingEvent ||
+        isExtinguished ||
         !isFreshByTimestamp;
 
       // Cooldown / Thermal Activity State Filtering:
@@ -618,7 +626,9 @@ export default function MapComponent({
         if (cooldownFilter === "COOLED" && !isCooled) continue;
       }
 
-      if (isSelected || isFreshByTimestamp) {
+      // Fresh active detections (<24h), cooling events (24-72h), or explicitly filtered cooled events
+      // are rendered as rich interactive markers with appropriate visual styling:
+      if (isSelected || isFreshByTimestamp || isCoolingEvent || cooldownFilter === "COOLED") {
         fresh.push(f);
       } else {
         historical.push(f);
@@ -1259,7 +1269,9 @@ export default function MapComponent({
                 THERMAL RADAR
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 shrink-0">
-                {freshFeatures.length} Active{includeHistorical ? ` · ${historicalFeatures.length} Hist` : ""}
+                {cooldownFilter === "COOLED"
+                  ? `${freshFeatures.length} Cooled`
+                  : `${freshFeatures.length} Active${includeHistorical ? ` · ${historicalFeatures.length} Hist` : ""}`}
               </span>
             </div>
 
@@ -1291,14 +1303,16 @@ export default function MapComponent({
                   THERMAL RADAR // INDIA NRT
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  {freshFeatures.length} Active{includeHistorical ? ` · ${historicalFeatures.length} Historical` : ""} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
+                  {cooldownFilter === "COOLED"
+                    ? `${freshFeatures.length} Cooled Down`
+                    : `${freshFeatures.length} Active${includeHistorical ? ` · ${historicalFeatures.length} Historical` : ""}`} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
                 </span>
               </div>
 
               {/* Time Window Buttons */}
               <div className="flex items-center gap-1 bg-slate-800/90 p-0.5 rounded-xl border border-slate-700">
                 {([
-                  [6, "6h"],
+                  [12, "12h"],
                   [24, "24h"],
                   [168, "7d"],
                   [720, "30d"],
@@ -1388,7 +1402,7 @@ export default function MapComponent({
                   setSeverityFilter(val);
                   if (val) {
                     setShowAllDetections(true);
-                    if (val === "CRITICAL" && windowHours === 6) setWindowHours(168);
+                    if (val === "CRITICAL" && windowHours === 12) setWindowHours(168);
                   }
                 }}
                 className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
@@ -1476,7 +1490,7 @@ export default function MapComponent({
                 </label>
                 <div className="grid grid-cols-5 gap-1.5">
                   {([
-                    [6, "6h"],
+                    [12, "12h"],
                     [24, "24h"],
                     [168, "7d"],
                     [720, "30d"],
@@ -1511,7 +1525,7 @@ export default function MapComponent({
                       setSeverityFilter(val);
                       if (val) {
                         setShowAllDetections(true);
-                        if (val === "CRITICAL" && windowHours === 6) setWindowHours(168);
+                        if (val === "CRITICAL" && windowHours === 12) setWindowHours(168);
                       }
                     }}
                     className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl p-2.5 text-xs font-medium focus:outline-none focus:border-orange-500"
@@ -1607,7 +1621,7 @@ export default function MapComponent({
                     Reset Defaults
                   </button>
                 ) : (
-                  <span className="text-xs text-slate-500 font-mono">Default 6h Filter</span>
+                  <span className="text-xs text-slate-500 font-mono">Default 24h Filter</span>
                 )}
 
                 <button
