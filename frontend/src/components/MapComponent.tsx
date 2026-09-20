@@ -427,11 +427,13 @@ export default function MapComponent({
 
       const currentSeq = ++fetchSequenceRef.current;
 
+      const isWindowHistorical = windowHours === null || (windowHours !== null && windowHours > 24);
+      const isClassHistorical = classFilter === "AGRI_BURN" || classFilter === "WILDFIRE";
       const effectiveHours = cooldownFilter === "COOLED"
         ? (windowHours && windowHours >= 72 ? windowHours : 72)
         : (windowHours ?? undefined);
 
-      const effectiveIncludeHistorical = includeHistorical || cooldownFilter === "COOLED";
+      const effectiveIncludeHistorical = includeHistorical || cooldownFilter === "COOLED" || isWindowHistorical || isClassHistorical;
 
       const eventFilters = {
         hours: effectiveHours,
@@ -557,6 +559,8 @@ export default function MapComponent({
   }, [selectedEventId]);
 
   const eventCount = geoData?.features.length || 0;
+  const isWindowHistorical = windowHours === null || (windowHours !== null && windowHours > 24);
+  const showHistoricalData = includeHistorical || isWindowHistorical;
   const isFilterActive = windowHours !== 24 || !showAllDetections || severityFilter !== "" || classFilter !== "" || includeHistorical || cooldownFilter !== "ALL";
 
   // Selected marker feature
@@ -626,9 +630,15 @@ export default function MapComponent({
         if (cooldownFilter === "COOLED" && !isCooled) continue;
       }
 
-      // Fresh active detections (<24h), cooling events (24-72h), or explicitly filtered cooled events
-      // are rendered as rich interactive markers with appropriate visual styling:
-      if (isSelected || isFreshByTimestamp || isCoolingEvent || cooldownFilter === "COOLED") {
+      // Tactical symbology priority: Wildfire events (always high-priority) and agricultural burns in the selected window
+      const normClass = String(f.properties?.classification || "").toUpperCase();
+      const isWildfire = normClass === "WILDFIRE";
+      const isAgriBurn = normClass === "AGRI_BURN";
+      const isRelevantAgri = isAgriBurn && (classFilter === "AGRI_BURN" || showHistoricalData || fresh.length < 350);
+
+      // Fresh active detections (<24h), cooling events (24-72h), wildfires, or relevant agricultural burns
+      // are rendered as rich interactive markers with appropriate tactical symbology:
+      if (isSelected || isFreshByTimestamp || isCoolingEvent || cooldownFilter === "COOLED" || isWildfire || isRelevantAgri) {
         fresh.push(f);
       } else {
         historical.push(f);
@@ -636,7 +646,7 @@ export default function MapComponent({
     }
 
     return { freshFeatures: fresh, historicalFeatures: historical };
-  }, [displayFeatures, selectedEventId, cooldownFilter]);
+  }, [displayFeatures, selectedEventId, cooldownFilter, showHistoricalData, classFilter]);
 
   const historicalGeoJson = useMemo(() => {
     return {
@@ -781,7 +791,7 @@ export default function MapComponent({
         }}
         interactiveLayerIds={[
           ...(showFacilities ? ["facilities-circles"] : []),
-          ...(includeHistorical && historicalFeatures.length > 500 ? ["historical-clusters-circle"] : []),
+          ...(showHistoricalData && historicalFeatures.length > 500 ? ["historical-clusters-circle"] : []),
         ]}
         onClick={(e) => {
           const feature = e.features?.[0];
@@ -897,7 +907,7 @@ export default function MapComponent({
         )}
 
         {/* Clustered Historical Events Layer (when >500 historical events to protect DOM & 60fps) */}
-        {includeHistorical && historicalFeatures.length > 500 && (
+        {showHistoricalData && historicalFeatures.length > 500 && (
           <Source
             id="historical-clusters"
             type="geojson"
@@ -1029,7 +1039,7 @@ export default function MapComponent({
         })}
 
         {/* Historical Event Markers: Rendered up to 500 budget to prevent DOM degradation (when unclustered) */}
-        {includeHistorical && (viewport.zoom > 12 || historicalFeatures.length <= 500) && historicalFeatures.slice(0, 500).map((feature) => {
+        {showHistoricalData && (viewport.zoom > 12 || historicalFeatures.length <= 500) && historicalFeatures.slice(0, 500).map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
           const isSelected = selectedEventId === event_id;
@@ -1271,7 +1281,7 @@ export default function MapComponent({
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 shrink-0">
                 {cooldownFilter === "COOLED"
                   ? `${freshFeatures.length} Cooled`
-                  : `${freshFeatures.length} Active${includeHistorical ? ` · ${historicalFeatures.length} Hist` : ""}`}
+                  : `${freshFeatures.length} Active${showHistoricalData ? ` · ${historicalFeatures.length} Hist` : ""}`}
               </span>
             </div>
 
@@ -1305,7 +1315,7 @@ export default function MapComponent({
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
                   {cooldownFilter === "COOLED"
                     ? `${freshFeatures.length} Cooled Down`
-                    : `${freshFeatures.length} Active${includeHistorical ? ` · ${historicalFeatures.length} Historical` : ""}`} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
+                    : `${freshFeatures.length} Active${showHistoricalData ? ` · ${historicalFeatures.length} Historical` : ""}`} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
                 </span>
               </div>
 
@@ -1361,7 +1371,7 @@ export default function MapComponent({
               <button
                 onClick={() => setIncludeHistorical((prev) => !prev)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition cursor-pointer ${
-                  includeHistorical
+                  showHistoricalData
                     ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
                     : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200"
                 }`}
@@ -1369,7 +1379,7 @@ export default function MapComponent({
                 type="button"
               >
                 <Clock className="w-3.5 h-3.5" />
-                <span>Historical {includeHistorical ? "(ON)" : ""}</span>
+                <span>Historical {showHistoricalData ? "(ON)" : ""}</span>
               </button>
 
               <select
@@ -1567,7 +1577,7 @@ export default function MapComponent({
                     type="button"
                     onClick={() => setIncludeHistorical(!includeHistorical)}
                     className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-between border transition cursor-pointer ${
-                      includeHistorical
+                      showHistoricalData
                         ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
                         : "bg-slate-800 text-slate-300 border-slate-700"
                     }`}
@@ -1577,7 +1587,7 @@ export default function MapComponent({
                       <span>Show Historical Events</span>
                     </div>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700">
-                      {includeHistorical ? "ENABLED" : "OFF"}
+                      {showHistoricalData ? "ENABLED" : "OFF"}
                     </span>
                   </button>
                   <p className="text-[10.5px] text-slate-400 leading-tight">
