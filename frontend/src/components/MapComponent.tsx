@@ -617,20 +617,18 @@ export default function MapComponent({
     return list;
   }, [geoData, selectedEventData, selectedEventId]);
 
-  // Partition features into rich interactive markers with authentic ML tactical symbology
+  // Partition features into active interactive markers and cooled/historical markers
   const { freshFeatures, historicalFeatures } = useMemo(() => {
     const fresh: GeoFeature[] = [];
     const historical: GeoFeature[] = [];
 
     for (const f of displayFeatures) {
       const isSelected = selectedEventId === f.properties?.event_id;
+      const isActive = f.properties?.is_active === true;
       const normLife = String(f.properties?.lifecycle_status || "").toUpperCase();
       const isCoolingEvent = normLife === "COOLING";
       const isExtinguished = normLife === "EXTINGUISHED" || normLife === "RESOLVED" || normLife === "HISTORICAL";
-
-      const isCooled = f.properties?.is_active === false ||
-        isCoolingEvent ||
-        isExtinguished;
+      const isCooled = !isActive || isCoolingEvent || isExtinguished;
 
       // Cooldown / Thermal Activity State Filtering:
       if (!isSelected) {
@@ -638,10 +636,11 @@ export default function MapComponent({
         if (cooldownFilter === "COOLED" && !isCooled) continue;
       }
 
-      // In the sovereign evaluation freeze, all authentic classified events
-      // (Industrial plants, agricultural burns, wildfires, and uncertain heat anomalies)
-      // are rendered as interactive markers with their authentic ML symbology:
-      fresh.push(f);
+      if (isCooled) {
+        historical.push(f);
+      } else {
+        fresh.push(f);
+      }
     }
 
     return { freshFeatures: fresh, historicalFeatures: historical };
@@ -1037,8 +1036,8 @@ export default function MapComponent({
           );
         })}
 
-        {/* Historical Event Markers: Rendered up to 500 budget to prevent DOM degradation (when unclustered) */}
-        {showHistoricalData && (viewport.zoom > 12 || historicalFeatures.length <= 500) && historicalFeatures.slice(0, 500).map((feature) => {
+        {/* Historical Event Markers: Rendered when historical data is requested or in 7d/30d multi-day windows */}
+        {(showHistoricalData || cooldownFilter === "COOLED" || (windowHours !== null && windowHours > 24)) && historicalFeatures.slice(0, 500).map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
           const isSelected = selectedEventId === event_id;
@@ -1279,8 +1278,10 @@ export default function MapComponent({
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 shrink-0">
                 {cooldownFilter === "COOLED"
-                  ? `${freshFeatures.length} Cooled`
-                  : `${freshFeatures.length} Active${showHistoricalData ? ` · ${historicalFeatures.length} Hist` : ""}`}
+                  ? `${historicalFeatures.length} Cooled`
+                  : cooldownFilter === "ACTIVE"
+                  ? `${freshFeatures.length} Active`
+                  : `${freshFeatures.length} Active${historicalFeatures.length > 0 ? ` · ${historicalFeatures.length} Hist` : ""}`}
               </span>
             </div>
 
@@ -1313,8 +1314,10 @@ export default function MapComponent({
                 </span>
                 <span id="radar-event-count-pill" className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
                   {cooldownFilter === "COOLED"
-                    ? `${freshFeatures.length} Cooled Down`
-                    : `${freshFeatures.length} Active${showHistoricalData ? ` · ${historicalFeatures.length} Historical` : ""}`} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
+                    ? `${historicalFeatures.length} Cooled Down`
+                    : cooldownFilter === "ACTIVE"
+                    ? `${freshFeatures.length} Active`
+                    : `${freshFeatures.length} Active${historicalFeatures.length > 0 ? ` · ${historicalFeatures.length} Historical` : ""}`} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
                 </span>
               </div>
 

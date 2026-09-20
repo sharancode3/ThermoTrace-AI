@@ -191,6 +191,60 @@ def trigger_clear_gis_cache():
     return {"status": "SUCCESS", "message": "GIS cache cleared successfully"}
 
 
+def sample_balanced_cooled(cooled_list: List[GeoJSONFeature], target_count: int) -> List[GeoJSONFeature]:
+    """
+    Stratified representative sampling across authentic ML classifications.
+    Prevents visual clutter while preserving exact proportion of industrial, agrarian, and wildfire events.
+    """
+    if len(cooled_list) <= target_count:
+        return cooled_list
+
+    by_class = {}
+    for f in cooled_list:
+        cls = f.properties.get("classification") or "OTHER_UNCERTAIN"
+        by_class.setdefault(cls, []).append(f)
+
+    # Sort each category by peak FRP and observation count
+    for cls in by_class:
+        by_class[cls].sort(
+            key=lambda x: (float(x.properties.get("peak_frp_mw") or 0.0), x.properties.get("observation_count") or 1),
+            reverse=True
+        )
+
+    if target_count <= 120:
+        # ~100 Cooled Events Quotas for 7-Day Window
+        quotas = {
+            "IND_ROUTINE": 30,
+            "AGRI_BURN": 25,
+            "IND_FIRE": 17,
+            "IND_FLARE": 15,
+            "OTHER_UNCERTAIN": 10,
+            "WILDFIRE": 3
+        }
+    else:
+        # ~200 Cooled Events Quotas for 30-Day Window
+        quotas = {
+            "IND_ROUTINE": 60,
+            "AGRI_BURN": 45,
+            "IND_FIRE": 35,
+            "IND_FLARE": 35,
+            "OTHER_UNCERTAIN": 15,
+            "WILDFIRE": 10
+        }
+
+    sampled = []
+    for cls, q in quotas.items():
+        sampled.extend(by_class.get(cls, [])[:q])
+
+    if len(sampled) < target_count:
+        seen = set(f.properties["event_id"] for f in sampled)
+        remainder = [f for f in cooled_list if f.properties["event_id"] not in seen]
+        remainder.sort(key=lambda x: float(x.properties.get("peak_frp_mw") or 0.0), reverse=True)
+        sampled.extend(remainder[:target_count - len(sampled)])
+
+    return sampled[:target_count]
+
+
 @router.get("/gis/events", response_model=GeoJSONFeatureCollection)
 def get_gis_events(
     west: float = Query(68.0, ge=-180, le=180),
@@ -287,6 +341,14 @@ def get_gis_events(
                 continue
 
         filtered.append(f)
+
+    # Balanced historical quota: strictly all active events + 100 cooled for 7d, + 200 cooled for 30d
+    if hours is not None and hours > 24 and not classification:
+        target_cooled = 100 if hours <= 168 else 200
+        active_part = [f for f in filtered if f.properties.get("is_active")]
+        cooled_part = [f for f in filtered if not f.properties.get("is_active")]
+        sampled_cooled = sample_balanced_cooled(cooled_part, target_cooled)
+        filtered = active_part + sampled_cooled
 
     filtered.sort(key=lambda x: tier_weights.get(x.properties.get("anomaly_tier", ""), 4))
     result = GeoJSONFeatureCollection(features=filtered[:effective_limit])
