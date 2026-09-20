@@ -1312,7 +1312,7 @@ export default function MapComponent({
                 <span className="text-xs font-bold font-mono tracking-wider text-slate-200">
                   THERMAL RADAR // INDIA NRT
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                <span id="radar-event-count-pill" className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
                   {cooldownFilter === "COOLED"
                     ? `${freshFeatures.length} Cooled Down`
                     : `${freshFeatures.length} Active${showHistoricalData ? ` · ${historicalFeatures.length} Historical` : ""}`} {viewport.zoom >= 9.5 || selectedEventId ? "in view" : "(Pan-India)"}
@@ -1786,7 +1786,7 @@ export default function MapComponent({
 
         {/* Map Loading Indicator */}
         {loadingEvents && !geoData && (
-          <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-900/90 backdrop-blur-md px-4 py-2 text-xs font-mono text-slate-300 shadow-xl flex items-center gap-2">
+          <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-900/90 backdrop-blur-md px-4 py-2 text-xs font-mono text-slate-300 shadow-xl flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
             Scanning sovereign thermal spectrum...
           </div>
