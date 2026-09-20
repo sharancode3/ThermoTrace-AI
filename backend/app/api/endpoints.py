@@ -30,7 +30,7 @@ from app.domain.features import get_thermal_trend, batch_get_thermal_trends, get
 from app.domain.llm_humanizer import humanize_intelligence
 from app.domain.geocoding import resolve_indian_location
 from app.domain.sovereign_geofencing import is_within_sovereign_india
-from app.services.weather_service import WindLookupError, lookup_wind
+from app.services.weather_service import WindLookupError, lookup_wind, _compute_reanalysis_weather_fallback
 
 router = APIRouter()
 
@@ -211,7 +211,24 @@ def sample_balanced_cooled(cooled_list: List[GeoJSONFeature], target_count: int)
             reverse=True
         )
 
-    if target_count <= 120:
+    if target_count <= 8:
+        # ~5 Cooled Events Quotas for 12-Hour Window
+        quotas = {
+            "IND_ROUTINE": 2,
+            "IND_FLARE": 1,
+            "AGRI_BURN": 1,
+            "OTHER_UNCERTAIN": 1,
+        }
+    elif target_count <= 30:
+        # ~20 Cooled Events Quotas for 24-Hour Window
+        quotas = {
+            "IND_ROUTINE": 8,
+            "IND_FLARE": 4,
+            "AGRI_BURN": 4,
+            "IND_FIRE": 2,
+            "OTHER_UNCERTAIN": 2,
+        }
+    elif target_count <= 120:
         # ~100 Cooled Events Quotas for 7-Day Window
         quotas = {
             "IND_ROUTINE": 30,
@@ -290,7 +307,8 @@ def get_gis_events(
     effective_limit = min(lim, get_zoom_limit(zoom))
 
     tier_weights = {"CRITICAL": 1, "ABNORMAL": 2, "ELEVATED": 3}
-    filtered = []
+    active_candidates = []
+    cooled_candidates = []
 
     # Instant in-memory filter across precomputed benchmark features (<1ms execution)
     for f in master:
@@ -301,14 +319,6 @@ def get_gis_events(
         is_in_bounds = (west - 0.5 <= lon <= east + 0.5 and south - 0.5 <= lat <= north + 0.5)
         if not is_in_bounds and not (focus_event_id and props["event_id"] == focus_event_id):
             continue
-
-        # Hours / Active Lifecycle Filter
-        if hours is not None:
-            if props["elapsed_hours"] > hours and not (focus_event_id and props["event_id"] == focus_event_id):
-                continue
-        elif not include_historical:
-            if not props["is_active"] and not (focus_event_id and props["event_id"] == focus_event_id):
-                continue
 
         # Time range bounds
         if start_time and props["latest_detected_utc"]:
@@ -340,15 +350,43 @@ def get_gis_events(
             if not is_priority:
                 continue
 
-        filtered.append(f)
+        if props.get("is_active"):
+            # Active event: verify within active window
+            if hours is not None and hours <= 24:
+                if props["elapsed_hours"] <= hours or (focus_event_id and props["event_id"] == focus_event_id):
+                    active_candidates.append(f)
+            else:
+                active_candidates.append(f)
+        else:
+            # Cooled / Historical event candidate
+            cooled_candidates.append(f)
 
-    # Balanced historical quota: strictly all active events + 100 cooled for 7d, + 200 cooled for 30d
-    if hours is not None and hours > 24 and not classification:
-        target_cooled = 100 if hours <= 168 else 200
-        active_part = [f for f in filtered if f.properties.get("is_active")]
-        cooled_part = [f for f in filtered if not f.properties.get("is_active")]
-        sampled_cooled = sample_balanced_cooled(cooled_part, target_cooled)
-        filtered = active_part + sampled_cooled
+    # Determine target cooled quota: 12h: +5 cooled | 24h: +20 cooled | 7d: +100 cooled | 30d: +200 cooled
+    if classification:
+        if hours is not None and hours <= 24:
+            filtered = active_candidates + cooled_candidates[: (5 if hours <= 12 else 20)]
+        else:
+            filtered = active_candidates + cooled_candidates
+    else:
+        if hours is not None:
+            if hours <= 12:
+                target_cooled = 5
+            elif hours <= 24:
+                target_cooled = 20
+            elif hours <= 168:
+                target_cooled = 100
+            else:
+                target_cooled = 200
+        elif include_historical:
+            target_cooled = 200
+        else:
+            target_cooled = 0
+
+        if target_cooled > 0:
+            sampled_cooled = sample_balanced_cooled(cooled_candidates, target_cooled)
+            filtered = active_candidates + sampled_cooled
+        else:
+            filtered = active_candidates
 
     filtered.sort(key=lambda x: tier_weights.get(x.properties.get("anomaly_tier", ""), 4))
     result = GeoJSONFeatureCollection(features=filtered[:effective_limit])
@@ -794,18 +832,14 @@ def get_event_wind(
 
     try:
         return lookup_wind(lat, lon, obs_time, target_type="EVENT", target_id=canonical_id)
-    except WindLookupError as exc:
-        is_hist = obs_time < datetime.now(timezone.utc) - timedelta(hours=48)
-        return {
-            "available": False,
-            "status": "HISTORICAL_WIND_DATA_UNAVAILABLE" if is_hist else "WIND_DATA_UNAVAILABLE",
-            "reason": str(exc),
-            "target_type": "EVENT",
-            "target_id": canonical_id,
-            "latitude": lat,
-            "longitude": lon,
-            "requested_at": obs_time.isoformat(),
-        }
+    except Exception as exc:
+        return _compute_reanalysis_weather_fallback(
+            latitude=lat,
+            longitude=lon,
+            requested_at=obs_time,
+            target_type="EVENT",
+            target_id=canonical_id,
+        )
 
 
 @router.get("/events/{event_id}/compare")

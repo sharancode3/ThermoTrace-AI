@@ -17,8 +17,8 @@ import {
   Viewport,
   WindData,
 } from "@/lib/apiClient";
-import { buildAwarenessCorridorGeoJson } from "@/lib/corridorGeometry";
-import { syncWindCorridorToMap } from "@/lib/windLayerHelper";
+import { buildAwarenessCorridorGeoJson, generateChevronsAlongCentreline } from "@/lib/corridorGeometry";
+import { syncWindCorridorToMap, syncWindChevronsToMap } from "@/lib/windLayerHelper";
 import {
   Layers,
   Navigation as NavigationIcon,
@@ -742,6 +742,56 @@ export default function MapComponent({
     };
   }, [windGeometry, isSatellite, activeWindVisible]);
 
+  // Dynamic moving chevron animation loop along downwind centreline
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !activeWindVisible || !windGeometry?.geo || windGeometry.geo.isLightVariable) return;
+
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    let animFrameId: number;
+    let startTime: number | null = null;
+    const speedMultiplier = Math.min(2.5, Math.max(0.5, windGeometry.speed / 10));
+
+    const animate = (timestamp: number) => {
+      if (document.hidden) {
+        animFrameId = requestAnimationFrame(animate);
+        return;
+      }
+
+      if (!startTime) startTime = timestamp;
+      const elapsedSec = (timestamp - startTime) / 1000;
+      const progress = (elapsedSec * 0.35 * speedMultiplier) % 1.0;
+
+      const chevrons = generateChevronsAlongCentreline(
+        windGeometry.lon,
+        windGeometry.lat,
+        windGeometry.geo.reachMeters,
+        windGeometry.toward,
+        progress,
+        6
+      );
+
+      syncWindChevronsToMap(
+        map,
+        "thermotrace-wind-corridor-source",
+        "thermotrace-wind-corridor",
+        chevrons,
+        isSatellite,
+        true
+      );
+
+      animFrameId = requestAnimationFrame(animate);
+    };
+
+    animFrameId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animFrameId);
+    };
+  }, [windGeometry, isSatellite, activeWindVisible]);
+
   // Dynamic Camera Fit with Padding to prevent right dossier occlusion
   useEffect(() => {
     if (!windGeometry?.geo?.bounds || !mapRef.current) return;
@@ -1036,8 +1086,8 @@ export default function MapComponent({
           );
         })}
 
-        {/* Historical Event Markers: Rendered when historical data is requested or in 7d/30d multi-day windows */}
-        {(showHistoricalData || cooldownFilter === "COOLED" || (windowHours !== null && windowHours > 24)) && historicalFeatures.slice(0, 500).map((feature) => {
+        {/* Historical Event Markers: Rendered when historical data is present or requested */}
+        {(showHistoricalData || cooldownFilter === "COOLED" || historicalFeatures.length > 0) && historicalFeatures.slice(0, 500).map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
           const isSelected = selectedEventId === event_id;
