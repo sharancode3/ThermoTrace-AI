@@ -47,30 +47,52 @@ def health_check(db: Session = Depends(get_db)):
         total_events = db.query(ThermalEvent).count()
     except Exception as e:
         db_target = f"ERR: {e}"
+    anchor_dt = get_frozen_anchor_utc(db)
     return {
         "status": "HEALTHY",
         "service": "ThermoTrace Backend",
         "contract_version": "3.3.0",
         "ml_model_version": "thermo_xgb_v1.1.0",
         "database_target": db_target,
-        "total_events_in_db": total_events
+        "total_events_in_db": total_events,
+        "evaluation_mode": "SOVEREIGN_BENCHMARK_FREEZE",
+        "baseline_window": "2026-08-19 to 2026-09-20",
+        "polling_status": "PAUSED_STORAGE_PRESERVATION",
+        "frozen_anchor_utc": anchor_dt.isoformat()
     }
 
 def get_zoom_limit(zoom: float) -> int:
     # Full sovereign event dataset delivery across all zoom levels
     return 5000
 
+# High-Performance In-Memory Cache for Sovereign Evaluation Freeze Mode (30-Day Permanent Cache)
 _GIS_CACHE = {}
-_GIS_CACHE_TTL = 15.0 # 15s cache to debounce viewport pans without blocking live polling reflection
+_GIS_CACHE_TTL = 86400.0 * 30.0 # 30-day cache to eliminate repeated Supabase queries
 
 _FACILITIES_CACHE = {}
-_FACILITIES_CACHE_TTL = 3600.0 # 1 hour cache for static industrial facilities
+_FACILITIES_CACHE_TTL = 86400.0 * 30.0 # 30-day cache for static industrial facilities
 
 _OBSERVATIONS_CACHE = {}
-_OBSERVATIONS_CACHE_TTL = 60.0 # 1 min cache for raw satellite observations
+_OBSERVATIONS_CACHE_TTL = 86400.0 * 30.0 # 30-day cache for raw satellite observations
 
 _ANALYTICS_CACHE = {}
-_ANALYTICS_CACHE_TTL = 60.0 # 1 min cache for national analytics summary
+_ANALYTICS_CACHE_TTL = 86400.0 * 30.0 # 30-day cache for national analytics summary
+
+_FROZEN_ANCHOR_UTC: Optional[datetime] = None
+
+def get_frozen_anchor_utc(db: Optional[Session] = None) -> datetime:
+    """Returns the benchmark anchor timestamp. Anchored to the latest satellite overpass in the sovereign dataset."""
+    global _FROZEN_ANCHOR_UTC
+    if _FROZEN_ANCHOR_UTC is None and db is not None:
+        try:
+            max_dt = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar()
+            if max_dt:
+                _FROZEN_ANCHOR_UTC = max_dt if max_dt.tzinfo else max_dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
+    if _FROZEN_ANCHOR_UTC is None:
+        _FROZEN_ANCHOR_UTC = datetime(2026, 9, 20, 8, 1, 0, tzinfo=timezone.utc)
+    return _FROZEN_ANCHOR_UTC
 
 def clear_gis_cache():
     global _GIS_CACHE, _FACILITIES_CACHE, _OBSERVATIONS_CACHE, _ANALYTICS_CACHE
@@ -126,7 +148,7 @@ def get_gis_events(
     if not include_closed:
         query = query.filter(ThermalEvent.lifecycle_status != "CLOSED")
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = get_frozen_anchor_utc(db)
 
     # Truthful historical visibility filter
     if not include_historical:
@@ -231,7 +253,7 @@ def get_gis_events(
     features = []
 
     for evt in events:
-        life_info = evaluate_lifecycle(evt.latest_detected_utc, current_persisted_status=evt.lifecycle_status)
+        life_info = evaluate_lifecycle(evt.latest_detected_utc, reference_time=now_utc, current_persisted_status=evt.lifecycle_status)
         feature = GeoJSONFeature(
             geometry={
                 "type": "Point",
@@ -343,7 +365,7 @@ def get_gis_events_timeline(
     )
 
     if hours is not None:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        cutoff = get_frozen_anchor_utc(db) - timedelta(hours=hours)
         query = query.filter(ThermalEvent.latest_detected_utc >= cutoff)
     elif start_time is not None:
         query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
@@ -994,7 +1016,7 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
         .join(ThermalEvent, ThermoNews.event_id == ThermalEvent.id)
     )
     
-    now_utc = datetime.now(timezone.utc)
+    now_utc = get_frozen_anchor_utc(db)
     h_window = hours if (hours and hours > 0) else 24
     time_cutoff = now_utc - timedelta(hours=h_window)
     
@@ -1088,8 +1110,8 @@ def get_firms_status(db: Session = Depends(get_db)):
     last_fetch = latest_job.executed_at if (latest_job and latest_job.executed_at) else None
     last_successful_fetch = successful_job.executed_at if (successful_job and successful_job.executed_at) else last_fetch
     
-    # Truthful Data Freshness Evaluation
-    now_utc = datetime.now(timezone.utc)
+    # Truthful Data Freshness Evaluation anchored to frozen sovereign benchmark
+    now_utc = get_frozen_anchor_utc(db)
     if latest_obs_ts:
         if latest_obs_ts.tzinfo is None:
             latest_obs_ts = latest_obs_ts.replace(tzinfo=timezone.utc)
@@ -1208,7 +1230,7 @@ def get_national_summary(target_date: Optional[str] = Query(None, description="O
     from app.domain.geocoding import resolve_indian_location
 
     from app.domain.sovereign_geofencing import is_within_sovereign_india
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    thirty_days_ago = get_frozen_anchor_utc(db) - timedelta(days=30)
     raw_events = db.query(ThermalEvent).filter(
         ThermalEvent.lifecycle_status != "CLOSED",
         ThermalEvent.latest_detected_utc >= thirty_days_ago

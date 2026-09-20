@@ -342,11 +342,11 @@ export function NewsPanel({
             </span>
           </div>
           <span className="text-[11px] text-slate-500 font-mono">
-            {lastPolledAt ? formatRelativeTime(lastPolledAt) : "1h Cadence"}
+            {lastPolledAt ? formatRelativeTime(lastPolledAt) : "Locked Benchmark"}
           </span>
         </div>
-        <p className="text-[10px] text-amber-900/90 leading-tight">
-          Notice: NASA FIRMS satellite telemetry refreshed on 1-hour cadence across 30-day rolling window.
+        <p className="text-[10px] text-cyan-900/90 leading-tight">
+          Sovereign Evaluation Freeze: Telemetry locked from August 19, 2026 to September 20, 2026 (storage constraints &amp; audit integrity).
         </p>
       </div>
 

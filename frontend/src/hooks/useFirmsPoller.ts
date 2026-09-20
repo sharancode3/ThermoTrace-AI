@@ -57,18 +57,8 @@ export function useFirmsPoller(onNewData?: () => void) {
   };
 
   useEffect(() => {
-    // 1. Initial check on mount respects 60-min cooldown
-    executePoll();
-
-    // 2. Strict 60-minute foreground interval
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        executePoll();
-      }
-    }, intervalMs);
-
-    return () => {
-      clearInterval(interval);
-    };
+    // Sovereign Evaluation Freeze: Automated polling is paused to preserve cloud storage and guarantee
+    // deterministic audit reproducibility across the golden benchmark evaluation window.
+    return () => {};
   }, []);
 }

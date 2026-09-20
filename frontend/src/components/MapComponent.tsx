@@ -1344,11 +1344,11 @@ export default function MapComponent({
               </div>
             </div>
 
-            {/* 1-Hour Storage-Optimized Telemetry Cadence Notice */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10.5px] text-amber-300/90 leading-snug">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            {/* Sovereign Evaluation Benchmark Freeze Notice */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg text-[10.5px] text-cyan-300 leading-snug">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
               <span>
-                <strong className="font-semibold text-amber-200">Notice:</strong> NASA FIRMS satellite telemetry refreshed on 1-hour cadence across 30-day rolling window.
+                <strong className="font-semibold text-cyan-200">Sovereign Evaluation Freeze:</strong> Telemetry locked from <span className="font-semibold text-white">August 19, 2026 to September 20, 2026</span> (Deployment storage constraints &amp; audit integrity). Automated polling paused.
               </span>
             </div>
 
