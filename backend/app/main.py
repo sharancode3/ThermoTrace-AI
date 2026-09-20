@@ -11,51 +11,37 @@ from app.domain.event_formation import form_events_from_observations
 
 def _run_sync_poller_cycle():
     """Worker executed in background worker thread to prevent event loop blocking."""
+    session = None
     try:
         session = SessionLocal()
-        print("[FIRMS DAEMON] Executing 60-minute automated NASA FIRMS multi-sensor polling & ML hardening...")
+        print("[FIRMS DAEMON] Executing automated NASA FIRMS telemetry polling & ML hardening...")
         res = poll_firms_foreground_cycle(session, force=False)
         inserted = res.get("inserted_count", 0)
         events_count = res.get("new_events_formed", 0)
         print(f"[FIRMS DAEMON] Telemetry check completed. New observations: {inserted}, Events formed/refreshed: {events_count}")
-        
-        # Keep facility active hotspot counters in sync
-        from sqlalchemy import text
-        session.execute(text("""
-            UPDATE industrial_facilities f
-            SET historical_event_count = counts.cnt
-            FROM (
-                SELECT f2.id as fid, count(e.id) as cnt
-                FROM industrial_facilities f2
-                JOIN thermal_events e ON (
-                    e.associated_facility_id = f2.id
-                    OR (e.latitude BETWEEN f2.latitude - 0.05 AND f2.latitude + 0.05
-                        AND e.longitude BETWEEN f2.longitude - 0.05 AND f2.longitude + 0.05)
-                )
-                GROUP BY f2.id
-            ) counts
-            WHERE f.id = counts.fid;
-        """))
-        session.commit()
-        session.close()
         endpoints.clear_gis_cache()
         print("[FIRMS DAEMON] GIS in-memory cache successfully invalidated following telemetry poll.")
     except Exception as e:
         print(f"[FIRMS DAEMON ERROR] {e}")
+    finally:
+        if session:
+            try:
+                session.close()
+            except Exception:
+                pass
 
 POLL_INTERVAL_MINUTES = int(os.getenv("FIRMS_POLL_INTERVAL_MINUTES", "60"))
 POLL_INTERVAL_SECONDS = POLL_INTERVAL_MINUTES * 60
 
 async def firms_periodic_poller_daemon():
-    """Autonomous 1-Hour NASA FIRMS Telemetry Polling & ML Intelligence Worker."""
-    # Delay initial check slightly to let server bind
-    await asyncio.sleep(15)
+    """Autonomous NASA FIRMS Telemetry Polling Worker with non-blocking initial delay."""
+    # Delay initial check by 5 minutes to ensure server starts and demo requests are never starved
+    await asyncio.sleep(300)
     while True:
         try:
             await asyncio.to_thread(_run_sync_poller_cycle)
         except Exception as e:
             print(f"[FIRMS DAEMON THREAD ERROR] {e}")
-        # Sleep for configured interval (default: 60 minutes = 3600 seconds)
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 ENABLE_FIRMS_POLLING = os.getenv("ENABLE_FIRMS_POLLING", "true").lower() in ("true", "1", "yes")

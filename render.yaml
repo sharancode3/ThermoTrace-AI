@@ -5,11 +5,12 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
+    healthCheckPath: /api/v1/health
     envVars:
       - key: PORT
         value: 8000
       - key: ENABLE_FIRMS_POLLING
-        value: "true"
+        value: "false"
       - key: FIRMS_POLL_INTERVAL_MINUTES
         value: "60"
       - key: FIRMS_MAP_KEY

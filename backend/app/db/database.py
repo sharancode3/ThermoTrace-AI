@@ -55,7 +55,14 @@ else:
     # Default to production Supabase PostGIS database instance
     SQLALCHEMY_DATABASE_URL = DEFAULT_SUPABASE_DATABASE_URL
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, pool_size=15, max_overflow=25)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=5,
+    pool_timeout=15,
+    pool_recycle=300
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
