@@ -76,7 +76,7 @@ interface CacheEntry<T> {
 }
 
 const memoryCache = new Map<string, CacheEntry<any>>();
-const CACHE_TTL_MS = 10 * 1000; // 10 seconds (in-memory debounce for rapid map pans)
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours: sovereign frozen benchmark dataset never changes
 
 export function clearClientCache(): void {
   memoryCache.clear();

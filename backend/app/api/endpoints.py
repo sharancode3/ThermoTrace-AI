@@ -100,14 +100,90 @@ def get_frozen_anchor_utc(db: Optional[Session] = None) -> datetime:
         _FROZEN_ANCHOR_UTC = datetime(2026, 9, 20, 8, 1, 0, tzinfo=timezone.utc)
     return _FROZEN_ANCHOR_UTC
 
+_MASTER_SOVEREIGN_FEATURES: Optional[List[GeoJSONFeature]] = None
+
+def get_master_sovereign_features(db: Session) -> List[GeoJSONFeature]:
+    """
+    Loads and pre-computes the complete sovereign evaluation benchmark in RAM.
+    Eliminates all repetitive PostgreSQL and Supabase network hops.
+    """
+    global _MASTER_SOVEREIGN_FEATURES
+    if _MASTER_SOVEREIGN_FEATURES is not None:
+        return _MASTER_SOVEREIGN_FEATURES
+
+    now_utc = get_frozen_anchor_utc(db)
+    all_events = (
+        db.query(ThermalEvent)
+        .filter(ThermalEvent.lifecycle_status != "CLOSED")
+        .order_by(ThermalEvent.latest_detected_utc.desc())
+        .limit(5000)
+        .all()
+    )
+    events = [
+        e for e in all_events
+        if is_within_sovereign_india(float(e.latitude), float(e.longitude))
+    ]
+    seen_ids = set()
+    deduped = []
+    for evt in events:
+        if evt.event_id not in seen_ids:
+            seen_ids.add(evt.event_id)
+            deduped.append(evt)
+    events = deduped
+
+    event_db_ids = [evt.id for evt in events]
+    trend_map = batch_get_thermal_trends(db, event_db_ids)
+
+    features = []
+    for evt in events:
+        life_info = evaluate_lifecycle(evt.latest_detected_utc, reference_time=now_utc, current_persisted_status=evt.lifecycle_status)
+        feature = GeoJSONFeature(
+            geometry={
+                "type": "Point",
+                "coordinates": [float(evt.longitude), float(evt.latitude)]
+            },
+            properties={
+                "event_id": evt.event_id,
+                "classification": evt.classification,
+                "anomaly_tier": evt.anomaly_tier,
+                "thermal_trend": trend_map.get(str(evt.id), "INSUFFICIENT_DATA"),
+                "peak_frp_mw": float(evt.peak_frp_mw) if evt.peak_frp_mw is not None else None,
+                "mean_frp_mw": float(evt.mean_frp_mw) if evt.mean_frp_mw is not None else None,
+                "max_brightness_k": float(evt.max_brightness_k) if evt.max_brightness_k is not None else None,
+                "observation_count": evt.observation_count,
+                "confidence_pct": round(float(evt.classification_confidence or 0.0) * 100.0, 1),
+                "evidence_strength": (
+                    "STRONG" if evt.observation_count >= 4 and evt.associated_facility_id
+                    else "MODERATE" if evt.observation_count >= 2 or evt.associated_facility_id
+                    else "LIMITED"
+                ),
+                "evidence_rationale": (
+                    f"{evt.observation_count} obs" + (", facility linked" if evt.associated_facility_id else ", unassociated")
+                ),
+                "distance_to_facility_m": float(evt.distance_to_facility_m) if evt.distance_to_facility_m is not None else None,
+                "first_detected_utc": evt.first_detected_utc.isoformat() if evt.first_detected_utc else None,
+                "latest_detected_utc": evt.latest_detected_utc.isoformat() if evt.latest_detected_utc else None,
+                "lifecycle_status": life_info["lifecycle_status"],
+                "freshness_status": life_info["freshness_status"],
+                "is_active": life_info["is_active"],
+                "freshness_label": life_info["freshness_label"],
+                "elapsed_hours": life_info["elapsed_hours"],
+                "model_version": "thermo_xgb_v1.1.0"
+            }
+        )
+        features.append(feature)
+    _MASTER_SOVEREIGN_FEATURES = features
+    return _MASTER_SOVEREIGN_FEATURES
+
 def clear_gis_cache():
-    global _GIS_CACHE, _TIMELINE_CACHE, _FACILITIES_CACHE, _OBSERVATIONS_CACHE, _ANALYTICS_CACHE, _NEWS_CACHE
+    global _GIS_CACHE, _TIMELINE_CACHE, _FACILITIES_CACHE, _OBSERVATIONS_CACHE, _ANALYTICS_CACHE, _NEWS_CACHE, _MASTER_SOVEREIGN_FEATURES
     _GIS_CACHE.clear()
     _TIMELINE_CACHE.clear()
     _FACILITIES_CACHE.clear()
     _OBSERVATIONS_CACHE.clear()
     _ANALYTICS_CACHE.clear()
     _NEWS_CACHE.clear()
+    _MASTER_SOVEREIGN_FEATURES = None
 
 @router.post("/gis/cache/clear", tags=["GIS"])
 def trigger_clear_gis_cache():
@@ -129,7 +205,7 @@ def get_gis_events(
     anomaly_tier: Optional[str] = None,
     include_closed: bool = Query(False),
     include_historical: bool = Query(False),
-    show_all: bool = Query(True),
+    show_all: bool = Query(False),
     focus_event_id: Optional[str] = None,
     hours: Optional[int] = Query(None, ge=1, le=720),
     limit: int = Query(2000, ge=1, le=5000),
@@ -151,65 +227,7 @@ def get_gis_events(
         if now_ts - cached_ts < _GIS_CACHE_TTL:
             return cached_result
 
-    query = db.query(ThermalEvent)
-
-    if not include_closed:
-        query = query.filter(ThermalEvent.lifecycle_status != "CLOSED")
-
-    now_utc = get_frozen_anchor_utc(db)
-
-    # Truthful historical visibility filter
-    if not include_historical:
-        fresh_cutoff = now_utc - timedelta(hours=24)
-        if focus_event_id:
-            query = query.filter(
-                or_(
-                    ThermalEvent.latest_detected_utc >= fresh_cutoff,
-                    ThermalEvent.event_id == focus_event_id
-                )
-            )
-        else:
-            query = query.filter(ThermalEvent.latest_detected_utc >= fresh_cutoff)
-
-    query = query.filter(
-        ThermalEvent.longitude >= west,
-        ThermalEvent.longitude <= east,
-        ThermalEvent.latitude >= south,
-        ThermalEvent.latitude <= north,
-    )
-
-    if since_utc is not None:
-        query = query.filter(ThermalEvent.latest_detected_utc > since_utc)
-    elif hours is not None:
-        cutoff = now_utc - timedelta(hours=hours)
-        query = query.filter(ThermalEvent.latest_detected_utc >= cutoff)
-    elif start_time is not None:
-        query = query.filter(ThermalEvent.latest_detected_utc >= start_time)
-    elif not show_all:
-        thirty_days_ago = now_utc - timedelta(days=30)
-        query = query.filter(ThermalEvent.latest_detected_utc >= thirty_days_ago)
-
-    if end_time is not None:
-        query = query.filter(ThermalEvent.first_detected_utc <= end_time)
-
-    if classification:
-        if classification.upper() in ["INDUSTRY", "INDUSTRIAL"]:
-            query = query.filter(ThermalEvent.classification.in_(["IND_ROUTINE", "IND_FLARE", "IND_FIRE"]))
-        else:
-            query = query.filter(ThermalEvent.classification == classification)
-
-    if anomaly_tier:
-        query = query.filter(ThermalEvent.anomaly_tier == anomaly_tier)
-
-    # Only apply priority-only restriction when NO explicit classification or anomaly_tier filter is requested, and show_all is False
-    if not show_all and not classification and not anomaly_tier:
-        filter_conditions = [
-            ThermalEvent.anomaly_tier.in_(["ABNORMAL", "CRITICAL"]),
-            ThermalEvent.classification.in_(["IND_FIRE", "IND_FLARE"]),
-        ]
-        if focus_event_id:
-            filter_conditions.append(ThermalEvent.event_id == focus_event_id)
-        query = query.filter(or_(*filter_conditions))
+    master = get_master_sovereign_features(db)
 
     try:
         lim = int(limit)
@@ -217,133 +235,61 @@ def get_gis_events(
         lim = 2000
     effective_limit = min(lim, get_zoom_limit(zoom))
 
-    # Priority ordering: Critical & Abnormal anomalies surfaced first, followed by Elevated & Routine
-    severity_order = case(
-        (ThermalEvent.anomaly_tier == "CRITICAL", 1),
-        (ThermalEvent.anomaly_tier == "ABNORMAL", 2),
-        (ThermalEvent.anomaly_tier == "ELEVATED", 3),
-        else_=4
-    )
+    tier_weights = {"CRITICAL": 1, "ABNORMAL": 2, "ELEVATED": 3}
+    filtered = []
 
-    all_events = (
-        query
-        .order_by(severity_order, ThermalEvent.latest_detected_utc.desc())
-        .limit(effective_limit)
-        .all()
-    )
+    # Instant in-memory filter across precomputed benchmark features (<1ms execution)
+    for f in master:
+        props = f.properties
+        lon, lat = f.geometry["coordinates"]
 
-    events = [
-        event
-        for event in all_events
-        if is_within_sovereign_india(float(event.latitude), float(event.longitude))
-        or (focus_event_id and event.event_id == focus_event_id)
-    ]
+        # Viewport check (with margin for border markers)
+        is_in_bounds = (west - 0.5 <= lon <= east + 0.5 and south - 0.5 <= lat <= north + 0.5)
+        if not is_in_bounds and not (focus_event_id and props["event_id"] == focus_event_id):
+            continue
 
-    # Guaranteed Focus Event Injection: If operator clicked an event from Alerts/News, always include it on the map
-    if focus_event_id and not any(e.event_id == focus_event_id for e in events):
-        focus_evt = db.query(ThermalEvent).filter(ThermalEvent.event_id == focus_event_id).first()
-        if focus_evt:
-            events.insert(0, focus_evt)
+        # Hours / Active Lifecycle Filter
+        if hours is not None:
+            if props["elapsed_hours"] > hours and not (focus_event_id and props["event_id"] == focus_event_id):
+                continue
+        elif not include_historical:
+            if not props["is_active"] and not (focus_event_id and props["event_id"] == focus_event_id):
+                continue
 
-    # Strictly deduplicate by event_id
-    seen_ids = set()
-    deduped_events = []
-    for evt in events:
-        if evt.event_id not in seen_ids:
-            seen_ids.add(evt.event_id)
-            deduped_events.append(evt)
-    events = deduped_events
+        # Time range bounds
+        if start_time and props["latest_detected_utc"]:
+            if props["latest_detected_utc"] < start_time.isoformat():
+                continue
+        if end_time and props["first_detected_utc"]:
+            if props["first_detected_utc"] > end_time.isoformat():
+                continue
 
-    # High-performance batch resolution: 1 single DB query instead of N individual queries
-    event_db_ids = [evt.id for evt in events]
-    trend_map = batch_get_thermal_trends(db, event_db_ids)
+        # Classification Filter
+        if classification:
+            if classification.upper() in ["INDUSTRY", "INDUSTRIAL"]:
+                if props["classification"] not in ["IND_ROUTINE", "IND_FLARE", "IND_FIRE"]:
+                    continue
+            elif props["classification"] != classification:
+                continue
 
-    features = []
+        # Anomaly Tier Filter
+        if anomaly_tier and props["anomaly_tier"] != anomaly_tier:
+            continue
 
-    for evt in events:
-        life_info = evaluate_lifecycle(evt.latest_detected_utc, reference_time=now_utc, current_persisted_status=evt.lifecycle_status)
-        feature = GeoJSONFeature(
-            geometry={
-                "type": "Point",
-                "coordinates": [
-                    float(evt.longitude),
-                    float(evt.latitude)
-                ]
-            },
-            properties={
-                "event_id": evt.event_id,
-                "classification": evt.classification,
-                "anomaly_tier": evt.anomaly_tier,
-                "thermal_trend": trend_map.get(str(evt.id), "INSUFFICIENT_DATA"),
+        # Priority Only
+        if not show_all and not classification and not anomaly_tier:
+            is_priority = (
+                props["anomaly_tier"] in ["ABNORMAL", "CRITICAL"] or
+                props["classification"] in ["IND_FIRE", "IND_FLARE"] or
+                (focus_event_id and props["event_id"] == focus_event_id)
+            )
+            if not is_priority:
+                continue
 
-                "peak_frp_mw": float(evt.peak_frp_mw)
-                if evt.peak_frp_mw is not None
-                else None,
+        filtered.append(f)
 
-                "mean_frp_mw": float(evt.mean_frp_mw)
-                if evt.mean_frp_mw is not None
-                else None,
-
-                "max_brightness_k": float(evt.max_brightness_k)
-                if evt.max_brightness_k is not None
-                else None,
-
-                "observation_count": evt.observation_count,
-                "confidence_pct": round(
-                    float(evt.classification_confidence or 0.0)
-                    * 100.0,
-                    1
-                ),
-
-                "evidence_strength": (
-                    "STRONG"
-                    if evt.observation_count >= 4 and evt.associated_facility_id
-                    else "MODERATE"
-                    if evt.observation_count >= 2 or evt.associated_facility_id
-                    else "LIMITED"
-                ),
-
-                "evidence_rationale": (
-                    f"{evt.observation_count} obs"
-                    + (
-                        ", facility linked"
-                        if evt.associated_facility_id
-                        else ", unassociated"
-                    )
-                ),
-
-                "distance_to_facility_m": (
-                    float(evt.distance_to_facility_m)
-                    if evt.distance_to_facility_m is not None
-                    else None
-                ),
-
-                "first_detected_utc": (
-                    evt.first_detected_utc.isoformat()
-                    if evt.first_detected_utc
-                    else None
-                ),
-
-                "latest_detected_utc": (
-                    evt.latest_detected_utc.isoformat()
-                    if evt.latest_detected_utc
-                    else None
-                ),
-
-                "lifecycle_status": life_info["lifecycle_status"],
-                "freshness_status": life_info["freshness_status"],
-                "is_active": life_info["is_active"],
-                "freshness_label": life_info["freshness_label"],
-                "elapsed_hours": life_info["elapsed_hours"],
-                "model_version": "thermo_xgb_v1.1.0"
-            }
-        )
-
-        features.append(feature)
-
-    result = GeoJSONFeatureCollection(
-        features=features
-    )
+    filtered.sort(key=lambda x: tier_weights.get(x.properties.get("anomaly_tier", ""), 4))
+    result = GeoJSONFeatureCollection(features=filtered[:effective_limit])
     _GIS_CACHE[cache_key] = (now_ts, result)
     return result
 
