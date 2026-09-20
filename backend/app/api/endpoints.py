@@ -69,6 +69,9 @@ def get_zoom_limit(zoom: float) -> int:
 _GIS_CACHE = {}
 _GIS_CACHE_TTL = 86400.0 * 30.0 # 30-day cache to eliminate repeated Supabase queries
 
+_TIMELINE_CACHE = {}
+_TIMELINE_CACHE_TTL = 86400.0 * 30.0
+
 _FACILITIES_CACHE = {}
 _FACILITIES_CACHE_TTL = 86400.0 * 30.0 # 30-day cache for static industrial facilities
 
@@ -77,6 +80,9 @@ _OBSERVATIONS_CACHE_TTL = 86400.0 * 30.0 # 30-day cache for raw satellite observ
 
 _ANALYTICS_CACHE = {}
 _ANALYTICS_CACHE_TTL = 86400.0 * 30.0 # 30-day cache for national analytics summary
+
+_NEWS_CACHE = {}
+_NEWS_CACHE_TTL = 86400.0 * 30.0 # 30-day cache for news bulletins
 
 _FROZEN_ANCHOR_UTC: Optional[datetime] = None
 
@@ -95,11 +101,13 @@ def get_frozen_anchor_utc(db: Optional[Session] = None) -> datetime:
     return _FROZEN_ANCHOR_UTC
 
 def clear_gis_cache():
-    global _GIS_CACHE, _FACILITIES_CACHE, _OBSERVATIONS_CACHE, _ANALYTICS_CACHE
+    global _GIS_CACHE, _TIMELINE_CACHE, _FACILITIES_CACHE, _OBSERVATIONS_CACHE, _ANALYTICS_CACHE, _NEWS_CACHE
     _GIS_CACHE.clear()
+    _TIMELINE_CACHE.clear()
     _FACILITIES_CACHE.clear()
     _OBSERVATIONS_CACHE.clear()
     _ANALYTICS_CACHE.clear()
+    _NEWS_CACHE.clear()
 
 @router.post("/gis/cache/clear", tags=["GIS"])
 def trigger_clear_gis_cache():
@@ -346,6 +354,7 @@ def get_gis_events_timeline(
     south: float = Query(8.3, ge=-90, le=90),
     east: float = Query(96.98, ge=-180, le=180),
     north: float = Query(36.74, ge=-90, le=90),
+    hours: Optional[int] = Query(None, ge=1, le=720),
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
     bucket_hours: int = Query(24, ge=1, le=168),
@@ -356,6 +365,14 @@ def get_gis_events_timeline(
 
     if south >= north:
         raise HTTPException(status_code=422, detail="south must be less than north")
+
+    import time
+    now_ts = time.time()
+    cache_key = (round(west, 2), round(south, 2), round(east, 2), round(north, 2), hours, str(start_time), str(end_time), bucket_hours)
+    if cache_key in _TIMELINE_CACHE:
+        cached_ts, cached_data = _TIMELINE_CACHE[cache_key]
+        if now_ts - cached_ts < _TIMELINE_CACHE_TTL:
+            return cached_data
 
     query = db.query(ThermalEvent).filter(
         ThermalEvent.longitude >= west,
@@ -376,7 +393,9 @@ def get_gis_events_timeline(
     events = query.order_by(ThermalEvent.first_detected_utc.asc()).all()
 
     if not events:
-        return {"bucket_hours": bucket_hours, "timeline": []}
+        empty_res = {"bucket_hours": bucket_hours, "timeline": []}
+        _TIMELINE_CACHE[cache_key] = (now_ts, empty_res)
+        return empty_res
 
     bucket_seconds = bucket_hours * 3600
     buckets = {}
@@ -419,7 +438,9 @@ def get_gis_events_timeline(
     for bucket in timeline:
         bucket["total_peak_frp_mw"] = round(bucket["total_peak_frp_mw"], 2)
 
-    return {"bucket_hours": bucket_hours, "timeline": timeline}
+    res = {"bucket_hours": bucket_hours, "timeline": timeline}
+    _TIMELINE_CACHE[cache_key] = (now_ts, res)
+    return res
 
 
 @router.get("/gis/facilities", response_model=GeoJSONFeatureCollection)
@@ -1011,6 +1032,14 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
     - Graceful fallback: If active 24h window has fewer than 4 items, includes most recent bulletins so news feed is never blank.
     - Non-destructive: older events remain permanently in PostgreSQL database.
     """
+    import time
+    now_ts = time.time()
+    cache_key = hours
+    if cache_key in _NEWS_CACHE:
+        cached_ts, cached_data = _NEWS_CACHE[cache_key]
+        if now_ts - cached_ts < _NEWS_CACHE_TTL:
+            return cached_data
+
     query = (
         db.query(ThermoNews)
         .join(ThermalEvent, ThermoNews.event_id == ThermalEvent.id)
@@ -1091,6 +1120,7 @@ def get_news_feed(hours: Optional[int] = 24, db: Session = Depends(get_db)):
             published_at=item.published_at,
             is_archived=is_archived
         ))
+    _NEWS_CACHE[cache_key] = (now_ts, results)
     return results
 
 @router.get("/firms/status", response_model=FirmsStatusResponse)
