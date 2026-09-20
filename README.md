@@ -47,7 +47,7 @@
    - [6.1 Source Category Symbology](#61-source-category-symbology)
    - [6.2 Anomaly Severity Hierarchy](#62-anomaly-severity-hierarchy)
    - [6.3 Thermal Lifecycle and Cooldown States](#63-thermal-lifecycle-and-cooldown-states)
-   - [6.4 Temporal Horizon Horizon Filters (12h to 30d)](#64-temporal-horizon-filters-12h-to-30d)
+   - [6.4 Temporal Horizon Filters (12h to 30d)](#64-temporal-horizon-filters-12h-to-30d)
 7. [Mathematical and Statistical Formulations](#7-mathematical-and-statistical-formulations)
 8. [Multi-Regime Experimental Validation and Benchmarks](#8-multi-regime-experimental-validation-and-benchmarks)
 9. [National Impact, Feasibility and Sovereign Compliance](#9-national-impact-feasibility-and-sovereign-compliance)
@@ -229,15 +229,17 @@ flowchart TD
   * **VIIRS NOAA-21** (375-meter spatial resolution).
   * **MODIS Terra and Aqua** (1,000-meter spatial resolution).
 * **60-Minute Polling Horizon:** Telemetry polling executes on an autonomous 60-minute cadence. This schedule avoids redundant bandwidth consumption while respecting the physical orbital latency of polar-orbiting satellites (~10 to 12 hours between passes over identical Indian coordinates).
-* **Sovereign Boundary Geofencing:** Every detection coordinate is geofenced against the official Survey of India territorial polygon ($6.0^\circ\text{N}\text{ to }38.0^\circ\text{N},\; 68.0^\circ\text{E}\text{ to }98.0^\circ\text{E}$). Maritime noise and foreign territorial detections are immediately filtered out.
+* **Sovereign Boundary Geofencing:** Every detection coordinate is geofenced against the official Survey of India territorial polygon (6.0°N to 38.0°N, 68.0°E to 98.0°E). Maritime noise and foreign territorial detections are immediately filtered out.
 * **Deterministic SHA-256 Deduplication:** Generates an idempotent primary key via:
-  $$\text{Hash} = \text{SHA-256}\Big(\text{round}(\text{lat}, 4) \parallel \text{round}(\text{lon}, 4) \parallel \text{acq\_date} \parallel \text{acq\_time} \parallel \text{sensor}\Big)$$
+  ```text
+  Event_Hash = SHA-256( round(lat, 4) || round(lon, 4) || acq_date || acq_time || sensor )
+  ```
   This guarantees zero duplicated observations across overlapping sensor swaths.
 
 ### 5.2 Spatio-Temporal Event Clustering (ST-DBSCAN)
 Individual satellite pixels represent discrete sensor footprints, not standalone incidents. ThermoTrace AI aggregates co-located, temporally aligned observations into unified physical combustion events using **ST-DBSCAN**:
-* **Spatial Epsilon ($\varepsilon_{s}$):** $750\text{ meters}$ (the physical dispersal envelope of multi-pixel combustion plumes).
-* **Temporal Epsilon ($\varepsilon_{t}$):** $12\text{ hours}$ (links consecutive morning, afternoon, and night-time orbital passes).
+* **Spatial Epsilon ($\varepsilon_s$):** 750 meters (the physical dispersal envelope of multi-pixel combustion plumes).
+* **Temporal Epsilon ($\varepsilon_t$):** 12 hours (links consecutive morning, afternoon, and night-time orbital passes).
 * **Perimeter and Envelope Derivation:** Executes `ST_ConvexHull` on the clustered points to derive event acreage, perimeter boundaries, and the radiant centroid.
 
 ### 5.3 Canonical 14-Dimensional Multimodal Feature Vector
@@ -249,10 +251,10 @@ For every clustered event, our geospatial pipeline constructs a normalized 14-di
 | `[1]` | `facility_category_encoded` | Ordinal industrial sector code (Refinery, Power, Smelter, Petrochemical) | CPCB National Registry |
 | `[2]` | `peak_frp_mw` | Maximum recorded Fire Radiative Power across the cluster (MW) | NASA VIIRS / MODIS |
 | `[3]` | `mean_frp_mw` | Mean Fire Radiative Power across constituent observations (MW) | NASA VIIRS / MODIS |
-| `[4]` | `frp_variance` | Multi-observation temporal variance in radiant output ($\text{MW}^2$) | Derived Cluster Variance |
+| `[4]` | `frp_variance` | Multi-observation temporal variance in radiant output (MW²) | Derived Cluster Variance |
 | `[5]` | `max_brightness_k` | Peak 4-micrometer infrared brightness temperature (Kelvin) | Satellite Radiometer |
 | `[6]` | `duration_hours` | Elapsed span from earliest to latest cluster observation (hours) | Spatio-Temporal Tracking |
-| `[7]` | `day_night_ratio` | Ratio of daytime to total detections ($N_{\text{day}} / N_{\text{total}}$) | Diurnal Radiometry |
+| `[7]` | `day_night_ratio` | Ratio of daytime to total detections ($N_{\mathrm{day}} / N_{\mathrm{total}}$) | Diurnal Radiometry |
 | `[8]` | `historical_active_days_90d` | Days with confirmed thermal recurrence within 2.5 km over trailing 90 days | Historical Spatial DB |
 | `[9]` | `historical_peak_frp` | Historical peak radiant output recorded at this spatial coordinate (MW) | Historical Spatial DB |
 | `[10]` | `pct_cropland` | Fractional coverage of agricultural cropland in a 5 km circular buffer | ESA WorldCover 10m |
@@ -262,48 +264,53 @@ For every clustered event, our geospatial pipeline constructs a normalized 14-di
 
 ### 5.4 Machine Learning Classification and Platt Probability Calibration
 * **Champion Model Architecture:** `Float64XGBClassifier` utilizing double-precision floating-point Gradient Boosted Decision Trees.
-* **Hyperparameter Specification:** 120 trees, maximum tree depth 4, learning rate $\eta = 0.08$, row subsample ratio $0.85$, column subsample ratio $0.85$, minimum child weight 3.
-* **Probability Calibration:** 5-fold cross-validated **Sigmoid Platt Scaling** (`CalibratedClassifierCV(method='sigmoid')`). This contracts Expected Calibration Error (ECE) from $14.8\%$ to $< 3.2\%$, ensuring predicted confidence scores represent authentic Bayesian posterior probabilities.
-* **Computational Performance:** Sub-10ms inference latency ($7.14\text{ ms}$ average per event on single CPU core).
+* **Hyperparameter Specification:** 120 trees, maximum tree depth 4, learning rate $\eta = 0.08$, row subsample ratio 0.85, column subsample ratio 0.85, minimum child weight 3.
+* **Probability Calibration:** 5-fold cross-validated **Sigmoid Platt Scaling** (`CalibratedClassifierCV(method='sigmoid')`). This contracts Expected Calibration Error (ECE) from 14.8% to < 3.2%, ensuring predicted confidence scores represent authentic Bayesian posterior probabilities.
+* **Computational Performance:** Sub-10ms inference latency (7.14 ms average per event on single CPU core).
 
 ### 5.5 Deterministic Physical Domain Gates and Epistemic Abstention
 To prevent high-confidence statistical errors on edge cases, machine learning predictions pass through physical domain decision gates:
 1. **Physical Facility Authority Gate:**  
-   If an anomaly centroid is within **$2{,}500\text{ meters}$** of a verified industrial complex or inside an industrial corridor:
+   If an anomaly centroid is within **2,500 meters** of a verified industrial complex or inside an industrial corridor:
    * The classification is constrained to **`INDUSTRY`** (`IND_ROUTINE`, `IND_FLARE`, or `IND_FIRE`).
    * It can never be misclassified as agricultural burning (petroleum refineries do not cultivate cereal crops inside operating units).
-   * Radiative attribution: $\text{FRP} \ge 50\text{ MW} \implies \text{IND\_FIRE}$, $\text{FRP} \ge 15\text{ MW} \implies \text{IND\_FLARE}$, baseline process $\implies \text{IND\_ROUTINE}$.
+   * **Radiative Attribution Rules:**
+     * `FRP >= 50 MW` &rarr; Categorized as **`IND_FIRE`** (Emergency catastrophic blaze)
+     * `FRP >= 15 MW` &rarr; Categorized as **`IND_FLARE`** (Elevated safety gas flare)
+     * Baseline process heat &rarr; Categorized as **`IND_ROUTINE`** (Standard nominal operational combustion)
 2. **Perimeter Agricultural Gate:**  
-   If an anomaly exhibits $\ge 70\%$ cropland coverage, is outside facility boundaries, and has a duration $\le 6\text{ hours}$, it is categorized as **`AGRI_BURN`**.
+   If an anomaly exhibits ≥ 70% cropland coverage, is outside facility boundaries, and has a duration ≤ 6 hours, it is categorized as **`AGRI_BURN`**.
 3. **Epistemic Abstention Gate:**  
-   If the maximum calibrated probability $P_{\text{max}} < 0.50$ or prediction Shannon entropy $H(P) > 1.35\text{ nats}$:
+   If the maximum calibrated probability $P_{\max} < 0.50$ or prediction Shannon entropy $H(P) > 1.35$ nats:
    * The pipeline abstains from ungrounded classification and marks the record as **`OTHER_UNCERTAIN`**, routing the incident to the human corroboration queue.
 
 ### 5.6 Instance-Level Game-Theoretic TreeSHAP Attribution
 For every evaluated incident, the engine executes exact TreeSHAP (Tree Shapley Additive Explanations) in native C++. The system decomposes the prediction into exact additive contributions:
 $$\ln\left(\frac{P(Y=k)}{1 - P(Y=k)}\right) = \phi_0 + \sum_{i=1}^{14} \phi_i$$
-Where $\phi_i$ quantitatively expresses feature impact (e.g. $+0.42$ attributable to refinery proximity, $+0.28$ to 90-day persistence, $-0.15$ to cropland fraction). These attributions are visualized directly in the operator drawer.
+Where $\phi_i$ quantitatively expresses feature impact (e.g. +0.42 attributable to refinery proximity, +0.28 to 90-day persistence, -0.15 to cropland fraction). These attributions are visualized directly in the operator drawer.
 
 ### 5.7 Dual-Engine Baseline Anomaly Formulation
 Evaluating whether an industrial heat source is routine or disastrous is accomplished through a dual-engine statistical baseline across trailing 90-day observations ($N \ge 10$):
 * **Parametric Gaussian Z-Score:**
-  $$Z = \frac{\text{FRP}_{\text{observed}} - \mu_{90d}}{\sigma_{90d}}$$
+  $$Z = \frac{\text{FRP} - \mu_{90}}{\sigma_{90}}$$
 * **Robust Non-Parametric Median Absolute Deviation (MAD):**
-  $$Z_{\text{MAD}} = \frac{\text{FRP}_{\text{observed}} - \text{Median}_{90d}}{1.4826 \times \text{MAD}_{90d}}$$
-  $$\text{MAD}_{90d} = \text{Median}\Big(\big|\text{FRP}_i - \text{Median}_{90d}\big|\Big)$$
+  $$Z_{\mathrm{MAD}} = \frac{\text{FRP} - \mathrm{Median}_{90}}{1.4826 \times \mathrm{MAD}_{90}}$$
+  $$\mathrm{MAD}_{90} = \mathrm{Median}\Big(\big|\text{FRP}_i - \mathrm{Median}_{90}\big|\Big)$$
 * **Quarantine Condition:** If sample size $N < 10$, the system avoids premature standard deviation calculations and applies robust thresholding to prevent false alarms.
 
 ### 5.8 Downwind Meteorological Dispersion Corridors
 When an incident is selected on the tactical radar, ThermoTrace AI contacts the **Open-Meteo API** (using ERA5 reanalysis for historical events or high-resolution forecast models for live events):
-* **Transport Vector:** Computes the downwind transport angle ($\theta_{\text{toward}} = (\theta_{\text{from}} + 180^\circ) \pmod{360^\circ}$), surface wind velocity ($V$ in km/h), and peak gusts.
+* **Transport Vector:** Computes the downwind transport angle:
+  $$\theta_{\mathrm{downwind}} = (\theta_{\mathrm{wind}} + 180^\circ) \pmod{360^\circ}$$
+  along with surface wind velocity ($V$ in km/h) and peak gusts.
 * **30-Minute Exposure Footprint:** Projects a forward sector polygon:
-  $$\text{Length} = \max\left(1.5\text{ km},\; \min\left(25.0\text{ km},\; V \times 0.5\text{ h} \times 1.25\right)\right)$$
+  $$L_{\mathrm{corridor}} = \max\Big(1.5\text{ km},\; \min\big(25.0\text{ km},\; V \times 0.5\text{ h} \times 1.25\big)\Big)$$
 * **Downwind Vulnerability Analysis:** Computes spatial intersections against populated settlements, medical centers, and schools within the downwind corridor to assist immediate evacuation planning.
 
 ### 5.9 Proximity and Geofenced Nearby Alert Engine
 ThermoTrace AI features an automated geospatial proximity alerting system:
-* **Critical Alerts:** Dispatched for thermal anomalies classified as `CRITICAL` ($Z \ge 4.0\sigma$ or $\text{FRP} \ge 50\text{ MW}$) within a **25-kilometer radius** of the operator's monitored location or registered facility coordinates.
-* **Abnormal Alerts:** Dispatched for thermal anomalies classified as `ABNORMAL` ($+2.5\sigma \le Z < +4.0\sigma$) within a **10-kilometer radius**.
+* **Critical Alerts:** Dispatched for thermal anomalies classified as `CRITICAL` (Z ≥ +4.0σ or FRP ≥ 50 MW) within a **25-kilometer radius** of the operator's monitored location or registered facility coordinates.
+* **Abnormal Alerts:** Dispatched for thermal anomalies classified as `ABNORMAL` (+2.5σ ≤ Z < +4.0σ) within a **10-kilometer radius**.
 * **Browser Push Notification System:** Backed by persistent user preference endpoints (`/api/v1/notifications/nearby/preferences`) supporting standard Web Push encryption protocols.
 
 ---
@@ -327,10 +334,10 @@ Combustion events are classified into four operational severity tiers based on s
 
 | Anomaly Tier | Quantitative Criterion | Visual Representation | Operational Mobilization |
 | :--- | :--- | :--- | :--- |
-| **`CRITICAL`** | $Z \ge +4.0\sigma$ or $\text{FRP} \ge 50\text{ MW}$ | Pulsing Crimson Beacon (Solid) | Emergency First-Responder Mobilization |
-| **`ABNORMAL`** | $+2.5\sigma \le Z < +4.0\sigma$ or Flare $\ge 15\text{ MW}$ | High-Visibility Orange Marker | Regulatory Inquest / Facility Inquiry |
-| **`ELEVATED`** | $+1.5\sigma \le Z < +2.5\sigma$ | Amber Warning Halo | Heightened Automated Monitoring |
-| **`NORMAL`** | $Z < +1.5\sigma$ | Subdued Process Halo | Routine Regulatory Baseline Logging |
+| **`CRITICAL`** | Z ≥ +4.0σ or FRP ≥ 50 MW | Pulsing Crimson Beacon (Solid) | Emergency First-Responder Mobilization |
+| **`ABNORMAL`** | +2.5σ ≤ Z < +4.0σ or FRP ≥ 15 MW | High-Visibility Orange Marker | Regulatory Inquest / Facility Inquiry |
+| **`ELEVATED`** | +1.5σ ≤ Z < +2.5σ | Amber Warning Halo | Heightened Automated Monitoring |
+| **`NORMAL`** | Z < +1.5σ | Subdued Process Halo | Routine Regulatory Baseline Logging |
 
 ### 6.3 Thermal Lifecycle and Cooldown States
 Because orbital satellites pass over coordinates at discrete intervals (~10 to 12 hours), the absence of a detection in a subsequent pass does not immediately verify physical extinguishment. ThermoTrace AI enforces temporal lifecycle states:
@@ -355,11 +362,11 @@ The tactical radar provides deterministic temporal horizon filtering:
 
 ### 7.1 Spatio-Temporal Distance Metric
 Spatial Haversine distance between two satellite observations $p_i$ and $p_j$:
-$$d_{\text{spatial}}(p_i, p_j) = 2R \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_i)\cos(\phi_j)\sin^2\left(\frac{\Delta \lambda}{2}\right)} \right) \le 750\text{ meters}$$
-Where $R = 6{,}371\text{ km}$, $\phi = \text{latitude in radians}$, $\lambda = \text{longitude in radians}$.
+$$d_{\mathrm{spatial}}(p_i, p_j) = 2R \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_i)\cos(\phi_j)\sin^2\left(\frac{\Delta \lambda}{2}\right)} \right) \le 750\text{ m}$$
+Where $R = 6,371$ km, $\phi$ represents latitude in radians, and $\lambda$ represents longitude in radians.
 
 Temporal distance constraint:
-$$d_{\text{temporal}}(p_i, p_j) = |t_i - t_j| \le 12\text{ hours}$$
+$$d_{\mathrm{temporal}}(p_i, p_j) = |t_i - t_j| \le 12\text{ hours}$$
 
 ### 7.2 Platt Probability Calibration Equation
 For raw uncalibrated model output logits $z_k(x)$ across class $k$:
@@ -370,13 +377,13 @@ $$\hat{P}(Y = k \mid x) = \frac{P(Y = k \mid x)}{\sum_{j=1}^K P(Y = j \mid x)}$$
 ### 7.3 Prediction Shannon Entropy
 To evaluate epistemic classification ambiguity:
 $$H(P) = -\sum_{k=1}^K \hat{P}(Y = k \mid x) \ln \hat{P}(Y = k \mid x)$$
-If $H(P) > 1.35\text{ nats}$ or $\max_k \hat{P}(Y = k \mid x) < 0.50$, the system executes epistemic abstention.
+If $H(P) > 1.35$ nats or $\max_k \hat{P}(Y = k \mid x) < 0.50$, the system executes epistemic abstention.
 
 ---
 
 ## 8. Multi-Regime Experimental Validation and Benchmarks
 
-To eliminate spatial and temporal data leakage, ThermoTrace AI was evaluated across **5 rigorous multi-regime stress holdouts** ($B = 1{,}000$ non-parametric bootstrap iterations):
+To eliminate spatial and temporal data leakage, ThermoTrace AI was evaluated across **5 rigorous multi-regime stress holdouts** (B = 1,000 non-parametric bootstrap iterations):
 
 | Evaluation Regime | Sample Size | Experimental Rigor & Holdout Condition | Macro F1 [95% CI] | Weighted F1 | Brier Loss | ECE % |
 | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
@@ -386,10 +393,10 @@ To eliminate spatial and temporal data leakage, ThermoTrace AI was evaluated acr
 | **TEST-D: Hard Boundary Negatives** | 216 | **Edge-case stress benchmarks.** (Stubble clearance near plant fences, asphalt heaters). | **0.9860** [0.9673, 1.000] | 0.9861 | 0.3088 | 13.16% |
 | **TEST-E: Adversarial / OOD Noise** | 208 | **Synthetically perturbed and noisy signatures.** Tests abstention reliability. | **0.8672** [0.8182, 0.907] | 0.8571 | 1.0084 | 47.90% |
 
-### Independent Real-World Gold Benchmark ($N = 300$ Unseen Real Events)
+### Independent Real-World Gold Benchmark (N = 300 Unseen Real Events)
 * **Macro Precision:** **81.5%**
 * **Macro Recall:** **68.3%**
-* **Selective Classification Accuracy:** **69.95%** (on accepted classifications at $67.7\%$ coverage)
+* **Selective Classification Accuracy:** **69.95%** (on accepted classifications at 67.7% coverage)
 * **Automated Abstention Rate:** **32.33%** (low-confidence records routed to human analyst queue)
 
 ---
@@ -423,7 +430,7 @@ The backend exposes fully documented REST endpoints (interactive documentation a
 | `GET` | `/api/v1/firms/status` | None | Returns NASA FIRMS polling sync status, sensor metrics, and latest observation timestamp. |
 | `POST` | `/api/v1/ingest/poll` | `day_range, force` | Triggers an immediate satellite ingestion cycle from NASA FIRMS API. |
 | `GET` | `/api/v1/news` | `limit, target_date` | Chronological intelligence bulletins and incident reports for national operators. |
-| `GET` | `/api/v1/alerts` | `severity, limit` | Returns filtered queue of high-priority anomalies ($Z \ge 4.0\sigma$ and $Z \ge 2.5\sigma$). |
+| `GET` | `/api/v1/alerts` | `severity, limit` | Returns filtered queue of high-priority anomalies (Z ≥ +4.0σ and +2.5σ ≤ Z < +4.0σ). |
 | `GET` | `/api/v1/notifications/nearby` | `lat, lon, critical_radius_km, abnormal_radius_km` | Geofenced proximity alerts relative to operator coordinates. |
 | `POST` | `/api/v1/notifications/nearby/preferences` | User coordinate and radius payload | Persists proximity alert geofencing thresholds. |
 | `GET` | `/api/v1/reports/{id}/pdf` | `id` (Event UUID) | Compiles a forensic A4 PDF intelligence dossier with cryptographic SHA-256 seal. |
