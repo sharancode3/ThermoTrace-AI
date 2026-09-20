@@ -47,4 +47,5 @@ backend/backend/
 scratch/
 test-results/
 .system_generated/
+tmp/
 

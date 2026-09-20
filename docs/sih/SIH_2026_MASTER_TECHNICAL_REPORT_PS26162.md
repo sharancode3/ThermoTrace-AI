@@ -1,14 +1,15 @@
-# THERMOTRACE AI: WHAT WE HAVE DONE TILL NOW
-## Comprehensive Technical Report and Defense Master Plan (SIH 2026)
+# SMART INDIA HACKATHON 2026 (SIH 2026)
+## Comprehensive Technical Report and Defense Master Plan
 
 **Problem Statement ID:** 26162 (Theme: Disaster Management)  
 **Problem Statement Title:** AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources Using NASA FIRMS, OSM and Satellite Data  
 **Evaluating Agencies:** National Technical Research Organisation (NTRO) and Central Pollution Control Board (CPCB)  
-**Team Name:** Deadlock | **Team ID:** BMS-SIH2026-68  
+**Team Name:** ThermoTrace AI | **Team ID:** 136962  
 **Project Name:** ThermoTrace AI  
 **Live Working Prototype:** https://thermo-trace-ai.vercel.app/  
 **GitHub Repository:** https://github.com/sharancode3/ThermoTrace-AI  
-**System Status:** 100% Operational Prototype (78 out of 78 Passing Backend Pytest Suite, Clean Next.js Turbopack Production Build)
+**System Status:** 100% Operational Prototype (113 out of 113 Passing Backend Pytest Suite, Clean Next.js Turbopack Production Build)
+
 ---
 
 # TABLE OF CONTENTS
