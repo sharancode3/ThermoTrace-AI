@@ -61,22 +61,12 @@ def _resolve_postgres_host() -> str:
 
     return "127.0.0.1"
 
-DEFAULT_SUPABASE_DATABASE_URL = "postgresql://postgres.eeoadlzqlumdmikiitgm:Worksense%4012345@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
 LOCAL_SOVEREIGN_DB_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../data/sovereign_benchmark.sqlite")
 )
 
-if os.path.exists(LOCAL_SOVEREIGN_DB_PATH) and os.getenv("FORCE_REMOTE_SUPABASE", "false").lower() != "true":
-    # Prioritize embedded local sovereign database to guarantee 0 MB Supabase egress and sub-millisecond reads
-    SQLALCHEMY_DATABASE_URL = f"sqlite:///{LOCAL_SOVEREIGN_DB_PATH}"
-else:
-    DATABASE_URL = os.getenv("DATABASE_URL")
-    if DATABASE_URL and DATABASE_URL.strip():
-        SQLALCHEMY_DATABASE_URL = DATABASE_URL.strip().strip('"').strip("'")
-        if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
-            SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    else:
-        SQLALCHEMY_DATABASE_URL = DEFAULT_SUPABASE_DATABASE_URL
+# Strictly use the embedded local sovereign SQLite store (0 Supabase connections, 0 egress)
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{LOCAL_SOVEREIGN_DB_PATH}"
 
 def _parse_lon_lat(geom_val):
     if geom_val is None:
