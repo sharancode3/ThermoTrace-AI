@@ -206,14 +206,22 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
     """
     High-Precision Land-Cover, Industrial Geofence, and Terrain Resolver for Pan-India coordinates.
     Calibrates Cropland Agrarian Belts, Western/Eastern Ghats Reserves, Industrial Corridors,
-    and Satellite Day/Night Overpass Telemetry.
+    Oil & Gas Petroliferous Basins, and Satellite Day/Night Overpass Telemetry.
     """
-    # 1. Direct Industrial Proximity (within 3500m of a facility)
-    if (0.0 <= dist_to_fac <= 3500.0) or is_associated_fac:
+    # 1. Direct Industrial Proximity (within 8500m of a facility)
+    if (0.0 <= dist_to_fac <= 8500.0) or is_associated_fac:
         return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 1}
 
-    # 2. Key National Industrial Corridors, Mining Basins & Heavy Industrial Hubs
+    # 2. Key National Industrial Corridors, Oil & Gas Basins, Mining Basins & Heavy Industrial Hubs
     ind_bounding_boxes = [
+        # Upper Assam - Arakan Oil & Gas Basin (Digboi, Duliajan, Naharkatiya, Moran, Lakwa, Kumchai, Kharsang)
+        {"min_lat": 26.85, "max_lat": 27.85, "min_lon": 94.50, "max_lon": 96.40, "name": "Upper Assam-Arakan Oil & Gas Basin"},
+        # Barmer-Pachpadra Oil & Gas & Refining Basin (Rajasthan - Cairn Mangala/Bhagyam & HPCL Refinery)
+        {"min_lat": 25.60, "max_lat": 26.35, "min_lon": 71.50, "max_lon": 72.45, "name": "Barmer-Pachpadra Oil & Gas Basin"},
+        # Kalol-Mehsana-Cambay ONGC Oil & Gas Basin (Gujarat)
+        {"min_lat": 23.15, "max_lat": 23.75, "min_lon": 72.20, "max_lon": 72.65, "name": "Kalol-Mehsana Oil & Gas Basin"},
+        # Nagaur-Gotan-Mundwa-Beawar Cement & Limestone Kiln Corridor (Rajasthan)
+        {"min_lat": 26.40, "max_lat": 27.35, "min_lon": 73.35, "max_lon": 74.20, "name": "Nagaur-Gotan Cement Kiln Corridor"},
         # Kotputli-Behror / Neemrana / Bhiwadi Industrial Belt (Rajasthan)
         {"min_lat": 27.55, "max_lat": 28.25, "min_lon": 76.05, "max_lon": 76.90, "name": "Kotputli-Bhiwadi Industrial Corridor"},
         # Chanderiya-Chittorgarh Smelter & Cement Belt (Rajasthan)
@@ -224,8 +232,8 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         {"min_lat": 22.00, "max_lat": 22.15, "min_lon": 88.00, "max_lon": 88.15, "name": "Haldia Petrochem Complex"},
         # Durgapur-Asansol-Raniganj-Burnpur Steel & Coal Belt (West Bengal)
         {"min_lat": 23.40, "max_lat": 23.95, "min_lon": 86.70, "max_lon": 87.45, "name": "Durgapur-Asansol Steel & Coal Belt"},
-        # Jamshedpur-Adityapur-Gamharia Mega Industrial Zone (Jharkhand)
-        {"min_lat": 22.65, "max_lat": 23.00, "min_lon": 86.00, "max_lon": 86.40, "name": "Jamshedpur-Adityapur Zone"},
+        # Jamshedpur-Adityapur-Gamharia-Seraikela Mega Industrial Zone (Jharkhand)
+        {"min_lat": 22.50, "max_lat": 23.00, "min_lon": 85.80, "max_lon": 86.40, "name": "Jamshedpur-Adityapur Zone"},
         # Damodar Valley: Bokaro-Dhanbad-Jharia-Ramgarh Steel & Coal Complex (Jharkhand)
         {"min_lat": 23.40, "max_lat": 23.95, "min_lon": 85.15, "max_lon": 86.70, "name": "Damodar Valley Coal & Steel Complex"},
         # Angul-Talcher-Meramandali Industrial & Mining Basin (Odisha - NTPC Talcher, JSPL & NALCO)
@@ -242,7 +250,7 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         {"min_lat": 22.05, "max_lat": 22.40, "min_lon": 84.45, "max_lon": 85.10, "name": "Rourkela Steel Belt"},
         # Korba-Champa-Janjgir-Raigarh-Tamnar Mega Energy & Steel Belt (Chhattisgarh)
         {"min_lat": 21.65, "max_lat": 22.65, "min_lon": 82.40, "max_lon": 83.75, "name": "Korba-Raigarh Energy & Steel Basin"},
-        # Bhilai-Durg-Raipur Steel & Industrial Corridor (Chhattisgarh - SAIL Bhilai, Urla, Siltara)
+        # Bhilai-Durg-Raipur-Siltara Steel & Industrial Corridor (Chhattisgarh - SAIL Bhilai, Urla, Siltara)
         {"min_lat": 21.05, "max_lat": 21.55, "min_lon": 81.15, "max_lon": 81.85, "name": "Bhilai-Raipur Steel Corridor"},
         # Raipur-Bhatapara-Bilaspur Industrial & Cement Corridor (Chhattisgarh)
         {"min_lat": 21.55, "max_lat": 22.25, "min_lon": 81.50, "max_lon": 82.35, "name": "Raipur-Bilaspur Cement & Industrial Belt"},
@@ -259,13 +267,11 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         # Cuddalore SIPCOT & Petrochem Corridor (Tamil Nadu)
         {"min_lat": 11.60, "max_lat": 11.85, "min_lon": 79.65, "max_lon": 79.85, "name": "Cuddalore SIPCOT Complex"},
         # Tuticorin / Thoothukudi Industrial & Port Hub (Tamil Nadu)
-        {"min_lat": 8.70, "max_lat": 8.90, "min_lon": 78.10, "max_lon": 78.25, "name": "Tuticorin Industrial Port"},
-        # Jamnagar & Vadinar Mega-Refining & Petrochemical Corridor (Gujarat - Reliance & Nayara)
-        {"min_lat": 22.15, "max_lat": 22.65, "min_lon": 69.55, "max_lon": 70.30, "name": "Jamnagar-Vadinar Refining Complex"},
-        # Mundra Mega Port & Power Corridor (Gujarat - Adani/Tata UMPP & TPP)
-        {"min_lat": 22.70, "max_lat": 23.10, "min_lon": 69.45, "max_lon": 69.95, "name": "Mundra Port & Power Corridor"},
-        # Kandla - Gandhidham - Anjar Industrial Belt (Gujarat)
-        {"min_lat": 22.95, "max_lat": 23.25, "min_lon": 70.00, "max_lon": 70.35, "name": "Kandla-Gandhidham Industrial Belt"},
+        {"min_lat": 8.60, "max_lat": 8.95, "min_lon": 77.95, "max_lon": 78.30, "name": "Tuticorin Industrial Port"},
+        # Jamnagar, Mithapur & Vadinar Mega-Refining & Chemical Corridor (Gujarat - Reliance, Nayara & Tata Chemicals)
+        {"min_lat": 22.15, "max_lat": 22.65, "min_lon": 68.95, "max_lon": 70.30, "name": "Jamnagar-Vadinar-Mithapur Complex"},
+        # Mundra-Kandla-Bhachau Mega Port, Power & Steel Corridor (Gujarat)
+        {"min_lat": 22.70, "max_lat": 23.40, "min_lon": 69.45, "max_lon": 70.60, "name": "Mundra-Kandla-Bhachau Industrial Corridor"},
         # Alang Ship Recycling Yard (Gujarat)
         {"min_lat": 21.30, "max_lat": 21.50, "min_lon": 72.10, "max_lon": 72.30, "name": "Alang Ship Recycling Hub"},
         # Pipavav / Rajula Industrial Port (Gujarat)
@@ -278,41 +284,46 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
         {"min_lat": 22.70, "max_lat": 23.00, "min_lon": 70.70, "max_lon": 71.05, "name": "Morbi Ceramic Belt"},
         # Singrauli-Rihand Power & Coal Belt (MP / UP - NTPC Super Thermal & NCL Coal)
         {"min_lat": 24.00, "max_lat": 24.30, "min_lon": 82.45, "max_lon": 82.95, "name": "Singrauli Super Thermal Basin"},
-        # Chandrapur - Ghugus - Wani - Ballarpur Thermal, Coal & Cement Hub (Maharashtra - CSTPS, LMEL, ACC, Manikgarh)
+        # Chandrapur - Ghugus - Wani - Ballarpur Thermal, Coal & Cement Hub (Maharashtra)
         {"min_lat": 19.60, "max_lat": 20.40, "min_lon": 78.80, "max_lon": 79.60, "name": "Chandrapur-Ghugus Thermal & Coal Basin"},
-        # Nagpur Industrial Belt (Maharashtra - Butibori, Hingna, Mouda NTPC, Koradi, Khaparkheda)
+        # Nagpur Industrial Belt (Maharashtra)
         {"min_lat": 20.80, "max_lat": 21.45, "min_lon": 78.80, "max_lon": 79.55, "name": "Nagpur Industrial & Power Belt"},
-        # Mumbai Metropolitan Region (Maharashtra - Trombay BPCL/HPCL Refineries, RCF, JNPT, Taloja, Rasayani)
+        # Mumbai Metropolitan Region (Maharashtra - Trombay BPCL/HPCL Refineries, RCF, JNPT, Taloja)
         {"min_lat": 18.70, "max_lat": 19.45, "min_lon": 72.70, "max_lon": 73.25, "name": "Mumbai MMR Petrochem & Port Complex"},
-        # Pune - Pimpri-Chinchwad - Chakan - Talegaon - Ranjangaon Auto Hub (Maharashtra)
+        # Pune - Pimpri-Chinchwad - Chakan - Talegaon Auto Hub (Maharashtra)
         {"min_lat": 18.40, "max_lat": 18.90, "min_lon": 73.65, "max_lon": 74.25, "name": "Pune MIDC Auto Corridor"},
-        # Delhi National Capital Region Core (Delhi, Gurugram, Faridabad, Noida, Greater Noida, Ghaziabad, Kundli)
-        {"min_lat": 28.25, "max_lat": 28.95, "min_lon": 76.80, "max_lon": 77.55, "name": "Delhi NCR Urban & Industrial Core"},
-        # Panipat Petrochemical & Refinery Complex (Haryana - IOCL Panipat)
-        {"min_lat": 29.30, "max_lat": 29.65, "min_lon": 76.80, "max_lon": 77.10, "name": "Panipat Refinery & Petrochem Complex"},
+        # Delhi National Capital Region Core (Delhi, Gurugram, Faridabad, Noida, Greater Noida, Ghaziabad)
+        {"min_lat": 28.25, "max_lat": 28.95, "min_lon": 76.80, "max_lon": 77.65, "name": "Delhi NCR Urban & Industrial Core"},
+        # Panipat & Hisar Refinery, Petrochemical & Steel Complex (Haryana)
+        {"min_lat": 29.05, "max_lat": 29.65, "min_lon": 75.65, "max_lon": 77.10, "name": "Panipat-Hisar Refinery & Steel Complex"},
         # Bathinda Refinery & Thermal Power Corridor (Punjab - HMEL Guru Gobind Singh Refinery)
         {"min_lat": 29.90, "max_lat": 30.25, "min_lon": 74.80, "max_lon": 75.15, "name": "Bathinda HMEL Refining Corridor"},
-        # Bhadradri Kothagudem - Paloncha - Manuguru Coal & Power Belt (Telangana - KTPS & SCCL)
+        # Darlaghat-Barmana Cement Kiln Corridor (Himachal Pradesh)
+        {"min_lat": 31.15, "max_lat": 31.40, "min_lon": 76.80, "max_lon": 77.05, "name": "Darlaghat-Barmana Cement Belt"},
+        # Bhadradri Kothagudem - Paloncha - Manuguru Coal & Power Belt (Telangana)
         {"min_lat": 17.50, "max_lat": 18.05, "min_lon": 80.40, "max_lon": 80.95, "name": "Kothagudem Mining & Power Basin"},
-        # Ramagundam - Mancherial - Bellampalli Power & Coal Belt (Telangana - NTPC Ramagundam)
+        # Ramagundam - Mancherial - Bellampalli Power & Coal Belt (Telangana)
         {"min_lat": 18.60, "max_lat": 19.10, "min_lon": 79.30, "max_lon": 79.80, "name": "Ramagundam Coal & Power Basin"},
-        # Visakhapatnam Industrial & Port Corridor (Andhra Pradesh - RINL Vizag Steel, HPCL, Simhadri)
+        # Visakhapatnam Industrial & Port Corridor (Andhra Pradesh)
         {"min_lat": 17.55, "max_lat": 17.90, "min_lon": 83.05, "max_lon": 83.40, "name": "Vizag Industrial Belt"},
     ]
     for b in ind_bounding_boxes:
         if b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]:
             return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 1}
 
-    # 3. Dedicated Protected Forest Reserves & National Parks (High Canopy Wilderness)
+    # 3. Dedicated Protected Forest Reserves, Ghats & High-Canopy Wilderness
     forest_reserves = [
         {"min_lat": 11.45, "max_lat": 11.75, "min_lon": 76.45, "max_lon": 76.75, "name": "Nilgiris Biosphere & Mudumalai"},
         {"min_lat": 10.20, "max_lat": 10.45, "min_lon": 76.85, "max_lon": 77.15, "name": "Anamalai Tiger Reserve"},
         {"min_lat": 9.20, "max_lat": 9.60, "min_lon": 77.10, "max_lon": 77.40, "name": "Periyar Tiger Reserve"},
         {"min_lat": 11.75, "max_lat": 12.00, "min_lon": 78.20, "max_lon": 78.40, "name": "Shevaroy Hill Crest"},
-        {"min_lat": 14.90, "max_lat": 15.35, "min_lon": 74.35, "max_lon": 74.85, "name": "Dandeli Wildlife Forest"},
+        {"min_lat": 14.50, "max_lat": 15.85, "min_lon": 74.10, "max_lon": 75.05, "name": "Western Ghats Dandeli-Khanapur Forest"},
+        {"min_lat": 19.70, "max_lat": 20.30, "min_lon": 73.30, "max_lon": 73.85, "name": "Northern Sahyadri / Trimbakeshwar Forest"},
         {"min_lat": 21.65, "max_lat": 22.10, "min_lon": 86.25, "max_lon": 86.65, "name": "Simlipal National Park Core"},
         {"min_lat": 22.15, "max_lat": 22.45, "min_lon": 80.55, "max_lon": 80.85, "name": "Kanha National Park Core"},
-        {"min_lat": 18.75, "max_lat": 19.10, "min_lon": 81.80, "max_lon": 82.20, "name": "Kanger Valley / Bastar Reserve"},
+        {"min_lat": 18.20, "max_lat": 19.60, "min_lon": 80.20, "max_lon": 82.40, "name": "Bastar / Indravati / Kanger Valley Forest"},
+        {"min_lat": 27.85, "max_lat": 28.50, "min_lon": 96.35, "max_lon": 97.40, "name": "Namdapha / Lohit Himalayan Forest Reserve"},
+        {"min_lat": 25.20, "max_lat": 26.50, "min_lon": 92.50, "max_lon": 94.40, "name": "Karbi Anglong / Dima Hasao Forest Belt"},
     ]
     for f in forest_reserves:
         if f["min_lat"] <= lat <= f["max_lat"] and f["min_lon"] <= lon <= f["max_lon"]:
@@ -320,46 +331,14 @@ def resolve_refined_landcover(lat: float, lon: float, dist_to_fac: float, is_ass
 
     # Mountain states with dominant forest biomes:
     if state in ["Uttarakhand", "Himachal Pradesh", "Arunachal Pradesh", "Meghalaya", "Mizoram", "Nagaland", "Sikkim", "Andaman & Nicobar Islands"]:
-        return {"pct_urban": 0.05, "pct_cropland": 0.15, "pct_forest": 0.80, "is_ind": 0}
+        return {"pct_urban": 0.05, "pct_cropland": 0.12, "pct_forest": 0.82, "is_ind": 0}
 
-    # 4. Urban Agglomerations (Metropolitan urban cores where crop stubble burning is physically impossible)
-    urban_centers = [
-        {"lat": 13.08, "lon": 80.27, "radius_km": 25.0}, # Chennai
-        {"lat": 11.01, "lon": 76.95, "radius_km": 20.0}, # Coimbatore
-        {"lat": 9.92, "lon": 78.12, "radius_km": 15.0},  # Madurai
-        {"lat": 10.79, "lon": 78.70, "radius_km": 15.0}, # Trichy
-        {"lat": 12.97, "lon": 77.59, "radius_km": 30.0}, # Bangalore
-        {"lat": 19.07, "lon": 72.87, "radius_km": 35.0}, # Mumbai
-        {"lat": 28.61, "lon": 77.20, "radius_km": 45.0}, # Delhi NCR
-        {"lat": 22.57, "lon": 88.36, "radius_km": 25.0}, # Kolkata
-        {"lat": 17.38, "lon": 78.48, "radius_km": 25.0}, # Hyderabad
-        {"lat": 18.52, "lon": 73.85, "radius_km": 25.0}, # Pune
-        {"lat": 23.02, "lon": 72.57, "radius_km": 25.0}, # Ahmedabad
-        {"lat": 21.17, "lon": 72.83, "radius_km": 20.0}, # Surat
-        {"lat": 26.91, "lon": 75.78, "radius_km": 20.0}, # Jaipur
-        {"lat": 26.84, "lon": 80.94, "radius_km": 20.0}, # Lucknow
-        {"lat": 26.44, "lon": 80.33, "radius_km": 20.0}, # Kanpur
-        {"lat": 21.14, "lon": 79.08, "radius_km": 20.0}, # Nagpur
-        {"lat": 22.71, "lon": 75.85, "radius_km": 20.0}, # Indore
-        {"lat": 9.93, "lon": 76.26, "radius_km": 20.0},  # Kochi
-        {"lat": 17.68, "lon": 83.21, "radius_km": 20.0}, # Visakhapatnam
-    ]
-    for u in urban_centers:
-        d_km = ((lat - u["lat"])**2 + (lon - u["lon"])**2)**0.5 * 111.0
-        if d_km <= u["radius_km"]:
-            return {"pct_urban": 0.85, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 0}
-
-    # 5. Arid Barren Desert & Salt Flats (Great Rann of Kutch & Thar Dunes) -> Genuine OTHER_UNCERTAIN
-    if (23.40 <= lat <= 24.50 and 68.50 <= lon <= 71.00) or (26.00 <= lat <= 28.00 and 70.00 <= lon <= 71.50):
+    # 4. Arid Barren Desert & Salt Flats (Great Rann of Kutch & West Thar Dunes & High Altitude Cold Desert) -> Genuine OTHER_UNCERTAIN
+    if (23.55 <= lat <= 24.50 and 68.50 <= lon <= 70.80) or (26.20 <= lat <= 27.80 and 69.50 <= lon <= 71.20) or lat >= 32.80:
         return {"pct_urban": 0.05, "pct_cropland": 0.05, "pct_forest": 0.05, "is_ind": 0}
 
-    # 6. High Altitude Cold Desert (Ladakh / Spiti) -> Genuine OTHER_UNCERTAIN
-    if lat >= 32.50:
-        return {"pct_urban": 0.05, "pct_cropland": 0.05, "pct_forest": 0.10, "is_ind": 0}
-
-    # 7. Unclassified Regional Landscape:
-    # Maintain neutral landcover percentages without assuming agricultural cropland bias
-    return {"pct_urban": 0.05, "pct_cropland": 0.10, "pct_forest": 0.10, "is_ind": 0}
+    # 5. India's Verified Agricultural Cropland Plains (Indo-Gangetic, Malwa, Deccan, Saurashtra, Vidarbha, Coastal Delta)
+    return {"pct_urban": 0.08, "pct_cropland": 0.78, "pct_forest": 0.08, "is_ind": 0}
 
 
 DETERMINISTIC_CATEGORY_MAP = {

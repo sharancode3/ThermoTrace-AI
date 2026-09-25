@@ -142,76 +142,67 @@ def process_event_intelligence(session: Session, event_id: str, override_feature
             entropy = -float(np.sum([p * np.log(p + 1e-9) for p in probs]))
             uncertainty_tier = compute_uncertainty(confidence, event.observation_count or 1, entropy)
             
-            # Physical Domain Context (Facility proximity is evidence, not absolute proof of source identity)
+            # Physical Domain Context (Facility proximity, oil/gas basins, forest biomes, and agrarian plains)
             dist_fac = float(features.get("dist_to_facility", 99999.0))
             is_ind_zone = int(features.get("is_industrial_zone", 0))
-            has_facility = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 4500.0) or (is_ind_zone == 1)
-            is_immediate_plant_boundary = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 1500.0)
+            has_facility = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 8500.0) or (is_ind_zone == 1)
+            is_immediate_plant_boundary = bool(event.associated_facility_id) or (0.0 <= dist_fac <= 3500.0)
             peak_frp = float(event.peak_frp_mw or 0.0)
             max_bright = float(features.get("max_brightness_k", 300.0))
             pct_crop = float(features.get("pct_cropland", 0.0))
             pct_for = float(features.get("pct_forest", 0.0))
             pct_urb = float(features.get("pct_urban", 0.0))
             dn_ratio = float(features.get("day_night_ratio", 0.5))
+            land_use_lower = str(features.get("primary_land_use", "") or "").lower()
+            lat_val, lon_val = float(event.latitude or 0.0), float(event.longitude or 0.0)
+            is_oil_gas_basin = (
+                any(k in land_use_lower for k in ("flare", "refin", "petro", "oil", "gas", "lng"))
+                or (26.85 <= lat_val <= 27.85 and 94.50 <= lon_val <= 96.40)  # Upper Assam-Arakan Oil & Gas Basin
+                or (25.60 <= lat_val <= 26.35 and 71.50 <= lon_val <= 72.45)  # Barmer-Pachpadra Oil & Gas Basin
+                or (23.15 <= lat_val <= 23.75 and 72.20 <= lon_val <= 72.65)  # Kalol-Mehsana ONGC Basin
+            )
             raw_model_class = predicted_class
             raw_model_confidence = confidence
             rule_applied = None
 
             if has_facility:
-                # 1. Industrial Facility Context (Within plant buffer or registered corridor)
-                # Stubble burning is strictly prohibited inside industrial complexes
-                if peak_frp >= 100.0 or max_bright >= 370.0:
+                # 1. Industrial Facility / Corridor Context
+                if (
+                    peak_frp >= 45.0
+                    or max_bright >= 352.0
+                    or (event.anomaly_tier in ("CRITICAL", "ABNORMAL") and (peak_frp >= 9.5 or max_bright >= 340.0))
+                    or ("coal" in land_use_lower and (peak_frp >= 14.0 or max_bright >= 342.0))
+                ):
                     predicted_class = "IND_FIRE"
                     rule_applied = "INDUSTRIAL_EXTREME_FIRE_GATE"
-                elif ("flare" in str(features.get("primary_land_use", "")).lower() or 
-                      "refin" in str(features.get("primary_land_use", "")).lower() or 
-                      "petro" in str(features.get("primary_land_use", "")).lower() or
-                      "oil" in str(features.get("primary_land_use", "")).lower() or
-                      "gas" in str(features.get("primary_land_use", "")).lower()) and peak_frp >= 20.0:
+                elif is_oil_gas_basin or ("steel" in land_use_lower and max_bright >= 338.0 and peak_frp >= 8.0):
                     predicted_class = "IND_FLARE"
                     rule_applied = "REFINERY_FLARE_STACK_GATE"
                 elif predicted_class in ("IND_ROUTINE", "IND_FLARE", "IND_FIRE"):
                     # Trust ML prediction for industrial emitter
                     pass
-                elif is_immediate_plant_boundary or is_ind_zone == 1 or dist_fac <= 4500.0:
-                    # Inside plant boundary, corridor, or 4.5km buffer:
-                    # Resolve non-industrial or uncertain output to nominal plant/corridor process heat
+                elif is_immediate_plant_boundary or is_ind_zone == 1 or dist_fac <= 8500.0:
                     predicted_class = "IND_ROUTINE"
                     rule_applied = "PLANT_BOUNDARY_NOMINAL_HEAT"
                 else:
                     if predicted_class == "AGRI_BURN":
                         predicted_class = "OTHER_UNCERTAIN"
                         rule_applied = "INDUSTRIAL_AGRI_BURN_GATE"
-            elif pct_urb >= 0.70:
-                # 2. Urban Metropolitan Core Context (Delhi NCR, Mumbai MMR, Bengaluru, etc.)
-                # Crop stubble burning is strictly impossible in dense urban/commercial districts
-                if predicted_class == "AGRI_BURN":
-                    predicted_class = "OTHER_UNCERTAIN"
-                    rule_applied = "URBAN_NON_AGRICULTURAL_MUNICIPAL_OR_WASTE"
             else:
-                # 3. Non-Facility Rural / Forest / Agrarian Context (> 4.5km from any plant and outside industrial/urban zones)
+                # 2. Non-Facility Forest / Agrarian / Arid Context
                 if pct_for >= 0.40 or event.primary_land_use == 'Forest':
                     predicted_class = "WILDFIRE"
                     rule_applied = "RURAL_FOREST_CANOPY_FIRE"
-                elif (pct_crop >= 0.45 or event.primary_land_use == 'Cropland') and dn_ratio >= 0.60:
-                    # Agricultural crop stubble burning: ONLY verified when daytime pass confirms agricultural cycle
+                elif (pct_crop >= 0.45 or event.primary_land_use == 'Cropland') and not (dn_ratio == 0.0 and peak_frp < 1.2 and (event.observation_count or 1) <= 1):
                     predicted_class = "AGRI_BURN"
                     rule_applied = "AGRARIAN_STUBBLE_BIOMASS_BURN"
-                elif dn_ratio < 0.60 and (pct_crop >= 0.45 or predicted_class == "AGRI_BURN"):
-                    # Nocturnal rural detections outside known industry: unverified localized burn
-                    predicted_class = "OTHER_UNCERTAIN"
-                    rule_applied = "NOCTURNAL_RURAL_UNVERIFIED"
                 elif confidence < 0.40 or entropy > 1.40:
                     predicted_class = "OTHER_UNCERTAIN"
                     rule_applied = "EPISTEMIC_UNCERTAINTY_GATE"
                 else:
-                    # Trust raw XGBoost model prediction for non-facility locations
                     pass
 
             if predicted_class != raw_model_class:
-                # Domain safety rule altered the operational decision:
-                # Explicitly use the actual calibrated model probability for the assigned class.
-                # NEVER reuse the probability of a superseded class as confidence in a replacement class!
                 assigned_prob = float(class_probs.get(predicted_class, 0.0))
                 confidence = assigned_prob if assigned_prob > 0.0 else round(min(raw_model_confidence, 0.40), 4)
                 uncertainty_tier = "MODERATE" if confidence >= 0.50 else "HIGH"
