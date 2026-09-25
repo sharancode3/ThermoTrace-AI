@@ -38,45 +38,46 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
 
   const isWildfire = normClass === "WILDFIRE" || normClass === "FOREST_FIRE";
   const isAgri = normClass === "AGRI_BURN" || normClass === "AGRICULTURE" || normClass === "STUBBLE";
+  const isIndRoutine = normClass === "IND_ROUTINE";
   const isIndFire = normClass === "IND_FIRE";
   const isIndFlare = normClass === "IND_FLARE";
   const isIndustry = normClass.startsWith("IND_") || normClass === "INDUSTRIAL" || normClass === "INDUSTRY";
 
   // Canonical Symbology Separation:
-  // Icon Shape conveys Source Category; Color / Outline conveys Criticality Tier.
-  const isCritical = normTier === "CRITICAL" || isIndFire;
-  const isAbnormal = !isCritical && (normTier === "ABNORMAL" || normTier === "ELEVATED");
+  // IND_ROUTINE is always Normal Yellow; CRITICAL is Red; ABNORMAL is Orange; Normal Agri & Forest Fire are Green.
+  const isCritical = !isIndRoutine && (normTier === "CRITICAL" || isIndFire);
+  const isAbnormal = !isIndRoutine && !isCritical && (normTier === "ABNORMAL" || normTier === "ELEVATED" || isIndFlare);
   const isNormal = !isCritical && !isAbnormal;
 
   let fillColor = "#10B981";
   let glowColor = "rgba(16, 185, 129, 0.45)";
   let strokeColor = "#059669";
 
-  if (isCritical) {
+  if (isIndRoutine) {
+    // Routine Industrial Process: Always Yellow (#FACC15)
+    fillColor = isCooled ? "#FEF08A" : "#FACC15";
+    glowColor = isCooled ? "rgba(250, 204, 21, 0.15)" : "rgba(250, 204, 21, 0.55)";
+    strokeColor = isCooled ? "#CA8A04" : "#854D0E";
+  } else if (isCritical) {
     // Red across ALL source categories for Critical Anomaly Tier
     fillColor = isCooled ? "#FECACA" : "#EF4444";
     glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.70)";
     strokeColor = isCooled ? "#DC2626" : "#B91C1C";
   } else if (isAbnormal) {
-    // Orange across ALL source categories for Abnormal / Elevated Anomaly Tier
+    // Orange across ALL source categories for Abnormal / Elevated Anomaly Tier & Flaring
     fillColor = isCooled ? "#FED7AA" : "#F97316";
     glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.65)";
     strokeColor = isCooled ? "#EA580C" : "#C2410C";
-  } else if (isIndFlare) {
-    // Nominal Industrial Flare Stack: Warm Amber-Orange
-    fillColor = isCooled ? "#FDE68A" : "#FB923C";
-    glowColor = isCooled ? "rgba(251, 146, 60, 0.15)" : "rgba(251, 146, 60, 0.55)";
-    strokeColor = isCooled ? "#D97706" : "#9A3412";
   } else if (isIndustry) {
     // Nominal Routine Industrial Process: Yellow
     fillColor = isCooled ? "#FEF08A" : "#FACC15";
     glowColor = isCooled ? "rgba(250, 204, 21, 0.15)" : "rgba(250, 204, 21, 0.55)";
     strokeColor = isCooled ? "#CA8A04" : "#854D0E";
   } else if (isWildfire) {
-    // Nominal Wildfire / Forest Canopy: Forest Teal
-    fillColor = isCooled ? "#99F6E4" : "#0D9488";
-    glowColor = isCooled ? "rgba(13, 148, 136, 0.15)" : "rgba(13, 148, 136, 0.45)";
-    strokeColor = isCooled ? "#0D9488" : "#042F2E";
+    // Nominal Wildfire / Forest Fire: Forest Green
+    fillColor = isCooled ? "#86EFAC" : "#16A34A";
+    glowColor = isCooled ? "rgba(22, 163, 74, 0.15)" : "rgba(22, 163, 74, 0.45)";
+    strokeColor = isCooled ? "#15803D" : "#14532D";
   } else if (isAgri) {
     // Nominal Crop Residue / Agriculture: Emerald Green
     fillColor = isCooled ? "#A7F3D0" : "#10B981";

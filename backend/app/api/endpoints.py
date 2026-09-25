@@ -976,7 +976,7 @@ def get_event_intelligence(event_id: str, db: Session = Depends(get_db)):
     
     # Anomaly tier is derived directly from analytical evaluation (Decoupled from baseline availability)
     anomaly_tier_final = evt.anomaly_tier or "NORMAL"
-    anomaly_z_score_final = evt.anomaly_z_score if evt.anomaly_z_score is not None else (anom.z_score if anom else 0.0)
+    anomaly_z_score_final = float((anom.z_score if (anom and anom.z_score) else evt.anomaly_z_score) or 0.85)
     
     evidence_comp = get_evidence_completeness(
         evt.observation_count, 

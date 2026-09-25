@@ -167,11 +167,14 @@ def list_facilities(
     facility_ids = [f[0] for f in facilities if f[0]]
     critical_counts: Dict[Any, int] = {}
     if facility_ids:
+        max_dt = db.query(func.max(ThermalEvent.latest_detected_utc)).scalar()
+        active_cutoff = (max_dt - timedelta(hours=24)) if max_dt else (datetime.now(timezone.utc) - timedelta(hours=24))
         crit_rows = (
             db.query(ThermalEvent.associated_facility_id, func.count(ThermalEvent.id))
             .filter(
                 ThermalEvent.associated_facility_id.in_(facility_ids),
                 ThermalEvent.lifecycle_status != "CLOSED",
+                ThermalEvent.latest_detected_utc >= active_cutoff,
                 or_(
                     ThermalEvent.anomaly_tier == "CRITICAL",
                     ThermalEvent.classification == "IND_FIRE",

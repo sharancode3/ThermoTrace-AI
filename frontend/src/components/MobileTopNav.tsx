@@ -28,8 +28,13 @@ export function MobileTopNav() {
   const { theme, toggleTheme } = useTheme();
   
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState<number>(0);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Poll notifications count
   useEffect(() => {
@@ -84,6 +89,7 @@ export function MobileTopNav() {
   };
 
   const pageTitle = useMemo(() => {
+    if (!mounted) return "Monitor";
     if (currentOverlay === "news") return "Thermo News";
     if (currentOverlay === "alerts") return "Alerts";
     if (currentOverlay === "chat") return "AI Chat";
@@ -92,7 +98,7 @@ export function MobileTopNav() {
     if (pathname.startsWith("/analytics")) return "Analytics";
     if (pathname.startsWith("/guide")) return "Guide";
     return "Monitor";
-  }, [pathname, currentOverlay]);
+  }, [mounted, pathname, currentOverlay]);
 
   return (
     <div ref={menuRef} className="flex md:hidden flex-col w-full sticky top-0 z-[55] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
@@ -107,7 +113,7 @@ export function MobileTopNav() {
           <div className="flex items-center gap-1.5 truncate">
             <span className="font-bold text-sm text-slate-900 dark:text-slate-100 tracking-tight">ThermoTrace</span>
             <span className="text-slate-400 dark:text-slate-600 font-normal text-xs hidden sm:inline">/</span>
-            <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 font-mono truncate hidden sm:inline">{pageTitle}</span>
+            <span suppressHydrationWarning className="text-xs font-semibold text-orange-600 dark:text-orange-400 font-mono truncate hidden sm:inline">{pageTitle}</span>
           </div>
         </Link>
 
@@ -116,11 +122,12 @@ export function MobileTopNav() {
           <button
             type="button"
             onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            suppressHydrationWarning
+            title={mounted && theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
             className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-transform active:scale-95 cursor-pointer shrink-0 shadow-2xs"
             aria-label="Toggle Theme"
           >
-            {theme === "dark" ? (
+            {mounted && theme === "dark" ? (
               <Moon className="w-4 h-4 text-amber-400" />
             ) : (
               <Sun className="w-4 h-4 text-orange-500" />
