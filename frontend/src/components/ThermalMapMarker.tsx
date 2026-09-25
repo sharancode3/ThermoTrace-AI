@@ -38,11 +38,13 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
 
   const isWildfire = normClass === "WILDFIRE" || normClass === "FOREST_FIRE";
   const isAgri = normClass === "AGRI_BURN" || normClass === "AGRICULTURE" || normClass === "STUBBLE";
+  const isIndFire = normClass === "IND_FIRE";
+  const isIndFlare = normClass === "IND_FLARE";
   const isIndustry = normClass.startsWith("IND_") || normClass === "INDUSTRIAL" || normClass === "INDUSTRY";
 
   // Canonical Symbology Separation:
   // Icon Shape conveys Source Category; Color / Outline conveys Criticality Tier.
-  const isCritical = normTier === "CRITICAL";
+  const isCritical = normTier === "CRITICAL" || isIndFire;
   const isAbnormal = !isCritical && (normTier === "ABNORMAL" || normTier === "ELEVATED");
   const isNormal = !isCritical && !isAbnormal;
 
@@ -53,13 +55,18 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
   if (isCritical) {
     // Red across ALL source categories for Critical Anomaly Tier
     fillColor = isCooled ? "#FECACA" : "#EF4444";
-    glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.65)";
+    glowColor = isCooled ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.70)";
     strokeColor = isCooled ? "#DC2626" : "#B91C1C";
   } else if (isAbnormal) {
     // Orange across ALL source categories for Abnormal / Elevated Anomaly Tier
     fillColor = isCooled ? "#FED7AA" : "#F97316";
-    glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.60)";
+    glowColor = isCooled ? "rgba(249, 115, 22, 0.15)" : "rgba(249, 115, 22, 0.65)";
     strokeColor = isCooled ? "#EA580C" : "#C2410C";
+  } else if (isIndFlare) {
+    // Nominal Industrial Flare Stack: Warm Amber-Orange
+    fillColor = isCooled ? "#FDE68A" : "#FB923C";
+    glowColor = isCooled ? "rgba(251, 146, 60, 0.15)" : "rgba(251, 146, 60, 0.55)";
+    strokeColor = isCooled ? "#D97706" : "#9A3412";
   } else if (isIndustry) {
     // Nominal Routine Industrial Process: Yellow
     fillColor = isCooled ? "#FEF08A" : "#FACC15";
@@ -83,7 +90,7 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
   }
 
   // Intense thermal radiance glow for high FRP / hot temperatures (only when active)
-  const isHighThermal = !isCooled && (peakFrp >= 50.0 || maxBrightnessK >= 350.0);
+  const isHighThermal = !isCooled && (peakFrp >= 6.5 || maxBrightnessK >= 338.0);
 
   return (
     <div
@@ -111,12 +118,12 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
         )
       ) : (!isCooled && (isCritical || isAbnormal || isHighThermal)) ? (
         <span 
-          className="absolute -inset-1 rounded-full animate-pulse opacity-45 pointer-events-none"
+          className="absolute -inset-1 rounded-full animate-pulse opacity-55 pointer-events-none"
           style={{ backgroundColor: glowColor }}
         />
       ) : null}
 
-      {/* SVG Tactical 4-Icon System */}
+      {/* SVG Tactical Symbology System */}
       <svg
         viewBox="0 0 32 32"
         width={size}
@@ -128,7 +135,7 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
         }`}
       >
         {isIndustry ? (
-          /* 1. INDUSTRY: Modern Factory Twin Stacks (Normal: Yellow, Abnormal: Orange, Critical: Red, Cooled: Faded) */
+          /* 1. INDUSTRY: Modern Factory Twin Stacks + Flare/Fire Tongue when IND_FLARE or IND_FIRE */
           <g 
             fill={fillColor} 
             stroke={isCooled ? strokeColor : "#FFFFFF"} 
@@ -136,9 +143,17 @@ export const ThermalMapMarker: React.FC<ThermalMapMarkerProps> = ({
             strokeDasharray={isCooled ? "3,1.5" : undefined}
             strokeLinejoin="round"
           >
-            <path d="M4 26V16L12 20V12L20 16V6H28V26H4Z" />
+            <path d="M4 26V16L12 20V12L20 16V7H28V26H4Z" />
             <line x1="12" y1="20" x2="12" y2="26" stroke={isCooled ? strokeColor : "#FFFFFF"} strokeWidth={isCooled ? "1.0" : "1.2"} />
             <line x1="20" y1="16" x2="20" y2="26" stroke={isCooled ? strokeColor : "#FFFFFF"} strokeWidth={isCooled ? "1.0" : "1.2"} />
+            {(isIndFlare || isIndFire) && (
+              <path
+                d="M24 7C21.5 5 22 2 24.5 1C26.5 2.5 27 5 24 7Z"
+                fill={isIndFire ? "#FEF08A" : "#FFEDD5"}
+                stroke={isIndFire ? "#DC2626" : "#EA580C"}
+                strokeWidth="1.1"
+              />
+            )}
           </g>
         ) : isWildfire ? (
           /* 2. FOREST WILDFIRE: Pine Tree + Fire Overlay */

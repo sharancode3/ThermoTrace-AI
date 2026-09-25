@@ -251,6 +251,7 @@ export function filterCachedFeatures(
     const freshCutoff = now - 24 * 3600 * 1000;
     filtered = filtered.filter((f) => {
       if (filters.focus_event_id && f.properties?.event_id === filters.focus_event_id) return true;
+      if (typeof f.properties?.is_active === "boolean") return f.properties.is_active;
       const ts = f.properties?.latest_detected_utc;
       return ts ? new Date(ts).getTime() >= freshCutoff : false;
     });
@@ -263,6 +264,7 @@ export function filterCachedFeatures(
 
     filtered = filtered.filter((f) => {
       if (filters.focus_event_id && f.properties?.event_id === filters.focus_event_id) return true;
+      if (typeof f.properties?.elapsed_hours === "number") return f.properties.elapsed_hours <= filters.hours!;
       const ts = f.properties?.latest_detected_utc;
       return ts ? new Date(ts).getTime() >= cutoff : true;
     });

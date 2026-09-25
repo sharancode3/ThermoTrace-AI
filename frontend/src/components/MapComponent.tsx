@@ -1012,10 +1012,12 @@ export default function MapComponent({
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status, is_active, latest_detected_utc } = feature.properties;
           const isSelected = selectedEventId === event_id;
           const normLife = String(lifecycle_status || "").toUpperCase();
-          const isFreshByTimestamp = latest_detected_utc
-            ? (Date.now() - new Date(latest_detected_utc).getTime()) < 24 * 3600 * 1000
-            : false;
-          const isCooled = is_active === false ||
+          const isFreshByTimestamp =
+            typeof feature.properties?.elapsed_hours === "number"
+              ? feature.properties.elapsed_hours <= 24
+              : is_active !== false;
+          const isCooled =
+            is_active === false ||
             normLife === "EXTINGUISHED" ||
             normLife === "RESOLVED" ||
             normLife === "COOLING" ||
