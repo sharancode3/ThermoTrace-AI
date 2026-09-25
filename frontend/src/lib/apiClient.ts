@@ -109,14 +109,14 @@ function getCached<T>(key: string): T | null {
   }
   if (typeof window !== "undefined") {
     try {
-      const raw = window.sessionStorage.getItem(`thermo_cache_v3_${key}`);
+      const raw = window.sessionStorage.getItem(`thermo_cache_v4_${key}`);
       if (raw) {
         const parsed = JSON.parse(raw) as CacheEntry<T>;
         if (now - parsed.timestamp < CACHE_TTL_MS) {
           memoryCache.set(key, parsed);
           return parsed.data;
         } else {
-          window.sessionStorage.removeItem(`thermo_cache_v3_${key}`);
+          window.sessionStorage.removeItem(`thermo_cache_v4_${key}`);
         }
       }
     } catch {
@@ -131,7 +131,7 @@ function setCached<T>(key: string, data: T): void {
   memoryCache.set(key, entry);
   if (typeof window !== "undefined") {
     try {
-      window.sessionStorage.setItem(`thermo_cache_v3_${key}`, JSON.stringify(entry));
+      window.sessionStorage.setItem(`thermo_cache_v4_${key}`, JSON.stringify(entry));
     } catch {
       // ignore storage quota errors
     }

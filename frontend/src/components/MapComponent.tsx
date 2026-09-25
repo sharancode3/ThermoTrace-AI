@@ -439,17 +439,15 @@ export default function MapComponent({
 
       const currentSeq = ++fetchSequenceRef.current;
 
-      const isWindowHistorical = windowHours === null || (windowHours !== null && windowHours > 24);
-      const isClassHistorical = classFilter === "AGRI_BURN" || classFilter === "WILDFIRE";
       const effectiveHours = cooldownFilter === "COOLED"
         ? (windowHours && windowHours >= 72 ? windowHours : 72)
         : (windowHours ?? undefined);
 
-      const effectiveIncludeHistorical = includeHistorical || cooldownFilter === "COOLED" || isWindowHistorical || isClassHistorical;
+      const effectiveIncludeHistorical = includeHistorical || cooldownFilter === "COOLED";
 
       const eventFilters = {
         hours: effectiveHours,
-        start_time: startTime,
+        start_time: effectiveHours === undefined ? startTime : undefined,
         classification: classFilter || undefined,
         anomaly_tier: severityFilter || undefined,
         show_all: showAllDetections,
@@ -571,8 +569,7 @@ export default function MapComponent({
   }, [selectedEventId]);
 
   const eventCount = geoData?.features.length || 0;
-  const isWindowHistorical = windowHours === null || (windowHours !== null && windowHours > 24);
-  const showHistoricalData = includeHistorical || isWindowHistorical;
+  const showHistoricalData = includeHistorical || cooldownFilter === "COOLED";
   const isFilterActive = windowHours !== 24 || !showAllDetections || severityFilter !== "" || classFilter !== "" || includeHistorical || cooldownFilter !== "ALL";
 
   // Selected marker feature
@@ -637,14 +634,16 @@ export default function MapComponent({
       }
 
       if (isCooled) {
-        historical.push(f);
+        if (showHistoricalData || isSelected) {
+          historical.push(f);
+        }
       } else {
         fresh.push(f);
       }
     }
 
     return { freshFeatures: fresh, historicalFeatures: historical };
-  }, [displayFeatures, selectedEventId, cooldownFilter]);
+  }, [displayFeatures, selectedEventId, cooldownFilter, showHistoricalData]);
 
   const historicalGeoJson = useMemo(() => {
     return {
@@ -1382,7 +1381,12 @@ export default function MapComponent({
                 ] as const).map(([hours, label]) => (
                   <button
                     key={label}
-                    onClick={() => setWindowHours(hours)}
+                    onClick={() => {
+                      setWindowHours(hours);
+                      if (hours === null || hours > 24) {
+                        setIncludeHistorical(true);
+                      }
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                       windowHours === hours
                         ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
@@ -1428,7 +1432,15 @@ export default function MapComponent({
               </button>
 
               <button
-                onClick={() => setIncludeHistorical((prev) => !prev)}
+                onClick={() => {
+                  setIncludeHistorical((prev) => {
+                    const next = !prev;
+                    if (!next && cooldownFilter === "COOLED") {
+                      setCooldownFilter("ALL");
+                    }
+                    return next;
+                  });
+                }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition cursor-pointer ${
                   showHistoricalData
                     ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
@@ -1567,7 +1579,12 @@ export default function MapComponent({
                   ] as const).map(([hours, label]) => (
                     <button
                       key={label}
-                      onClick={() => setWindowHours(hours)}
+                      onClick={() => {
+                        setWindowHours(hours);
+                        if (hours === null || hours > 24) {
+                          setIncludeHistorical(true);
+                        }
+                      }}
                       className={`py-2 rounded-xl text-xs font-bold transition text-center ${
                         windowHours === hours
                           ? "bg-orange-600 text-white shadow-md shadow-orange-900/40"
@@ -1634,7 +1651,15 @@ export default function MapComponent({
                   </label>
                   <button
                     type="button"
-                    onClick={() => setIncludeHistorical(!includeHistorical)}
+                    onClick={() => {
+                      setIncludeHistorical((prev) => {
+                        const next = !prev;
+                        if (!next && cooldownFilter === "COOLED") {
+                          setCooldownFilter("ALL");
+                        }
+                        return next;
+                      });
+                    }}
                     className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-between border transition cursor-pointer ${
                       showHistoricalData
                         ? "bg-amber-500/20 text-amber-300 border-amber-500/40"

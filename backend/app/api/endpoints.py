@@ -322,8 +322,8 @@ def get_gis_events(
         if not is_in_bounds and not (focus_event_id and props["event_id"] == focus_event_id):
             continue
 
-        # Time range bounds
-        if start_time and props["latest_detected_utc"]:
+        # Time range bounds (only apply wall-clock start_time when relative hours window is not provided)
+        if hours is None and start_time and props["latest_detected_utc"]:
             if props["latest_detected_utc"] < start_time.isoformat():
                 continue
         if end_time and props["first_detected_utc"]:
@@ -353,7 +353,7 @@ def get_gis_events(
                 continue
 
         if props.get("is_active"):
-            # Active event: verify within active window
+            # Active event: verify within active window anchored to frozen_anchor_utc
             if hours is not None and hours <= 24:
                 if props["elapsed_hours"] <= hours or (focus_event_id and props["event_id"] == focus_event_id):
                     active_candidates.append(f)
@@ -361,34 +361,35 @@ def get_gis_events(
                 active_candidates.append(f)
         else:
             # Cooled / Historical event candidate
-            cooled_candidates.append(f)
+            if hours is not None and hours > 24:
+                if props["elapsed_hours"] <= hours:
+                    cooled_candidates.append(f)
+            else:
+                cooled_candidates.append(f)
 
-    # Determine target cooled quota: 12h: +5 cooled | 24h: +20 cooled | 7d: +100 cooled | 30d: +200 cooled
-    if classification:
+    # Strictly respect include_historical: 0 cooled markers when OFF; monotonically scaling quota when ON
+    if not include_historical:
+        filtered = active_candidates
+    elif classification:
         if hours is not None and hours <= 24:
-            filtered = active_candidates + cooled_candidates[: (5 if hours <= 12 else 20)]
+            filtered = active_candidates + cooled_candidates[: (15 if hours <= 12 else 35)]
         else:
             filtered = active_candidates + cooled_candidates
     else:
         if hours is not None:
             if hours <= 12:
-                target_cooled = 5
+                target_cooled = 15
             elif hours <= 24:
-                target_cooled = 20
+                target_cooled = 35
             elif hours <= 168:
                 target_cooled = 100
             else:
                 target_cooled = 200
-        elif include_historical:
-            target_cooled = 200
         else:
-            target_cooled = 0
+            target_cooled = 250
 
-        if target_cooled > 0:
-            sampled_cooled = sample_balanced_cooled(cooled_candidates, target_cooled)
-            filtered = active_candidates + sampled_cooled
-        else:
-            filtered = active_candidates
+        sampled_cooled = sample_balanced_cooled(cooled_candidates, target_cooled)
+        filtered = active_candidates + sampled_cooled
 
     filtered.sort(key=lambda x: tier_weights.get(x.properties.get("anomaly_tier", ""), 4))
     result = GeoJSONFeatureCollection(features=filtered[:effective_limit])
