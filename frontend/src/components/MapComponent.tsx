@@ -1088,7 +1088,7 @@ export default function MapComponent({
         })}
 
         {/* Historical Event Markers: Rendered when historical data is present or requested */}
-        {(showHistoricalData || cooldownFilter === "COOLED" || historicalFeatures.length > 0) && historicalFeatures.slice(0, 500).map((feature) => {
+        {(showHistoricalData || historicalFeatures.length > 0) && historicalFeatures.slice(0, 500).map((feature) => {
           const [lon, lat] = feature.geometry.coordinates;
           const { event_id, classification, anomaly_tier, peak_frp_mw, max_brightness_k, lifecycle_status } = feature.properties;
           const isSelected = selectedEventId === event_id;
