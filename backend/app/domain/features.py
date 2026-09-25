@@ -66,6 +66,12 @@ def calculate_convex_hull(session: Session, event_id: str) -> float:
         return 0.0
     return float(res[0])
 
+def _to_unix_ts(val) -> float:
+    if hasattr(val, "timestamp"):
+        return float(val.timestamp())
+    from datetime import datetime
+    return float(datetime.fromisoformat(str(val).replace("Z", "+00:00")).timestamp())
+
 def get_thermal_trend(session: Session, event_id: str) -> str:
     query = text("""
         SELECT o.observation_timestamp_utc, o.frp_mw
@@ -83,7 +89,7 @@ def get_thermal_trend(session: Session, event_id: str) -> str:
         elif diff < -3.0: return "DECREASING"
         return "STABLE"
         
-    timestamps = [row[0].timestamp() for row in res]
+    timestamps = [_to_unix_ts(row[0]) for row in res]
     frps = [float(row[1]) for row in res]
     
     if len(set(timestamps)) < 2:
@@ -144,7 +150,7 @@ def batch_get_thermal_trends(session: Session, event_ids: List[Any]) -> Dict[str
             else: results[str_id] = "STABLE"
             continue
             
-        timestamps = [row[0].timestamp() for row in res]
+        timestamps = [_to_unix_ts(row[0]) for row in res]
         frps = [row[1] for row in res]
         if len(set(timestamps)) < 2:
             results[str_id] = "STABLE"

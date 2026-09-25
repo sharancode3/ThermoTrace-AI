@@ -40,7 +40,9 @@ def health_check(db: Session = Depends(get_db)):
     total_events = 0
     try:
         url_str = str(db.bind.url)
-        if "@" in url_str:
+        if url_str.startswith("sqlite"):
+            db_target = "local-embedded-sovereign-store (sovereign_benchmark.sqlite)"
+        elif "@" in url_str:
             db_target = url_str.split("@")[-1]
         else:
             db_target = url_str

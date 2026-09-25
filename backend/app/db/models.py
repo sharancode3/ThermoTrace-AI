@@ -1,13 +1,149 @@
 import uuid
-from sqlalchemy import Column, String, Float, Integer, DateTime, Date, Time, SmallInteger, JSON, Boolean, Numeric, ForeignKey, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from geoalchemy2 import Geometry
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, Float, Integer, DateTime as SaDateTime, Date, Time, SmallInteger, JSON, Boolean, Numeric, ForeignKey, Text, UniqueConstraint
+from sqlalchemy.types import TypeDecorator, CHAR, TEXT
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB as PG_JSONB
+from geoalchemy2 import Geometry as PG_Geometry
+from geoalchemy2.elements import WKBElement, WKTElement
+from shapely import wkb as shapely_wkb, wkt as shapely_wkt
 from sqlalchemy.sql import func
 from app.db.database import Base
 try:
     from pgvector.sqlalchemy import Vector
 except ImportError:
     pass # Will handle gracefully if pgvector is missing, though the DB contract demands it
+
+
+class UUID(TypeDecorator):
+    """Cross-dialect UUID type supporting both PostgreSQL native UUID and embedded SQLite CHAR(36)."""
+    impl = CHAR(36)
+    cache_ok = True
+
+    def __init__(self, as_uuid: bool = True, *args, **kwargs):
+        self.as_uuid = as_uuid
+        super().__init__(*args, **kwargs)
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID(as_uuid=self.as_uuid))
+        return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if not self.as_uuid:
+            return str(value)
+        if isinstance(value, uuid.UUID):
+            return value
+        try:
+            return uuid.UUID(str(value))
+        except Exception:
+            return value
+
+
+JSONB = JSON().with_variant(PG_JSONB(), "postgresql")
+
+
+class DateTime(TypeDecorator):
+    """Cross-dialect timezone-aware DateTime ensuring UTC tzinfo is preserved on embedded SQLite."""
+    impl = SaDateTime
+    cache_ok = True
+
+    def __init__(self, timezone: bool = True, *args, **kwargs):
+        self.timezone = timezone
+        super().__init__(timezone=timezone, *args, **kwargs)
+
+    def load_dialect_impl(self, dialect):
+        return dialect.type_descriptor(SaDateTime(timezone=self.timezone))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except Exception:
+                return value
+        if isinstance(value, datetime) and self.timezone and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except Exception:
+                return value
+        if isinstance(value, datetime) and self.timezone and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+
+class Geometry(TypeDecorator):
+    """Cross-dialect Geometry type supporting PostGIS on PostgreSQL and WKT/WKB on embedded SQLite."""
+    impl = TEXT
+    cache_ok = True
+
+    def __init__(self, geometry_type: str = "GEOMETRY", srid: int = 4326, *args, **kwargs):
+        self.geometry_type = geometry_type
+        self.srid = srid
+        super().__init__(*args, **kwargs)
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_Geometry(self.geometry_type, srid=self.srid))
+        return dialect.type_descriptor(TEXT())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value
+        if isinstance(value, WKTElement):
+            return value.data
+        if isinstance(value, WKBElement):
+            try:
+                return shapely_wkb.loads(bytes(value.data)).wkt
+            except Exception:
+                return bytes(value.data).hex()
+        if hasattr(value, "wkt"):
+            return value.wkt
+        val_str = str(value)
+        if val_str.upper().startswith("SRID="):
+            parts = val_str.split(";", 1)
+            if len(parts) == 2:
+                return parts[1]
+        return val_str
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value
+        if isinstance(value, (WKBElement, WKTElement)):
+            return value
+        val_str = str(value).strip()
+        if val_str.upper().startswith("SRID="):
+            parts = val_str.split(";", 1)
+            if len(parts) == 2:
+                val_str = parts[1].strip()
+        if any(val_str.upper().startswith(p) for p in ("POINT", "POLYGON", "MULTIPOLYGON", "LINESTRING", "GEOMETRYCOLLECTION")):
+            return WKTElement(val_str, srid=self.srid)
+        try:
+            raw_bytes = bytes.fromhex(val_str)
+            return WKBElement(raw_bytes, srid=self.srid)
+        except Exception:
+            return WKTElement(val_str, srid=self.srid)
+
 
 class ThermalObservation(Base):
     __tablename__ = "thermal_observations"
